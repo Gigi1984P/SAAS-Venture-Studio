@@ -5,7 +5,7 @@
 |---|---------|--------|------|
 | 1 | Next.js-Projekt initialisieren | ✅ Erledigt | Hoch |
 | 2 | Tailwind CSS einrichten | ✅ Erledigt | Hoch |
-| 3 | Prisma + PostgreSQL-Schema definieren | ✅ Erledigt (SQLite Dev) | Hoch |
+| 3 | Prisma + PostgreSQL-Schema definieren | ✅ Erledigt (PostgreSQL aktiv) | Hoch |
 | 4 | Auth-Grundgerüst (Login / Register / Middleware) | ✅ Erledigt | Hoch |
 | 5 | Venture-CRUD (Model, API, UI) | ✅ Erledigt | Hoch |
 | 6 | Dashboard mit echten Daten | ✅ Erledigt | Hoch |
@@ -17,7 +17,6 @@
 | 12 | Impressum | Offen | Mittel |
 | 13 | Venture Detail-Seite (Inline-Editing) | Offen | Mittel |
 | 14 | Settings-Seite (Profil, Passwort) | Offen | Niedrig |
-| 15 | PostgreSQL Produktions-DB wieder aktivieren | Offen | Hoch |
 
 ## Erledigt
 | # | Aufgabe | Datum |

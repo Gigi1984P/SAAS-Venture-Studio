@@ -8,7 +8,7 @@
 | **Pfad** | `/opt/data/projects/saas-venture-studio` |
 | **Git-Branch** | main |
 | **Erstellt** | 2026-09-06 |
-| **Status** | In Entwicklung (SQLite Dev-DB) |
+| **Status** | In Entwicklung (PostgreSQL aktiv) |
 | **Vorbild** | `/opt/data/projects/wowendo` |
 
 ## Zweck
