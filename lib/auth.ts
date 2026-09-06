@@ -14,33 +14,50 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Passwort", type: "password" },
       },
       async authorize(credentials) {
+        // Debug-Logging für Vercel
+        console.log("[AUTH] Attempt login for:", credentials?.email);
+
         if (!credentials?.email || !credentials?.password) {
+          console.log("[AUTH] Missing credentials");
           return null;
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        });
+        try {
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email },
+          });
 
-        if (!user || !user.password) {
+          if (!user) {
+            console.log("[AUTH] User not found:", credentials.email);
+            return null;
+          }
+
+          if (!user.password) {
+            console.log("[AUTH] User has no password");
+            return null;
+          }
+
+          const isValid = await bcrypt.compare(
+            credentials.password,
+            user.password
+          );
+
+          if (!isValid) {
+            console.log("[AUTH] Invalid password for:", credentials.email);
+            return null;
+          }
+
+          console.log("[AUTH] Login successful:", credentials.email);
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            image: user.image,
+          };
+        } catch (error) {
+          console.error("[AUTH] Error:", error);
           return null;
         }
-
-        const isValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
-
-        if (!isValid) {
-          return null;
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.image,
-        };
       },
     }),
   ],
