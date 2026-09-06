@@ -1,0 +1,21 @@
+import type { Metadata } from "next";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "SAAS Venture Studio",
+  description: "Venture-Studio-Plattform für SaaS-Produkte",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="de">
+      <body className="min-h-screen bg-background font-sans antialiased">
+        {children}
+      </body>
+    </html>
+  );
+}
