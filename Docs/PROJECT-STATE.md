@@ -6,9 +6,9 @@
 | **Name** | SAAS Venture Studio |
 | **Slug** | saas-venture-studio-2 |
 | **Pfad** | `/opt/data/projects/saas-venture-studio` |
-| **Git-Branch** | master (initial) |
+| **Git-Branch** | main |
 | **Erstellt** | 2026-09-06 |
-| **Status** | Initialisierung |
+| **Status** | In Entwicklung (SQLite Dev-DB) |
 | **Vorbild** | `/opt/data/projects/wowendo` |
 
 ## Zweck
