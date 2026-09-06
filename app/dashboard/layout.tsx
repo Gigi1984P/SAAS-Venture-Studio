@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { signOut } from "next-auth/react";
+import { LogoutButton } from "../../components/logout-button";
 
 export default async function DashboardLayout({
   children,
@@ -57,20 +57,7 @@ export default async function DashboardLayout({
           <Link href="/dashboard" className="text-lg font-bold lg:hidden">
             SVS
           </Link>
-          <form
-            action={async () => {
-              "use server";
-              const { signOut } = await import("next-auth/react");
-              await signOut({ redirect: true, callbackUrl: "/" });
-            }}
-          >
-            <button
-              type="submit"
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              Abmelden
-            </button>
-          </form>
+          <LogoutButton />
         </header>
         <main className="flex-1 p-6">{children}</main>
       </div>

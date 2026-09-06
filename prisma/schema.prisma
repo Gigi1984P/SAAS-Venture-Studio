@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -69,6 +69,7 @@ model User {
   sessions     Session[]
   memberships  Member[]
   ownedOrgs    Organization[] @relation("OwnedOrganizations")
+  ventures     Venture[]
 
   @@map("users")
 }
@@ -145,4 +146,26 @@ model RolePermission {
 
   @@unique([roleId, permissionId])
   @@map("role_permissions")
+}
+
+// ============================================================
+// VENTURES
+// ============================================================
+
+model Venture {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  status      String   @default("idea") // idea, validation, mvp, growth, scale
+  website     String?
+  github      String?
+  mrr         Int      @default(0)
+  ownerId     String   @map("owner_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@map("ventures")
 }
