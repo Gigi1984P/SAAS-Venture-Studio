@@ -201,6 +201,12 @@ NEXT_TELEMETRY_DISABLED="1"
 ## Nächste Schritte
 Siehe `TODOS.md`
 
+## GitHub Push
+- **Remote:** `git@github.com:Gigi1984P/SAAS-Venture-Studio.git`
+- **SSH Key:** `~/.ssh/saas-venture-studio` (ED25519)
+- **Public Key Fingerprint:** SHA256:JLulzj6SY3RdNAwT3xlmsqZX5Y2nMqQzJVtHAAjVLvg
+- **Push Command:** `GIT_SSH_COMMAND="ssh -i ~/.ssh/saas-venture-studio -o IdentitiesOnly=yes" git push`
+
 ## Notizen
 - Tech-Stack 1:1 aus Wowendo übernommen — bewährt, produktionsreif
 - Sentry statt OpenTelemetry gewählt — mehr direkter Kundennutzen für monolithisches Next.js

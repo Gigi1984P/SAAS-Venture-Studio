@@ -10,7 +10,7 @@
 | 5 | Erste Domain-Models implementieren | ✅ Erledigt (Basis) | Mittel |
 | 6 | DSGVO/GDPR-Grundgerüst (Consent, AVVs, Privacy Policy) | 🔄 Teilweise | Mittel |
 | 7 | CI/CD Pipeline (Vercel Deploy) | Offen | Mittel |
-| 8 | GitHub-Push einrichten | 🔄 In Arbeit | Hoch |
+| 8 | GitHub-Push einrichten | ✅ Erledigt | Hoch |
 | 9 | Cookie-Consent-Banner | Offen | Hoch |
 | 10 | Datenschutzerklärung | Offen | Hoch |
 | 11 | Impresum | Offen | Mittel |
