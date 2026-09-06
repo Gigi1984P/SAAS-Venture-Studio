@@ -16,7 +16,8 @@
 | 11 | Datenschutzerklärung | Offen | Hoch |
 | 12 | Impressum | Offen | Mittel |
 | 13 | Venture Detail-Seite (Inline-Editing) | Offen | Mittel |
-| 14 | Settings-Seite (Profil, Passwort) | Offen | Niedrig |
+| 14 | Superadmin-RBAC-System | ✅ Erledigt | Hoch |
+| 15 | Settings-Seite (Profil, Passwort) | Offen | Niedrig |
 
 ## Erledigt
 | # | Aufgabe | Datum |
