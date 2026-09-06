@@ -1,11 +1,11 @@
 import { NextAuthOptions } from "next-auth";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  // Kein PrismaAdapter bei CredentialsProvider + JWT-Strategy
+  // Der Adapter versucht Sessions in die DB zu schreiben, was mit JWT nicht funktioniert
   providers: [
     CredentialsProvider({
       name: "credentials",
