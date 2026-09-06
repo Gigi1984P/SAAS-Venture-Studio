@@ -3,6 +3,7 @@ import { authOptions } from "../../lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { LogoutButton } from "../../components/logout-button";
+import { prisma } from "../../lib/prisma";
 
 export default async function DashboardLayout({
   children,
@@ -14,6 +15,18 @@ export default async function DashboardLayout({
   if (!session) {
     redirect("/auth/login");
   }
+
+  // User mit Rolle laden
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    include: {
+      memberships: {
+        include: { role: true },
+      },
+    },
+  });
+
+  const role = user?.memberships[0]?.role;
 
   return (
     <div className="flex min-h-screen">
@@ -43,6 +56,14 @@ export default async function DashboardLayout({
           >
             Einstellungen
           </Link>
+          {role?.name === "superadmin" && (
+            <Link
+              href="/admin/users"
+              className="flex items-center rounded-md px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700"
+            >
+              Admin
+            </Link>
+          )}
         </nav>
         <div className="border-t p-4">
           <div className="text-xs text-muted-foreground">
