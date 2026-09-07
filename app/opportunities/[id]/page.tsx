@@ -32,11 +32,13 @@ type Opp = {
   gates: Gate[];
   assumptions: Assumption[];
   experiments: Experiment[];
+  competitors: Competitor[];
 };
 
 type Gate = { id: string; gateType: string; requirement: string | null; passed: boolean; passedAt: string | null; };
 type Assumption = { id: string; code: string; statement: string; category: string; confidence: number; status: string; nextExperiment: string | null; estimatedCost: number | null; };
 type Experiment = { id: string; hypothesis: string; method: string; status: string; sampleTarget: number; startDate: string | null; conclusion: string | null; };
+type Competitor = { id: string; name: string; type: string; website: string | null; description: string | null; pricing: string | null; strengths: string | null; weaknesses: string | null; gaps: string | null; createdAt: string; };
 
 export default function OpportunityDetailPage() {
   const router = useRouter();
@@ -128,6 +130,7 @@ export default function OpportunityDetailPage() {
             { id: "assumptions", label: `Assumptions (${opp.assumptions?.length || 0})` },
             { id: "experiments", label: `Experiments (${opp.experiments?.length || 0})` },
             { id: "gates", label: `Gates (${passedGates}/${totalGates})` },
+            { id: "competitors", label: `Competitors (${opp.competitors?.length || 0})` },
           ].map(tab => (
             <button
               key={tab.id}
@@ -402,6 +405,57 @@ export default function OpportunityDetailPage() {
             </div>
           </div>
         )}
+        {/* COMPETITORS */}
+        {activeTab === "competitors" && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold">Competitor Research</h2>
+              <button
+                onClick={() => router.push(`/opportunities/${id}/competitors`)}
+                className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                + Competitor hinzufügen
+              </button>
+            </div>
+
+            {opp.competitors?.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">Noch keine Competitors erfasst.</div>
+            ) : (
+              <div className="space-y-3">
+                {opp.competitors.map(c => (
+                  <div key={c.id} className="rounded-lg border bg-card p-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="font-medium">{c.name}</div>
+                        <div className="text-sm text-muted-foreground mt-1">
+                          {c.type} {c.website && <>• <a href={c.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Website</a></>}
+                        </div>
+                      </div>
+                      <span className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 capitalize">{c.type}</span>
+                    </div>
+                    {c.description && <p className="mt-2 text-sm text-muted-foreground">{c.description}</p>}
+                    {c.pricing && (
+                      <div className="mt-2 text-sm">
+                        <span className="font-medium">Pricing:</span> {c.pricing}
+                      </div>
+                    )}
+                    {(c.strengths || c.weaknesses) && (
+                      <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                        {c.strengths && <div><span className="font-medium text-green-700">Strengths:</span> <span className="text-muted-foreground">{c.strengths}</span></div>}
+                        {c.weaknesses && <div><span className="font-medium text-red-700">Weaknesses:</span> <span className="text-muted-foreground">{c.weaknesses}</span></div>}
+                      </div>
+                    )}
+                    {c.gaps && (
+                      <div className="mt-2 text-sm">
+                        <span className="font-medium">Gap:</span> <span className="text-muted-foreground">{c.gaps}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Convert Button */}
@@ -411,6 +465,11 @@ export default function OpportunityDetailPage() {
         >
           Zu Venture konvertieren
         </Link>
+          <Link href={`/opportunities/${id}/competitors`}
+            className="inline-flex h-10 items-center rounded-md border border-input bg-background px-6 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+          >
+            Competitor Research →
+          </Link>
       </div>
     </div>
   );

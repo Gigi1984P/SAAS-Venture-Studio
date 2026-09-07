@@ -45,6 +45,12 @@ export default async function DashboardLayout({
             Dashboard
           </Link>
           <Link
+            href="/dashboard/radar"
+            className="flex items-center rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+          >
+            Radar
+          </Link>
+          <Link
             href="/ventures"
             className="flex items-center rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
           >
@@ -55,6 +61,12 @@ export default async function DashboardLayout({
             className="flex items-center rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
           >
             Opportunities
+          </Link>
+          <Link
+            href="/dashboard/agents"
+            className="flex items-center rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+          >
+            Agents
           </Link>
           <Link
             href="/settings"

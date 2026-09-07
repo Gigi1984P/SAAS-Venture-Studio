@@ -473,3 +473,135 @@ model ScoreComponent {
 
   @@map("score_components")
 }
+
+// ============================================================
+// TASK QUEUE (Orchestrator)
+// ============================================================
+
+model Task {
+  id              String      @id @default(cuid())
+  type            String      // "market_research", "competitor_research", "fact_check", "critic_review", "business_analysis"
+  entityId        String      @map("entity_id") // opportunity_id oder venture_id
+  entityType      String      @map("entity_type") // "opportunity" oder "venture"
+  agent           String      // Welcher Agent soll das übernehmen
+  priority        Int         @default(5) // 1-10
+  status          String      @default("queued") // queued, running, completed, failed, retry, human_review
+  attempts        Int         @default(0)
+  maxAttempts     Int         @default(3) @map("max_attempts")
+  
+  // Ergebnis
+  result          Json?       // Agent-Output
+  error           String?     // Fehlermeldung bei failed
+  
+  // Budget
+  estimatedCost   Int?        @map("estimated_cost") // in EUR
+  actualCost      Int?        @map("actual_cost")
+  
+  // Zeiten
+  startedAt       DateTime?   @map("started_at")
+  completedAt     DateTime?   @map("completed_at")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  
+  // Verknüpfungen
+  agentRuns       AgentRun[]
+
+  @@map("tasks")
+}
+
+// ============================================================
+// AGENT ARCHITECTUR
+// ============================================================
+
+model AgentRun {
+  id              String      @id @default(cuid())
+  taskId          String      @map("task_id")
+  agentType       String      @map("agent_type") // "market_researcher", "competitor_researcher", "fact_checker", "critic_reviewer", "business_strategist", "financial_analyst"
+  
+  // Input/Output
+  input           Json?       // Was der Agent bekommen hat
+  output          Json?       // Was der Agent geliefert hat
+  
+  // Status
+  status          String      @default("running") // running, completed, failed
+  
+  // Metriken
+  tokensUsed      Int?        @map("tokens_used")
+  runtimeSeconds  Int?        @map("runtime_seconds")
+  cost            Float?      // Kosten für diesen Run
+  
+  startedAt       DateTime    @default(now()) @map("started_at")
+  completedAt     DateTime?   @map("completed_at")
+  
+  // Verknüpfungen
+  task            Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  messages        AgentMessage[]
+
+  @@map("agent_runs")
+}
+
+model AgentMessage {
+  id              String      @id @default(cuid())
+  agentRunId      String      @map("agent_run_id")
+  role            String      // "system", "user", "assistant", "tool"
+  content         String
+  toolCalls       Json?       @map("tool_calls") // Falls Tool Calls
+  toolResults     Json?       @map("tool_results") // Falls Tool Results
+  
+  createdAt       DateTime    @default(now()) @map("created_at")
+  
+  agentRun        AgentRun    @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
+
+  @@map("agent_messages")
+}
+
+// ============================================================
+// RESEARCH BUDGET
+// ============================================================
+
+model ResearchBudget {
+  id              String      @id @default(cuid())
+  opportunityId   String?     @map("opportunity_id")
+  
+  // Budget
+  phase           String      // "quick_scan", "deep_research", "validation"
+  maxRuntime      Int         @map("max_runtime") // in Minuten
+  maxAgentRuns    Int         @map("max_agent_runs")
+  minimumEvidence Int         @map("minimum_evidence")
+  budgetEur       Int         @map("budget_eur")
+  spentEur        Int         @default(0) @map("spent_eur")
+  
+  // Status
+  status          String      @default("active") // active, exhausted, paused
+  
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  @@map("research_budgets")
+}
+
+// ============================================================
+// DECISIONS (Kill / Watch / Experiment)
+// ============================================================
+
+model Decision {
+  id              String      @id @default(cuid())
+  opportunityId   String      @map("opportunity_id")
+  
+  type            String      // "kill", "watch", "experiment", "human_gate", "build_approved"
+  reason          String      // Begründung
+  
+  // Trigger
+  scoreA          Int?        @map("score_a")
+  scoreB          Int?        @map("score_b")
+  confidence      Float?
+  evidenceLevel   Int?        @map("evidence_level")
+  
+  // Human Review
+  reviewedBy      String?     @map("reviewed_by")
+  reviewedAt      DateTime?   @map("reviewed_at")
+  approved        Boolean     @default(false)
+  
+  createdAt       DateTime    @default(now()) @map("created_at")
+
+  @@map("decisions")
+}

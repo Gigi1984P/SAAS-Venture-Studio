@@ -21,7 +21,7 @@ export async function GET(
         gates: { orderBy: { gateType: "asc" } },
         assumptions: { orderBy: { code: "asc" } },
         experiments: { orderBy: { createdAt: "desc" } },
-        ventures: { select: { id: true, name: true, slug: true, status: true } },
+        competitors: true,
       },
     });
 

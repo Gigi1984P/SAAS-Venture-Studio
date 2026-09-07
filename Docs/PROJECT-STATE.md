@@ -198,6 +198,20 @@ NEXT_TELEMETRY_DISABLED="1"
 - [ ] Cookie-Einstellungen (granular, nicht nur On/Off)
 - [ ] IP-Anonymisierung (Middleware, letztes Oktett entfernt)
 
+## Features
+
+| Feature | Status |
+|---------|--------|
+| **Auth** | ✅ NextAuth.js (Credentials) + JWT |
+| **RBAC** | ✅ Superadmin/Admin/Member/Viewer mit Permissions |
+| **Ventures** | ✅ CRUD + Status-Pipeline (idea → sunset) |
+| **Opportunity Engine** | ✅ Complete: Two-Faktor Scoring, Assumptions, Experiments, Pain Graph, Gates |
+| **Agent System** | ✅ Task Queue, Agent Runs, Messages, Orchestrator |
+| **Radar Dashboard** | ✅ Score A/Fit/Conf sortierbare Tabelle |
+| **Competitor Research** | ✅ Competitor Analysis + Gaps |
+| **Research Budget** | ✅ Budget-Tracking pro Phase |
+| **Einstellungen** | ✅ Profil-Edit + Passwort-Änderung |
+
 ## Nächste Schritte
 Siehe `TODOS.md`
 
