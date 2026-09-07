@@ -18,7 +18,7 @@
 | 13 | Venture Detail-Seite (Inline-Editing) | Offen | Mittel |
 | 14 | Superadmin-RBAC-System | ✅ Erledigt | Hoch |
 | 15 | Settings-Seite (Profil, Passwort) | ✅ Erledigt | Niedrig |
-| 16 | Opportunity Engine (Discovery + Scoring + Gates) | ✅ Erledigt | Hoch |
+|| 16 | Opportunity Engine (Discovery + Scoring + Gates + Assumptions + Experiments + Pain Graph) | ✅ Erledigt | Hoch |
 | 17 | Venture Detail-Seite (Inline-Editing) | Offen | Mittel |
 | 18 | Cookie-Consent-Banner | Offen | Hoch |
 | 19 | Datenschutzerklärung | Offen | Hoch |
