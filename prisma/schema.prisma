@@ -153,19 +153,118 @@ model RolePermission {
 // ============================================================
 
 model Venture {
-  id          String   @id @default(cuid())
-  name        String
-  slug        String   @unique
-  description String?
-  status      String   @default("idea") // idea, validation, mvp, growth, scale
-  website     String?
-  github      String?
-  mrr         Int      @default(0)
-  ownerId     String   @map("owner_id")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id            String        @id @default(cuid())
+  name          String
+  slug          String        @unique
+  description   String?
+  status        String        @default("idea") // idea, validation, mvp, growth, scale, sunset
+  website       String?
+  github        String?
+  mrr           Int           @default(0)
+  ownerId       String        @map("owner_id")
+  opportunityId String?       @map("opportunity_id")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
 
-  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  owner         User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  opportunity   Opportunity?  @relation(fields: [opportunityId], references: [id])
+  events        VentureEvent[]
 
   @@map("ventures")
+}
+
+// ============================================================
+// OPPORTUNITY ENGINE (Discovery)
+// ============================================================
+
+model Opportunity {
+  id            String     @id @default(cuid())
+  title         String
+  description   String?
+  problem       String?    // Konkretes Problem
+  solution      String?    // Konkrete Lösungsidee
+  targetGroup   String?    @map("target_group")
+  businessModel String?    @map("business_model")
+  
+  // Scoring (1-10)
+  painScore     Int        @default(0) @map("pain_score")
+  marketScore   Int        @default(0) @map("market_score")
+  feasScore     Int        @default(0) @map("feas_score")
+  timingScore     Int        @default(0) @map("timing_score")
+  
+  // Berechneter Gesamtscore
+  totalScore    Int        @default(0) @map("total_score")
+  
+  // Marktdaten
+  marketSize    String?    @map("market_size")
+  competition   String?    // "low", "medium", "high"
+  mrrEstimate   Int?       @map("mrr_estimate")
+  
+  // Status Pipeline
+  status        String     @default("discovered") // discovered, validated, building, parked, killed
+  priority      String     @default("medium") // low, medium, high, urgent
+  
+  // Quelle
+  source        String     @default("manual") // manual, reddit, github, producthunt, trend
+  sourceUrl     String?    @map("source_url")
+  
+  // Tags
+  tags          String?    // JSON-Array als String
+  
+  // Verknüpfungen
+  signals       Signal[]
+  ventures      Venture[]
+  gates         OpportunityGate[]
+  
+  // Metadaten
+  createdBy     String     @map("created_by")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  @@map("opportunities")
+}
+
+model Signal {
+  id            String      @id @default(cuid())
+  opportunityId String      @map("opportunity_id")
+  type          String      // "trend", "pain_point", "competitor", "keyword", "pricing"
+  title         String
+  description   String?
+  source        String
+  sourceUrl     String?     @map("source_url")
+  data          Json?
+  confidence    Float       @default(0.5)
+  fetchedAt     DateTime    @default(now()) @map("fetched_at")
+
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("signals")
+}
+
+model OpportunityGate {
+  id              String      @id @default(cuid())
+  opportunityId   String      @map("opportunity_id")
+  gateType        String      @map("gate_type")
+  requirement     String?
+  evidence        String?
+  passed          Boolean     @default(false)
+  passedAt        DateTime?   @map("passed_at")
+  notes           String?
+
+  opportunity     Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("opportunity_gates")
+}
+
+model VentureEvent {
+  id          String   @id @default(cuid())
+  ventureId   String   @map("venture_id")
+  type        String
+  payload     Json
+  actorId     String   @map("actor_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  venture     Venture  @relation(fields: [ventureId], references: [id], onDelete: Cascade)
+
+  @@map("venture_events")
 }

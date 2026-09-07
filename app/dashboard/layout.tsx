@@ -51,6 +51,12 @@ export default async function DashboardLayout({
             Ventures
           </Link>
           <Link
+            href="/opportunities"
+            className="flex items-center rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+          >
+            Opportunities
+          </Link>
+          <Link
             href="/settings"
             className="flex items-center rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
           >
