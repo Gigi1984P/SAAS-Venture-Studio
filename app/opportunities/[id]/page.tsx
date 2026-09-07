@@ -1137,6 +1137,20 @@ export default function OpportunityDetailPage() {
         >
           🤖 Orchestrator starten
         </button>
+        <button
+          onClick={async () => {
+            if (!confirm("🔍 Web-Research starten? Scrapt Reddit, Foren, News nach Pain Points.")) return;
+            const res = await fetch(`/api/opportunities/${id}/research`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+            if (res.ok) {
+              const data = await res.json();
+              alert(`Research abgeschlossen! ${data.painSignalsFound} Pain Signals gefunden, ${data.signalsCreated} Signals erstellt.`);
+              fetchPainData();
+            }
+          }}
+          className="inline-flex h-10 items-center rounded-md border border-green-200 bg-green-50 px-6 text-sm font-medium text-green-700 hover:bg-green-100"
+        >
+          🔍 Web-Research starten
+        </button>
       </div>
     </div>
   );
