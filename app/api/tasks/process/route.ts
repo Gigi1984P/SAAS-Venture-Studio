@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { runAgent, AgentTask } from "@/lib/agents/index";
-import { scrapeUrl, searchWeb, extractPainPoints } from "@/lib/agents/tools";
+import { runIntelligenceGathering, extractPainPoints } from "@/lib/agents/tools";
 
 // POST /api/tasks/process
 // Wird alle 5 Minuten via Vercel Cron aufgerufen
@@ -56,27 +56,15 @@ export async function POST(_req: Request) {
           include: { signals: true, painSignals: true },
         });
         
-        // Erstelle Agent Input
-        const agentTask: AgentTask = {
-          id: task.id,
-          agentType: task.agent as any,
-          input: {
-            title: opp?.title,
-            description: opp?.description,
-            pain: opp?.pain,
-            targetGroup: opp?.targetGroup,
-          },
-        };
-        
-        // Führe Agent aus
-        const result = await runAgent(agentTask);
-        
-        // Optional: Web Scraping für Market Researcher
-        if (task.agent === "market_researcher" && opp?.title) {
-          console.log(`[TASK WORKER] Scraping web for: ${opp.title}`);
-          const webResults = await searchWeb(`${opp.title} ${opp.targetGroup || "saas"} reviews pain points`);
+        if (task.agent === "market_researcher" && opp) {
+          // Nutze die Intelligence Engine (alle konfigurierten Quellen)
+          console.log(`[TASK WORKER] Running Intelligence Gathering for: ${opp.title}`);
+          const { sources, stats } = await runIntelligenceGathering(
+            `${opp.title} ${opp.targetGroup || "saas"} pain points reviews`,
+            opp.industryId || undefined
+          );
           
-          for (const source of webResults.slice(0, 3)) {
+          for (const source of sources.slice(0, 3)) {
             const pains = extractPainPoints(source.text);
             
             // Speichere als Pain Signals
@@ -84,7 +72,7 @@ export async function POST(_req: Request) {
               await prisma.painSignal.create({
                 data: {
                   opportunityId: task.entityId,
-                  source: "web",
+                  source: new URL(source.url).hostname,
                   sourceUrl: source.url,
                   rawText: pain.pain,
                   pain: pain.pain,
@@ -108,29 +96,53 @@ export async function POST(_req: Request) {
               },
             });
           }
+          
+          await prisma.task.update({
+            where: { id: task.id },
+            data: {
+              status: "completed",
+              completedAt: new Date(),
+              result: { sources: sources.length, stats, taskType: "intelligence_gathering" } as any,
+              actualCost: sources.length * 0.5, // Mock Kosten
+            },
+          });
+          
+        } else {
+          // Standard Agent-Ausführung
+          const agentTask: AgentTask = {
+            id: task.id,
+            agentType: task.agent as any,
+            input: {
+              title: opp?.title,
+              description: opp?.description,
+              pain: opp?.pain,
+              targetGroup: opp?.targetGroup,
+            },
+          };
+          
+          const result = await runAgent(agentTask);
+          
+          await prisma.task.update({
+            where: { id: task.id },
+            data: {
+              status: result.status === "completed" ? "completed" : "failed",
+              completedAt: new Date(),
+              result: result.output as any,
+              error: result.status === "failed" ? JSON.stringify(result.output.error) : null,
+              actualCost: result.runtimeSeconds ? Math.ceil(result.runtimeSeconds / 10) : 0,
+            },
+          });
         }
-        
-        // Update Task Status
-        await prisma.task.update({
-          where: { id: task.id },
-          data: {
-            status: result.status === "completed" ? "completed" : "failed",
-            completedAt: new Date(),
-            result: result.output as any,
-            error: result.status === "failed" ? JSON.stringify(result.output.error) : null,
-            actualCost: result.runtimeSeconds ? Math.ceil(result.runtimeSeconds / 10) : 0, // Mock Kosten
-          },
-        });
         
         // Update Budget
         if (budgets.length > 0) {
           await prisma.researchBudget.updateMany({
             where: { opportunityId: task.entityId, status: "active" },
-            data: { spentEur: { increment: result.runtimeSeconds ? Math.ceil(result.runtimeSeconds / 10) : 0 } },
+            data: { spentEur: { increment: 1 } },
           });
         }
         
-        results.push({ taskId: task.id, status: result.status });
+        results.push({ taskId: task.id, status: "completed" });
         
       } catch (taskError) {
         console.error(`[TASK WORKER] Task ${task.id} failed:`, taskError);
@@ -155,7 +167,7 @@ export async function POST(_req: Request) {
 }
 
 // GET /api/tasks/process
-// Manueller Trigger für Task Processing
+// Manueller Trigger fuer Task Processing
 export async function GET() {
   return POST(new Request("http://localhost"));
 }

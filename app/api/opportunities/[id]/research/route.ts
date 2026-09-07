@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { searchWeb, extractPainPoints } from "@/lib/agents/tools";
+import { runIntelligenceGathering, extractPainPoints } from "@/lib/agents/tools";
 
 // POST /api/opportunities/[id]/research
-// Startet manuelle Research mit Web Scraping
+// Startet manuelle Research mit Web Scraping über konfigurierte Quellen
 export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -40,15 +40,16 @@ export async function POST(
       },
     });
 
-    // Führe Web-Suche durch
+    // Führe Intelligence Gathering durch (über alle konfigurierten Quellen)
     const searchQuery = query || `${opp.title} ${opp.targetGroup || "saas"} pain points reviews`;
-    console.log(`[RESEARCH] Searching: ${searchQuery}`);
+    console.log(`[RESEARCH] Intelligence Gathering: ${searchQuery}`);
     
-    const webResults = await searchWeb(searchQuery);
+    const { sources, stats } = await runIntelligenceGathering(searchQuery, opp.industryId || undefined);
+    
     const allPains: any[] = [];
     const allSignals: any[] = [];
 
-    for (const source of webResults.slice(0, 5)) {
+    for (const source of sources) {
       const pains = extractPainPoints(source.text);
       
       // Speichere Pain Signals
@@ -95,10 +96,11 @@ export async function POST(
         status: "completed",
         completedAt: new Date(),
         result: {
-          sourcesScraped: webResults.length,
+          sourcesScraped: sources.length,
           painSignalsFound: allPains.length,
           signalsCreated: allSignals.length,
           query: searchQuery,
+          stats,
         } as any,
       },
     });
@@ -106,10 +108,11 @@ export async function POST(
     return NextResponse.json({
       message: "Research abgeschlossen",
       taskId: task.id,
-      sourcesScraped: webResults.length,
+      sourcesScraped: sources.length,
       painSignalsFound: allPains.length,
       signalsCreated: allSignals.length,
       query: searchQuery,
+      stats,
       painSignals: allPains,
       signals: allSignals,
     });
@@ -139,8 +142,6 @@ async function runAutoClustering(opportunityId: string) {
     if (signals.length < 2) continue;
     
     const avgIntensity = signals.reduce((s, sig) => s + (sig.painIntensity || 0), 0) / signals.length;
-    const workarounds = [...new Set(signals.map(s => s.workaround).filter(Boolean))];
-    const consequences = [...new Set(signals.map(s => s.consequence).filter(Boolean))];
     
     const cluster = await prisma.painCluster.create({
       data: {
@@ -149,8 +150,6 @@ async function runAutoClustering(opportunityId: string) {
         description: `Auto-clustered from ${signals.length} signals`,
         signalCount: signals.length,
         avgIntensity,
-        topWorkarounds: JSON.stringify(workarounds.slice(0, 3)),
-        topConsequences: JSON.stringify(consequences.slice(0, 3)),
       },
     });
     

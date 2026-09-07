@@ -325,9 +325,11 @@ model PainSignal {
   
   // Clustering
   clusterId     String?     @map("cluster_id")
+  sourceId      String?     @map("source_id") // Link zu ResearchSource
   
   opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
   cluster       PainCluster? @relation(fields: [clusterId], references: [id])
+  researchSource ResearchSource? @relation("SourcePainSignals", fields: [sourceId], references: [id])
 
   @@map("pain_signals")
 }
@@ -452,6 +454,7 @@ model Persona {
 model Signal {
   id            String      @id @default(cuid())
   opportunityId String      @map("opportunity_id")
+  sourceId      String?     @map("source_id") // Link zu ResearchSource
   type          String      // "trend", "pain_point", "competitor", "keyword", "pricing"
   title         String
   description   String?
@@ -482,6 +485,7 @@ model Signal {
   fetchedAt     DateTime    @default(now()) @map("fetched_at")
 
   opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  researchSource ResearchSource? @relation("SourceSignals", fields: [sourceId], references: [id])
 
   @@map("signals")
 }
@@ -798,5 +802,56 @@ model NegativeEvidence {
   opportunity     Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
 
   @@map("negative_evidence")
+}
+
+// ============================================================
+// RESEARCH SOURCES (Konfigurierbare Quellen fuer Intelligence Engine)
+// ============================================================
+
+model ResearchSource {
+  id              String      @id @default(cuid())
+  
+  name            String      // "Reddit", "G2", "HackerNews", "TechCrunch"
+  slug            String      @unique // "reddit", "g2", "hackernews"
+  type            String      // "forum", "review", "news", "blog", "social", "api"
+  
+  baseUrl         String      @map("base_url") // "https://www.reddit.com"
+  searchUrl       String?     @map("search_url") // "https://www.reddit.com/search/?q={query}"
+  
+  isActive        Boolean     @default(true) @map("is_active")
+  priority        Int         @default(5) // 1-10 (hoeher = wichtiger)
+  
+  // Scraping Konfiguration
+  scrapeMethod    String      @default("browser") @map("scrape_method") // "browser", "api", "rss", "sitemap"
+  selectorTitle   String?     @map("selector_title") // CSS Selector fuer Titel
+  selectorContent String?     @map("selector_content") // CSS Selector fuer Content
+  selectorAuthor  String?     @map("selector_author") // CSS Selector fuer Autor
+  selectorDate    String?     @map("selector_date") // CSS Selector fuer Datum
+  
+  // Rate Limiting
+  rateLimitRequests Int       @default(10) @map("rate_limit_requests") // Requests pro Minute
+  rateLimitWindow   Int       @default(60) @map("rate_limit_window") // Fenster in Sekunden
+  
+  // API Konfiguration (falls API-basiert)
+  apiKey          String?     @map("api_key")
+  apiEndpoint     String?     @map("api_endpoint")
+  apiHeaders      Json?       @map("api_headers")
+  
+  // Kategorien (komma-separiert)
+  categories      String?     // "saas, property-management, maintenance"
+  
+  // Statistiken
+  lastScrapedAt   DateTime?   @map("last_scraped_at")
+  totalScrapes    Int         @default(0) @map("total_scrapes")
+  avgQualityScore Float?      @map("avg_quality_score")
+  
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  
+  // Relationen
+  signals         Signal[]    @relation("SourceSignals")
+  painSignals     PainSignal[] @relation("SourcePainSignals")
+  
+  @@map("research_sources")
 }
 
