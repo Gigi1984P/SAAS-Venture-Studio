@@ -20,3 +20,19 @@
 
   "status": "running"
 }
+
+
+
+
+
+Dann landen die Ergebnisse wieder im Evidence Store.
+
+Experiment
+    ↓
+Evidence
+    ↓
+Confidence changes
+    ↓
+Score recalculated
+    ↓
+Next experiment
