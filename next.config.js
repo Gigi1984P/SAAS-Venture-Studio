@@ -9,7 +9,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Cheerio als External (wird nur Server-seitig verwendet)
+  // Playwright und andere Server-only Module als External markieren
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
@@ -17,7 +17,11 @@ const nextConfig = {
         fs: false,
         net: false,
         tls: false,
+        child_process: false,
       };
+    } else {
+      // Markiere Playwright als External (wird nur Server-seitig verwendet)
+      config.externals = [...(config.externals || []), "playwright-core", "chromium"];
     }
     return config;
   },
