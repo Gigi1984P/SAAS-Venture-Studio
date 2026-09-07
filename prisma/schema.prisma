@@ -238,6 +238,13 @@ model Opportunity {
   confidence        Float   @default(0.0) // 0.0 - 1.0
   evidenceLevel     Int     @default(0) @map("evidence_level") // 0-8
   biggestUncertainty String? @map("biggest_uncertainty")
+
+  // Granular Validation Scores (0.0 - 1.0)
+  problemValidation    Float   @default(0.0) @map("problem_validation")
+  buyerValidation      Float   @default(0.0) @map("buyer_validation")
+  pricingValidation    Float   @default(0.0) @map("pricing_validation")
+  distributionValidation Float @default(0.0) @map("distribution_validation")
+  solutionValidation   Float   @default(0.0) @map("solution_validation")
   
   // Marktdaten
   marketSize    String?    @map("market_size")
@@ -257,8 +264,15 @@ model Opportunity {
   sourceUrl     String?    @map("source_url")
   tags          String?
   
+  // Evidence Engine
+  supportingEvidenceCount   Int     @default(0) @map("supporting_evidence_count")
+  contradictingEvidenceCount Int    @default(0) @map("contradicting_evidence_count")
+
   // Verknüpfungen
   signals       Signal[]
+  painSignals   PainSignal[]
+  painClusters  PainCluster[]
+  claims        OpportunityClaim[]
   ventures      Venture[]
   gates         OpportunityGate[]
   assumptions   Assumption[]
@@ -267,7 +281,9 @@ model Opportunity {
   scoreComponents ScoreComponent[]
   stopConditions StopCondition[]
   researchBudgets ResearchBudget[]
-  
+  negativeEvidence NegativeEvidence[]
+  artifacts     Artifact[]
+
   // Metadaten
   createdBy     String     @map("created_by")
   createdAt     DateTime   @default(now()) @map("created_at")
@@ -277,6 +293,128 @@ model Opportunity {
   persona       Persona?    @relation(fields: [personaId], references: [id])
 
   @@map("opportunities")
+}
+
+// ============================================================
+// PAIN SIGNALS (Spezialisierte Signale für Pain-Points)
+// ============================================================
+
+model PainSignal {
+  id            String      @id @default(cuid())
+  opportunityId String      @map("opportunity_id")
+  
+  // Quelle
+  source        String      // "reddit", "g2", "trustpilot", "forum", "interview"
+  sourceUrl     String?     @map("source_url")
+  rawText       String      @map("raw_text") // Originaler Text
+  
+  // Extrahierte Pain-Daten
+  actorRole     String?     @map("actor_role") // "Operations Manager"
+  actorIndustry String?     @map("actor_industry")
+  job           String?     // "Maintenance Coordination"
+  pain          String?     // Konkretes Problem
+  painIntensity Int?        @map("pain_intensity") // 1-10
+  workaround    String?     // Was machen sie stattdessen?
+  workaroundCost String?     @map("workaround_cost") // "5h/week", "€500/month"
+  consequence   String?     // "missed jobs", "tenant complaints"
+  
+  // Metadaten
+  confidence    Float       @default(0.5)
+  language      String      @default("en")
+  fetchedAt     DateTime    @default(now()) @map("fetched_at")
+  
+  // Clustering
+  clusterId     String?     @map("cluster_id")
+  
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  cluster       PainCluster? @relation(fields: [clusterId], references: [id])
+
+  @@map("pain_signals")
+}
+
+// ============================================================
+// PAIN CLUSTERS (Gruppierte ähnliche Pain-Signale)
+// ============================================================
+
+model PainCluster {
+  id              String      @id @default(cuid())
+  opportunityId   String      @map("opportunity_id")
+  
+  // Cluster-Daten
+  label           String      // "Fragmented maintenance intake"
+  description     String?     // Zusammenfassung
+  painSignals     PainSignal[]
+  
+  // Metriken
+  signalCount     Int         @default(0) @map("signal_count")
+  avgIntensity    Float       @default(0) @map("avg_intensity")
+  topWorkarounds  String?     @map("top_workarounds") // JSON Array
+  topConsequences String?     @map("top_consequences") // JSON Array
+  
+  // Status
+  status          String      @default("active") // active, merged, split, archived
+  
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  
+  opportunity     Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("pain_clusters")
+}
+
+// ============================================================
+// OPPORTUNITY CLAIMS (Extrahierte Claims für Evidence)
+// ============================================================
+
+model OpportunityClaim {
+  id              String      @id @default(cuid())
+  opportunityId   String      @map("opportunity_id")
+  
+  // Claim
+  claim           String      // "Property managers lose 5h/week on maintenance"
+  category        String      // "pain", "market", "competition", "buyer"
+  confidence      Float       @default(0.5)
+  
+  // Quellen
+  sourceSignalIds String?     @map("source_signal_ids") // JSON Array of IDs
+  sourceUrls      String?     @map("source_urls") // JSON Array
+  
+  // Status
+  status          String      @default("pending") // pending, verified, contradicted, uncertain
+  
+  createdAt       DateTime    @default(now()) @map("created_at")
+  
+  opportunity     Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("opportunity_claims")
+}
+
+// ============================================================
+// ARTIFACTS (Generierte Reports, Analysen, Dokumente)
+// ============================================================
+
+model Artifact {
+  id              String      @id @default(cuid())
+  opportunityId   String      @map("opportunity_id")
+  
+  // Inhalt
+  type            String      // "competitor_report", "market_analysis", "pain_summary", "experiment_report"
+  title           String
+  content         String?     // Markdown/HTML Content
+  summary         String?     // Kurze Zusammenfassung
+  
+  // Quellen
+  sourceData      Json?       @map("source_data") // Welche Daten wurden verwendet
+  
+  // Status
+  status          String      @default("draft") // draft, published, archived
+  
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  
+  opportunity     Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("artifacts")
 }
 
 // ============================================================
@@ -584,6 +722,8 @@ model ResearchBudget {
   createdAt       DateTime    @default(now()) @map("created_at")
   updatedAt       DateTime    @updatedAt @map("updated_at")
 
+  opportunity     Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
   @@map("research_budgets")
 }
 
@@ -637,6 +777,26 @@ model StopCondition {
   
   createdAt       DateTime    @default(now()) @map("created_at")
 
+  opportunity     Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
   @@map("stop_conditions")
+}
+
+// ============================================================
+// NEGATIVE EVIDENCE (Contradictions)
+// ============================================================
+
+model NegativeEvidence {
+  id              String      @id @default(cuid())
+  opportunityId   String      @map("opportunity_id")
+  claim           String      // z.B. "Property managers need another maintenance tool"
+  contradiction   String      // z.B. "existing software already solves problem"
+  source          String      // Quelle der Widerlegung
+  confidence      Float       @default(0.5) // 0.0 - 1.0
+  createdAt       DateTime    @default(now()) @map("created_at")
+
+  opportunity     Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("negative_evidence")
 }
 

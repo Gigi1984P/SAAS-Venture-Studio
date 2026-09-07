@@ -24,6 +24,8 @@ export default function AgentsPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("queue");
+  const [orchestratorRunning, setOrchestratorRunning] = useState(false);
+  const [agentRuns, setAgentRuns] = useState<any[]>([]);
 
   useEffect(() => { fetchTasks(); }, []);
 
@@ -33,6 +35,26 @@ export default function AgentsPage() {
       if (res.ok) setTasks(await res.json());
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
+  }
+
+  async function runFullOrchestrator() {
+    try {
+      // Simulierte Ausführung — in Produktion würde hier POST /api/opportunities/[id]/orchestrate aufgerufen
+      const mockRun = {
+        id: `run-${Date.now()}`,
+        agentType: "orchestrator",
+        status: "completed",
+        runtimeSeconds: 45,
+        createdAt: new Date().toISOString(),
+        output: {
+          phasesCompleted: ["discovery", "analysis", "validation", "review", "strategy"],
+          finalVerdict: "proceed",
+          summary: "All phases completed successfully"
+        }
+      };
+      setAgentRuns(prev => [mockRun, ...prev]);
+    } catch (e) { console.error(e); }
+    finally { setOrchestratorRunning(false); }
   }
 
   async function triggerTask(type: string, agent: string) {
@@ -159,16 +181,23 @@ export default function AgentsPage() {
       {activeTab === "agents" && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[
-            { name: "market_researcher", label: "Market Researcher", desc: "Analysiert Marktgroesse, Trends, Wachstum" },
-            { name: "competitor_researcher", label: "Competitor Researcher", desc: "Scrapt Pricing, Reviews, Gaps" },
-            { name: "fact_checker", label: "Fact Checker", desc: "Verifiziert Claims und Annahmen" },
-            { name: "critic_reviewer", label: "Critic Reviewer", desc: "Findet Schwachstellen und Risiken" },
-            { name: "business_strategist", label: "Business Strategist", desc: "Berechnet Scores und Empfehlungen" },
-            { name: "financial_analyst", label: "Financial Analyst", desc: "Analysiert Pricing und Unit Economics" },
+            { name: "market_researcher", label: "Market Researcher", desc: "Marktgroesse, Trends, Wachstum", model: "GPT-4o-mini", context: "128K", bestFor: "Grosse Dokumente" },
+            { name: "competitor_researcher", label: "Competitor Researcher", desc: "Pricing, Reviews, Gaps", model: "GPT-4o", context: "128K", bestFor: "Praezises JSON" },
+            { name: "fact_checker", label: "Fact Checker", desc: "Claims verifizieren", model: "Claude Haiku", context: "200K", bestFor: "Kritisches Denken" },
+            { name: "critic_reviewer", label: "Critic Reviewer", desc: "Risiken, Blind Spots finden", model: "Claude Fable", context: "1M", bestFor: "Red Team Analyse" },
+            { name: "business_strategist", label: "Business Strategist", desc: "Model, Pricing, GTM", model: "GPT-4o", context: "128K", bestFor: "Kreativitaet + Strategie" },
+            { name: "financial_analyst", label: "Financial Analyst", desc: "Unit Economics, ARR", model: "GPT-4o-mini", context: "128K", bestFor: "Schnelle Berechnungen" },
           ].map(agent => (
             <div key={agent.name} className="rounded-lg border bg-card p-4 space-y-2">
-              <div className="font-medium">{agent.label}</div>
+              <div className="flex items-center justify-between">
+                <div className="font-medium">{agent.label}</div>
+                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700">{agent.model}</span>
+              </div>
               <div className="text-sm text-muted-foreground">{agent.desc}</div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="inline-flex items-center rounded-full px-2 py-0.5 bg-gray-100 text-gray-600">{agent.context}</span>
+                <span>{agent.bestFor}</span>
+              </div>
               <button
                 onClick={() => triggerTask("research", agent.name)}
                 className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90"
@@ -181,30 +210,90 @@ export default function AgentsPage() {
       )}
 
       {activeTab === "orchestrator" && (
-        <div className="rounded-lg border bg-card p-6 space-y-4">
-          <h2 className="text-lg font-semibold">Orchestrator Rules</h2>
-          <div className="space-y-3 text-sm">
-            {[
-              { trigger: "Status = 'PAIN_VERIFIED'", action: "Enqueuet market_research + competitor_research", priority: 8 },
-              { trigger: "Status = 'MARKET_RESEARCH_DONE'", action: "Enqueuet business_analysis", priority: 7 },
-              { trigger: "Score A < 50", action: "AUTO_KILL (mit Human Review)", priority: 10 },
-              { trigger: "Score B < 50", action: "AUTO_KILL (mit Human Review)", priority: 10 },
-              { trigger: "Score A > 80 && Score B > 80", action: "Enqueuet critic_review", priority: 9 },
-              { trigger: "Confidence < 0.4", action: "RESEARCH_STOP", priority: 10 },
-            ].map((rule, i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-md border hover:bg-muted/20">
-                <div className="flex items-center gap-3">
-                  <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold">{i+1}</div>
-                  <div>
-                    <div className="font-medium">{rule.trigger}</div>
-                    <div className="text-muted-foreground">→ {rule.action}</div>
-                  </div>
-                </div>
-                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700">
-                  P{rule.priority}
-                </span>
+        <div className="space-y-6">
+          {/* Orchestrator Start */}
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-blue-900">Multi-Agent Orchestrator</h2>
+                <p className="text-sm text-blue-700 mt-1">
+                  Führt 5 Agenten sequentiell aus: Market Research → Competitor Analysis → Fact Check → Risk Review → Business Strategy
+                </p>
               </div>
-            ))}
+              <button
+                onClick={() => {
+                  setOrchestratorRunning(true);
+                  runFullOrchestrator();
+                }}
+                disabled={orchestratorRunning}
+                className="inline-flex h-10 items-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {orchestratorRunning ? "Lauft..." : "🚀 Orchestrator starten"}
+              </button>
+            </div>
+          </div>
+
+          {/* Orchestrator Rules */}
+          <div className="rounded-lg border bg-card p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Orchestrator Flow</h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              {[
+                { label: "Discovery", icon: "🔍", color: "bg-blue-100 text-blue-700", agent: "W1" },
+                { label: "Analysis", icon: "⚔️", color: "bg-purple-100 text-purple-700", agent: "W2" },
+                { label: "Validation", icon: "✅", color: "bg-green-100 text-green-700", agent: "W3" },
+                { label: "Review", icon: "⚠️", color: "bg-yellow-100 text-yellow-700", agent: "W4" },
+                { label: "Strategy", icon: "🎯", color: "bg-orange-100 text-orange-700", agent: "W5" },
+              ].map((step, i) => (
+                <div key={step.label} className="flex items-center gap-2">
+                  <div className={`flex items-center gap-2 rounded-lg px-3 py-2 ${step.color}`}>
+                    <span>{step.icon}</span>
+                    <div className="text-sm">
+                      <div className="font-medium">{step.label}</div>
+                      <div className="text-xs opacity-75">{step.agent}</div>
+                    </div>
+                  </div>
+                  {i < 4 && <span className="text-muted-foreground">→</span>}
+                </div>
+              ))}
+            </div>          
+          </div>
+
+          {/* Agent Runs History */}
+          <div className="rounded-lg border bg-card p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Recent Agent Runs</h2>
+            <div className="space-y-3">
+              {agentRuns.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">Noch keine Agent-Runs. Starte den Orchestrator oder trigger einen Agenten manuell.</div>
+              ) : (
+                agentRuns.map(run => (
+                  <div key={run.id} className="rounded-lg border p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold">
+                          {run.agentType.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="font-medium capitalize">{run.agentType.replace(/_/g, " ")}</div>
+                          <div className="text-xs text-muted-foreground">{run.runtimeSeconds}s • {new Date(run.createdAt).toLocaleString("de-DE")}</div>
+                        </div>
+                      </div>
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                        run.status === "completed" ? "bg-green-100 text-green-700" :
+                        run.status === "failed" ? "bg-red-100 text-red-700" :
+                        "bg-blue-100 text-blue-700"
+                      }`}>
+                        {run.status}
+                      </span>
+                    </div>
+                    {run.output && (
+                      <div className="mt-3 p-3 rounded-md bg-muted text-xs">
+                        <pre className="overflow-auto max-h-32">{JSON.stringify(run.output, null, 2)}</pre>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}

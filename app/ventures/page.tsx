@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 type Venture = {
   id: string;
@@ -246,7 +247,7 @@ export default function VenturesPage() {
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
                   <div className="flex items-center gap-3">
-                    <span className="text-xl font-semibold">{venture.name}</span>
+                    <Link href={`/ventures/${venture.id}`} className="text-xl font-semibold hover:text-primary hover:underline">{venture.name}</Link>
                     <span
                       className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(venture.status)}`}
                     >

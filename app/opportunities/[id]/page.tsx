@@ -34,6 +34,8 @@ type Opp = {
   economicImpact: number | null;
   existingSpend: number | null;
   reachability: number | null;
+  supportingEvidenceCount: number;
+  contradictingEvidenceCount: number;
   createdAt: string;
   gates: Gate[];
   assumptions: Assumption[];
@@ -45,7 +47,7 @@ type Opp = {
 };
 
 type Gate = { id: string; gateType: string; requirement: string | null; passed: boolean; passedAt: string | null; };
-type Assumption = { id: string; code: string; statement: string; category: string; confidence: number; status: string; nextExperiment: string | null; estimatedCost: number | null; };
+type Assumption = { id: string; code: string; statement: string; category: string; confidence: number; status: string; nextExperiment: string | null; estimatedCost: number | null; estimatedDuration: string | null; };
 type Experiment = { id: string; hypothesis: string; method: string; status: string; sampleTarget: number; startDate: string | null; conclusion: string | null; };
 type Competitor = { id: string; name: string; type: string; website: string | null; description: string | null; pricing: string | null; strengths: string | null; weaknesses: string | null; gaps: string | null; createdAt: string; };
 type Signal = { id: string; type: string; title: string; description: string | null; source: string; sourceUrl: string | null; confidence: number; verified: boolean; isDuplicate: boolean; isRelevant: boolean; actorRole: string | null; actorIndustry: string | null; fetchedAt: string; };
@@ -54,6 +56,13 @@ type StopCondition = { id: string; conditionType: string; triggered: boolean; tr
 type Budget = { id: string; phase: string; maxRuntime: number; maxAgentRuns: number; minimumEvidence: number; budgetEur: number; spentEur: number; status: string; createdAt: string; };
 type StopCond = { id: string; conditionType: string; threshold: number | null; triggered: boolean; triggeredAt: string | null; action: string; reason: string | null; };
 type DedupStats = { total: number; duplicates: number; irrelevant: number; highConfidence: number; independent: number; };
+type NegativeEvidence = { id: string; claim: string; contradiction: string; source: string; confidence: number; createdAt: string; };
+
+// Pain Signals & Clusters
+type PainSignal = { id: string; source: string; sourceUrl: string | null; rawText: string; actorRole: string | null; actorIndustry: string | null; job: string | null; pain: string | null; painIntensity: number | null; workaround: string | null; workaroundCost: string | null; consequence: string | null; confidence: number; language: string; fetchedAt: string; clusterId: string | null; cluster: { label: string } | null; };
+type PainCluster = { id: string; label: string; description: string | null; signalCount: number; avgIntensity: number; topWorkarounds: string | null; topConsequences: string | null; status: string; painSignals: PainSignal[]; };
+type Claim = { id: string; claim: string; category: string; confidence: number; status: string; sourceSignalIds: string | null; sourceUrls: string | null; createdAt: string; };
+type Artifact = { id: string; type: string; title: string; content: string | null; summary: string | null; status: string; createdAt: string; };
 
 export default function OpportunityDetailPage() {
   const router = useRouter();
@@ -63,6 +72,13 @@ export default function OpportunityDetailPage() {
   const [opp, setOpp] = useState<Opp | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
+
+  // Pain Signals & Clusters
+  const [painSignals, setPainSignals] = useState<PainSignal[]>([]);
+  const [painClusters, setPainClusters] = useState<PainCluster[]>([]);
+  const [claims, setClaims] = useState<Claim[]>([]);
+  const [artifacts, setArtifacts] = useState<Artifact[]>([]);
+  const [clusterLoading, setClusterLoading] = useState(false);
 
   // Budget
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -89,7 +105,7 @@ export default function OpportunityDetailPage() {
   const [dedupStats, setDedupStats] = useState<DedupStats | null>(null);
   const [dedupLoading, setDedupLoading] = useState(false);
 
-  useEffect(() => { fetchOpp(); fetchBudgets(); fetchStopConditions(); fetchDedupStats(); }, [id]);
+  useEffect(() => { fetchOpp(); fetchBudgets(); fetchStopConditions(); fetchDedupStats(); fetchPainData(); }, [id]);
 
   async function fetchOpp() {
     try {
@@ -97,6 +113,38 @@ export default function OpportunityDetailPage() {
       if (res.ok) setOpp(await res.json());
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
+  }
+
+  async function fetchPainData() {
+    try {
+      const [signalsRes, clustersRes, claimsRes, artifactsRes] = await Promise.all([
+        fetch(`/api/opportunities/${id}/pain-signals`),
+        fetch(`/api/opportunities/${id}/pain-clusters`),
+        fetch(`/api/opportunities/${id}/claims`),
+        fetch(`/api/opportunities/${id}/artifacts`),
+      ]);
+      if (signalsRes.ok) setPainSignals(await signalsRes.json());
+      if (clustersRes.ok) setPainClusters(await clustersRes.json());
+      if (claimsRes.ok) setClaims(await claimsRes.json());
+      if (artifactsRes.ok) setArtifacts(await artifactsRes.json());
+    } catch (e) { console.error(e); }
+  }
+
+  async function runClustering() {
+    setClusterLoading(true);
+    try {
+      await fetch(`/api/opportunities/${id}/pain-clusters`, { method: "POST" });
+      await fetchPainData();
+    } catch (e) { console.error(e); }
+    finally { setClusterLoading(false); }
+  }
+
+  async function createPainSignal(formData: Record<string, unknown>) {
+    await fetch(`/api/opportunities/${id}/pain-signals`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData),
+    });
+    await fetchPainData();
   }
 
   async function fetchBudgets() {
@@ -115,8 +163,17 @@ export default function OpportunityDetailPage() {
 
   async function fetchDedupStats() {
     try {
-      const res = await fetch(`/api/opportunities/${id}/signals?dedup=stats`);
-      if (res.ok) setDedupStats(await res.json());
+      const res = await fetch(`/api/opportunities/${id}/signals/deduplicate`);
+      if (res.ok) {
+        const data = await res.json();
+        setDedupStats({
+          total: data.stats.rawSignals,
+          duplicates: data.stats.duplicatesRemoved,
+          irrelevant: data.stats.irrelevantRemoved,
+          highConfidence: data.stats.highConfidenceSignals,
+          independent: data.stats.independentSignals,
+        });
+      }
     } catch (e) { console.error(e); }
   }
 
@@ -140,11 +197,11 @@ export default function OpportunityDetailPage() {
 
   async function runDeduplication() {
     setDedupLoading(true);
-    await fetch(`/api/opportunities/${id}/signals`, {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
+    await fetch(`/api/opportunities/${id}/signals/deduplicate`, {
+      method: "POST",
     });
     await fetchDedupStats();
+    fetchOpp();
     setDedupLoading(false);
   }
 
@@ -216,13 +273,18 @@ export default function OpportunityDetailPage() {
           {[
             { id: "overview", label: "Overview" },
             { id: "pain", label: "Pain Graph" },
+            { id: "pain-signals", label: `Pain Signals (${painSignals.length})` },
+            { id: "pain-clusters", label: `Clusters (${painClusters.length})` },
+            { id: "evidence", label: `Evidence` },
+            { id: "claims", label: `Claims (${claims.length})` },
             { id: "assumptions", label: `Assumptions (${opp.assumptions?.length || 0})` },
             { id: "experiments", label: `Experiments (${opp.experiments?.length || 0})` },
             { id: "gates", label: `Gates (${passedGates}/${totalGates})` },
             { id: "competitors", label: `Competitors (${opp.competitors?.length || 0})` },
             { id: "budget", label: `Budget` },
-            { id: "stop", label: `Stop Conditions (${stopConditions.filter(c => c.triggered).length}/${stopConditions.length})` },
+            { id: "stop", label: `Stop (${stopConditions.filter(c => c.triggered).length}/${stopConditions.length})` },
             { id: "dedup", label: "Signals" },
+            { id: "artifacts", label: `Artifacts (${artifacts.length})` },
           ].map(tab => (
             <button
               key={tab.id}
@@ -321,60 +383,69 @@ export default function OpportunityDetailPage() {
           </div>
         )}
 
-        {/* PAIN GRAPH */}
+        {/* PAIN GRAPH — Baumstruktur */}
         {activeTab === "pain" && (
           <div className="rounded-lg border bg-card p-6">
             <h2 className="text-lg font-semibold mb-6">Pain Graph</h2>
             <div className="space-y-6">
+              {/* ROOT: INDUSTRY */}
               <div className="flex items-start gap-4">
-                <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm">1</div>
-                <div>
-                  <div className="font-medium">Industry</div>
+                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm">I</div>
+                <div className="flex-1">
+                  <div className="font-medium text-lg">Industry</div>
                   <p className="text-sm text-muted-foreground">{opp.industryId || "Not specified"}</p>
                 </div>
               </div>
-              <div className="ml-4 border-l-2 border-muted pl-8">
+              
+              {/* BRANCH: PERSONA */}
+              <div className="ml-6 border-l-2 border-muted pl-6">
                 <div className="flex items-start gap-4">
-                  <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold text-sm">2</div>
-                  <div>
+                  <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold text-sm">P</div>
+                  <div className="flex-1">
                     <div className="font-medium">Persona</div>
                     <p className="text-sm text-muted-foreground">{opp.personaId || "Not specified"}</p>
                   </div>
                 </div>
-              </div>
-              <div className="ml-4 border-l-2 border-muted pl-8">
-                <div className="flex items-start gap-4">
-                  <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-700 font-bold text-sm">3</div>
-                  <div>
-                    <div className="font-medium">Job</div>
-                    <p className="text-sm text-muted-foreground">{opp.job || "Not specified"}</p>
+                
+                {/* BRANCH: JOB */}
+                <div className="ml-6 border-l-2 border-muted pl-6 mt-4">
+                  <div className="flex items-start gap-4">
+                    <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-700 font-bold text-sm">J</div>
+                    <div className="flex-1">
+                      <div className="font-medium">Job</div>
+                      <p className="text-sm text-muted-foreground">{opp.job || "Not specified"}</p>
+                    </div>
                   </div>
-                </div>
-              </div>
-              <div className="ml-8 border-l-2 border-muted pl-8">
-                <div className="flex items-start gap-4">
-                  <div className="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center text-red-700 font-bold text-sm">4</div>
-                  <div className="flex-1">
-                    <div className="font-medium">Pain</div>
-                    <p className="text-sm text-muted-foreground">{opp.pain || "Not specified"}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="ml-8 border-l-2 border-muted pl-8">
-                <div className="flex items-start gap-4">
-                  <div className="h-8 w-8 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-700 font-bold text-sm">5</div>
-                  <div className="flex-1">
-                    <div className="font-medium">Workaround</div>
-                    <p className="text-sm text-muted-foreground">{opp.workaround || "Not specified"}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="ml-8 border-l-2 border-muted pl-8">
-                <div className="flex items-start gap-4">
-                  <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 font-bold text-sm">6</div>
-                  <div className="flex-1">
-                    <div className="font-medium">Consequence</div>
-                    <p className="text-sm text-muted-foreground">{opp.consequence || "Not specified"}</p>
+                  
+                  {/* LEAVES: PAIN, WORKAROUND, CONSEQUENCE */}
+                  <div className="ml-6 border-l-2 border-muted pl-6 mt-4 space-y-4">
+                    {opp.pain && (
+                      <div className="flex items-start gap-4">
+                        <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center text-red-700 font-bold text-sm">!</div>
+                        <div className="flex-1">
+                          <div className="font-medium text-red-700">Pain</div>
+                          <p className="text-sm text-muted-foreground">{opp.pain}</p>
+                        </div>
+                      </div>
+                    )}
+                    {opp.workaround && (
+                      <div className="flex items-start gap-4">
+                        <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-700 font-bold text-sm">W</div>
+                        <div className="flex-1">
+                          <div className="font-medium text-yellow-700">Workaround</div>
+                          <p className="text-sm text-muted-foreground">{opp.workaround}</p>
+                        </div>
+                      </div>
+                    )}
+                    {opp.consequence && (
+                      <div className="flex items-start gap-4">
+                        <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 font-bold text-sm">C</div>
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-700">Consequence</div>
+                          <p className="text-sm text-muted-foreground">{opp.consequence}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -382,9 +453,14 @@ export default function OpportunityDetailPage() {
           </div>
         )}
 
-        {/* ASSUMPTIONS */}
+        {/* EVIDENCE */}
+        {activeTab === "evidence" && (
+          <EvidenceTab opp={opp} id={id} fetchOpp={fetchOpp} />
+        )}
+
+        {/* ASSUMPTIONS + NEXT BEST EXPERIMENT */}
         {activeTab === "assumptions" && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-semibold">Assumptions</h2>
               <button 
@@ -394,31 +470,66 @@ export default function OpportunityDetailPage() {
                 + Neue Annahme
               </button>
             </div>
+
+            {/* Next Best Experiment Card */}
+            {(() => {
+              const untested = opp.assumptions?.filter((a: Assumption) => a.status === "untested") || [];
+              const next = untested.sort((a: Assumption, b: Assumption) => b.confidence - a.confidence)[0];
+              if (!next) return null;
+              return (
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-bold text-blue-700">Nächstes Experiment empfohlen</span>
+                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700">{next.code}</span>
+                  </div>
+                  <p className="text-sm text-blue-900 mb-3">{next.statement}</p>
+                  {next.nextExperiment && (
+                    <div className="text-sm text-blue-800 mb-2">
+                      <span className="font-medium">Methode:</span> {next.nextExperiment}
+                    </div>
+                  )}
+                  {next.estimatedCost && (
+                    <div className="text-sm text-blue-800 mb-2">
+                      <span className="font-medium">Kosten:</span> €{next.estimatedCost}
+                      {next.estimatedDuration && ` • ${next.estimatedDuration}`}
+                    </div>
+                  )}
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={() => router.push(`/opportunities/${id}/experiments/new?assumption=${next.id}`)}
+                      className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+                    >
+                      Experiment starten
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
             
             {opp.assumptions?.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">Noch keine Annahmen erfasst.</div>
             ) : (
               <div className="space-y-3">
-                {opp.assumptions.map(a => (
+                {opp.assumptions.map((a: Assumption) => (
                   <div key={a.id} className="rounded-lg border bg-card p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
                         <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-bold">{a.code}</span>
-                        <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                          a.status === 'validated' ? 'bg-green-100 text-green-700' : 
-                          a.status === 'invalidated' ? 'bg-red-100 text-red-700' : 
-                          a.status === 'testing' ? 'bg-blue-100 text-blue-700' : 
-                          'bg-gray-100 text-gray-700'
-                        }">{a.status}</span>
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          a.status === "validated" ? "bg-green-100 text-green-700" : 
+                          a.status === "invalidated" ? "bg-red-100 text-red-700" : 
+                          a.status === "testing" ? "bg-blue-100 text-blue-700" : 
+                          "bg-gray-100 text-gray-700"
+                        }`}>{a.status}</span>
                       </div>
                       <div className="text-sm text-muted-foreground">{Math.round(a.confidence * 100)}% confidence</div>
                     </div>
                     <p className="mt-2 text-sm">{a.statement}</p>
-                    {a.nextExperiment && (
-                      <div className="mt-2 text-sm text-muted-foreground">
-                        Next: {a.nextExperiment} {a.estimatedCost && `• €${a.estimatedCost}`}
-                      </div>
-                    )}
+                    <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
+                      <span>Category: {a.category}</span>
+                      {a.nextExperiment && <span>Next: {a.nextExperiment}</span>}
+                      {a.estimatedCost && <span>Cost: €{a.estimatedCost}</span>}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -426,9 +537,9 @@ export default function OpportunityDetailPage() {
           </div>
         )}
 
-        {/* EXPERIMENTS */}
+        {/* EXPERIMENTS + EVIDENCE FLOW */}
         {activeTab === "experiments" && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-semibold">Experiments</h2>
               <button 
@@ -438,27 +549,58 @@ export default function OpportunityDetailPage() {
                 + Neues Experiment
               </button>
             </div>
+
+            {/* Evidence Flow Diagram */}
+            <div className="rounded-lg border bg-card p-5">
+              <h3 className="text-sm font-semibold text-muted-foreground mb-4">Experiment → Evidence → Confidence Flow</h3>
+              <div className="flex items-center gap-2 flex-wrap">
+                {[
+                  { label: "Experiment", icon: "🔬", color: "bg-purple-100 text-purple-700" },
+                  { label: "Evidence", icon: "📊", color: "bg-blue-100 text-blue-700" },
+                  { label: "Confidence", icon: "📈", color: "bg-green-100 text-green-700" },
+                  { label: "Score Update", icon: "🎯", color: "bg-yellow-100 text-yellow-700" },
+                  { label: "Next Experiment", icon: "➡️", color: "bg-gray-100 text-gray-700" },
+                ].map((step, i) => (
+                  <div key={step.label} className="flex items-center gap-2">
+                    <div className={`flex items-center gap-2 rounded-lg px-3 py-2 ${step.color}`}>
+                      <span>{step.icon}</span>
+                      <span className="text-sm font-medium">{step.label}</span>
+                    </div>
+                    {i < 4 && <span className="text-muted-foreground">→</span>}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 text-xs text-muted-foreground">
+                Experiment-Ergebnisse landen automatisch im Evidence Store → Confidence wird neu berechnet → Score wird aktualisiert → Nächstes Experiment wird empfohlen
+              </div>
+            </div>
             
             {opp.experiments?.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">Noch keine Experiments geplant.</div>
+              <div className="text-center py-8 text-muted-foreground">Noch keine Experiments geplant. Starte ein Experiment, um eine Annahme zu testen.</div>
             ) : (
               <div className="space-y-3">
-                {opp.experiments.map(e => (
+                {opp.experiments.map((e: Experiment) => (
                   <div key={e.id} className="rounded-lg border bg-card p-4">
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="font-medium">{e.hypothesis}</div>
-                        <div className="text-sm text-muted-foreground mt-1">Method: {e.method} • Target: {e.sampleTarget}</div>
+                        <div className="text-sm text-muted-foreground mt-1">
+                          Method: {e.method} • Target: {e.sampleTarget}
+                          {e.startDate && <span>• Started: {new Date(e.startDate).toLocaleDateString("de-DE")}</span>}
+                        </div>
                       </div>
                       <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                        e.status === 'completed' ? 'bg-green-100 text-green-700' : 
-                        e.status === 'failed' ? 'bg-red-100 text-red-700' : 
-                        e.status === 'running' ? 'bg-blue-100 text-blue-700' : 
-                        'bg-gray-100 text-gray-700'
+                        e.status === "completed" ? "bg-green-100 text-green-700" : 
+                        e.status === "failed" ? "bg-red-100 text-red-700" : 
+                        e.status === "running" ? "bg-blue-100 text-blue-700" : 
+                        "bg-gray-100 text-gray-700"
                       }`}>{e.status}</span>
                     </div>
                     {e.conclusion && (
-                      <p className="mt-2 text-sm text-muted-foreground">{e.conclusion}</p>
+                      <div className="mt-3 p-3 rounded-md bg-muted">
+                        <div className="text-xs font-medium text-muted-foreground mb-1">Conclusion</div>
+                        <p className="text-sm">{e.conclusion}</p>
+                      </div>
                     )}
                   </div>
                 ))}
@@ -794,20 +936,462 @@ export default function OpportunityDetailPage() {
             )}
           </div>
         )}
+
+        {/* PAIN SIGNALS TAB */}
+        {activeTab === "pain-signals" && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold">Pain Signals</h2>
+              <button
+                onClick={() => createPainSignal({
+                  source: "manual", rawText: "New pain signal...",
+                  pain: "Describe pain here", painIntensity: 5,
+                  workaround: "Current workaround", consequence: "Business consequence"
+                })}
+                className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                + Pain Signal
+              </button>
+            </div>
+            {painSignals.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground rounded-lg border bg-card">Noch keine Pain Signals erfasst.</div>
+            ) : (
+              <div className="space-y-3">
+                {painSignals.map((ps: PainSignal) => (
+                  <div key={ps.id} className="rounded-lg border bg-card p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-red-100 text-red-700">{ps.source}</span>
+                          {ps.painIntensity && <span className="text-xs text-muted-foreground">Intensity: {ps.painIntensity}/10</span>}
+                          {ps.cluster && <span className="text-xs text-blue-600">Cluster: {ps.cluster.label}</span>}
+                        </div>
+                        <p className="mt-2 text-sm">{ps.pain || ps.rawText}</p>
+                        {ps.workaround && <p className="text-sm text-muted-foreground mt-1">Workaround: {ps.workaround} {ps.workaroundCost && `(${ps.workaroundCost})`}</p>}
+                        {ps.consequence && <p className="text-sm text-muted-foreground">Consequence: {ps.consequence}</p>}
+                      </div>
+                      <div className="text-right text-sm text-muted-foreground">
+                        <div>{Math.round(ps.confidence * 100)}% Confidence</div>
+                        {ps.actorRole && <div className="text-xs">{ps.actorRole}</div>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* PAIN CLUSTERS TAB */}
+        {activeTab === "pain-clusters" && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold">Pain Clusters</h2>
+              <button
+                onClick={runClustering}
+                disabled={clusterLoading}
+                className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {clusterLoading ? "Clustering..." : "🔄 Auto-Clustering"}
+              </button>
+            </div>
+            {painClusters.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground rounded-lg border bg-card">Noch keine Clusters. Führe Auto-Clustering aus, um Pain Signals zu gruppieren.</div>
+            ) : (
+              <div className="space-y-4">
+                {painClusters.map((cluster: PainCluster) => (
+                  <div key={cluster.id} className="rounded-lg border bg-card p-5">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-medium text-lg">{cluster.label}</h3>
+                        {cluster.description && <p className="text-sm text-muted-foreground mt-1">{cluster.description}</p>}
+                        <div className="flex items-center gap-4 mt-3 text-sm">
+                          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700">{cluster.signalCount} Signals</span>
+                          <span className="text-muted-foreground">Ø Intensity: {cluster.avgIntensity.toFixed(1)}/10</span>
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                            cluster.status === "active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
+                          }`}>{cluster.status}</span>
+                        </div>
+                        
+                        {cluster.topWorkarounds && (
+                          <div className="mt-3">
+                            <div className="text-xs font-medium text-muted-foreground mb-1">Top Workarounds</div>
+                            <div className="flex flex-wrap gap-2">
+                              {JSON.parse(cluster.topWorkarounds).map((w: string) => (
+                                <span key={w} className="inline-flex items-center rounded-md bg-yellow-50 px-2 py-1 text-xs text-yellow-700 border border-yellow-200">{w}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {cluster.topConsequences && (
+                          <div className="mt-3">
+                            <div className="text-xs font-medium text-muted-foreground mb-1">Top Consequences</div>
+                            <div className="flex flex-wrap gap-2">
+                              {JSON.parse(cluster.topConsequences).map((c: string) => (
+                                <span key={c} className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs text-red-700 border border-red-200">{c}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {cluster.painSignals.length > 0 && (
+                      <div className="mt-4 border-t pt-4">
+                        <div className="text-xs font-medium text-muted-foreground mb-2">Recent Signals</div>
+                        <div className="space-y-2">
+                          {cluster.painSignals.slice(0, 3).map((ps: PainSignal) => (
+                            <div key={ps.id} className="text-sm text-muted-foreground">• {ps.pain || ps.rawText.substring(0, 80)}...</div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* CLAIMS TAB */}
+        {activeTab === "claims" && (
+          <div className="space-y-6">
+            <h2 className="text-lg font-semibold">Opportunity Claims</h2>
+            {claims.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground rounded-lg border bg-card">Noch keine Claims extrahiert.</div>
+            ) : (
+              <div className="space-y-3">
+                {claims.map((claim: Claim) => (
+                  <div key={claim.id} className="rounded-lg border bg-card p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                            claim.status === "verified" ? "bg-green-100 text-green-700" :
+                            claim.status === "contradicted" ? "bg-red-100 text-red-700" :
+                            "bg-yellow-100 text-yellow-700"
+                          }`}>{claim.status}</span>
+                          <span className="text-xs text-muted-foreground capitalize">{claim.category}</span>
+                        </div>
+                        <p className="mt-2 text-sm font-medium">{claim.claim}</p>
+                        <div className="text-xs text-muted-foreground mt-1">Confidence: {Math.round(claim.confidence * 100)}%</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ARTIFACTS TAB */}
+        {activeTab === "artifacts" && (
+          <div className="space-y-6">
+            <h2 className="text-lg font-semibold">Artifacts & Reports</h2>
+            {artifacts.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground rounded-lg border bg-card">Noch keine Artifacts erstellt.</div>
+            ) : (
+              <div className="space-y-3">
+                {artifacts.map((art: Artifact) => (
+                  <div key={art.id} className="rounded-lg border bg-card p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 capitalize">{art.type.replace(/_/g, " ")}</span>
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                            art.status === "published" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
+                          }`}>{art.status}</span>
+                        </div>
+                        <h3 className="font-medium mt-2">{art.title}</h3>
+                        {art.summary && <p className="text-sm text-muted-foreground mt-1">{art.summary}</p>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Convert Button */}
-      <div className="flex gap-3 pb-6">
+      <div className="flex gap-3 pb-6 flex-wrap">
         <Link href={`/ventures/new?opportunity=${id}`}
           className="inline-flex h-10 items-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
           Zu Venture konvertieren
         </Link>
-          <Link href={`/opportunities/${id}/competitors`}
-            className="inline-flex h-10 items-center rounded-md border border-input bg-background px-6 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+        <Link href={`/opportunities/${id}/competitors`}
+          className="inline-flex h-10 items-center rounded-md border border-input bg-background px-6 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+        >
+          Competitor Research →
+        </Link>
+        <button
+          onClick={async () => {
+            if (!confirm("🚀 Orchestrator startet 5 Agenten: Market Research → Competitor Analysis → Fact Check → Risk Review → Business Strategy. Das kann einige Minuten dauern.")) return;
+            await fetch(`/api/opportunities/${id}/orchestrate`, { method: "POST" });
+            alert("Orchestrator gestartet! Ergebnisse werden in Agent Runs gespeichert.");
+          }}
+          className="inline-flex h-10 items-center rounded-md border border-blue-200 bg-blue-50 px-6 text-sm font-medium text-blue-700 hover:bg-blue-100"
+        >
+          🤖 Orchestrator starten
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function EvidenceTab({ opp, id, fetchOpp }: { opp: Opp; id: string; fetchOpp: () => Promise<void> }) {
+  const [negativeEvidence, setNegativeEvidence] = useState<NegativeEvidence[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ claim: "", contradiction: "", source: "", confidence: 0.5 });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetchNegativeEvidence();
+  }, [id]);
+
+  async function fetchNegativeEvidence() {
+    try {
+      const res = await fetch(`/api/opportunities/${id}/evidence`);
+      if (res.ok) setNegativeEvidence(await res.json());
+    } catch (e) { console.error(e); }
+  }
+
+  async function createEvidence() {
+    if (!form.claim.trim() || !form.contradiction.trim()) return;
+    setSaving(true);
+    await fetch(`/api/opportunities/${id}/evidence`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    setShowForm(false);
+    setForm({ claim: "", contradiction: "", source: "", confidence: 0.5 });
+    setSaving(false);
+    fetchNegativeEvidence();
+    fetchOpp();
+  }
+
+  async function deleteEvidence(evidenceId: string) {
+    if (!confirm("Widerlegung löschen?")) return;
+    await fetch(`/api/opportunities/${id}/evidence/${evidenceId}`, {
+      method: "DELETE",
+    });
+    fetchNegativeEvidence();
+    fetchOpp();
+  }
+
+  const supporting = opp.signals?.filter(s => s.verified) || [];
+  const contradicting = negativeEvidence;
+  const total = supporting.length + contradicting.length;
+  const netScore = supporting.length - contradicting.length;
+
+  const supportingPct = total > 0 ? (supporting.length / total) * 100 : 0;
+  const contradictingPct = total > 0 ? (contradicting.length / total) * 100 : 0;
+
+  return (
+    <div className="space-y-6">
+      {/* Summary Card */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="rounded-lg border bg-card p-4 text-center">
+          <div className="text-xs text-muted-foreground">Unterstützend</div>
+          <div className="text-2xl font-bold text-green-600">{supporting.length}</div>
+        </div>
+        <div className="rounded-lg border bg-card p-4 text-center">
+          <div className="text-xs text-muted-foreground">Widerlegend</div>
+          <div className="text-2xl font-bold text-red-600">{contradicting.length}</div>
+        </div>
+        <div className="rounded-lg border bg-card p-4 text-center">
+          <div className="text-xs text-muted-foreground">Net Evidence Score</div>
+          <div className={`text-2xl font-bold ${netScore >= 0 ? "text-green-600" : "text-red-600"}`}>
+            {netScore > 0 ? `+${netScore}` : netScore}
+          </div>
+        </div>
+      </div>
+
+      {/* Evidence Bar Chart */}
+      {total > 0 && (
+        <div className="rounded-lg border bg-card p-6">
+          <h3 className="text-sm font-semibold mb-4">Evidence Verteilung</h3>
+          <div className="flex h-8 rounded-full overflow-hidden">
+            <div
+              className="bg-green-500 h-full flex items-center justify-center text-xs text-white font-medium transition-all"
+              style={{ width: `${supportingPct}%` }}
+            >
+              {supportingPct >= 15 && `${Math.round(supportingPct)}%`}
+            </div>
+            <div
+              className="bg-red-500 h-full flex items-center justify-center text-xs text-white font-medium transition-all"
+              style={{ width: `${contradictingPct}%` }}
+            >
+              {contradictingPct >= 15 && `${Math.round(contradictingPct)}%`}
+            </div>
+          </div>
+          <div className="flex gap-4 mt-3 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full bg-green-500" />
+              <span>Unterstützend ({supporting.length})</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full bg-red-500" />
+              <span>Widerlegend ({contradicting.length})</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Supporting Evidence (Signals) */}
+      <div className="space-y-3">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <div className="h-3 w-3 rounded-full bg-green-500" />
+          Unterstützende Evidence (Signals)
+        </h3>
+        {supporting.length === 0 ? (
+          <div className="text-center py-6 text-muted-foreground rounded-lg border bg-card">
+            Keine bestätigten Signals. Markiere Signals als verified, um sie hier anzuzeigen.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {supporting.map(s => (
+              <div key={s.id} className="rounded-lg border bg-card p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700">bestätigend</span>
+                      <span className="text-xs text-muted-foreground capitalize">{s.type}</span>
+                    </div>
+                    <div className="font-medium mt-1">{s.title}</div>
+                    {s.description && <p className="text-sm text-muted-foreground mt-1">{s.description}</p>}
+                  </div>
+                  <div className="text-right text-sm text-muted-foreground">
+                    <div>{Math.round(s.confidence * 100)}% Confidence</div>
+                    <div className="text-xs">{s.source}</div>
+                  </div>
+                </div>
+                {s.actorRole && (
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    Rolle: {s.actorRole} {s.actorIndustry && `• Branche: ${s.actorIndustry}`}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Negative Evidence */}
+      <div className="space-y-3">
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <div className="h-3 w-3 rounded-full bg-red-500" />
+            Widerlegende Evidence
+          </h3>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            Competitor Research →
-          </Link>
+            {showForm ? "Abbrechen" : "+ Negative Evidence"}
+          </button>
+        </div>
+
+        {/* Inline Form */}
+        {showForm && (
+          <div className="rounded-lg border bg-card p-4 space-y-3">
+            <div>
+              <label className="text-sm font-medium">Claim (Behauptung)</label>
+              <input
+                type="text"
+                value={form.claim}
+                onChange={e => setForm({ ...form, claim: e.target.value })}
+                placeholder="z.B. Property managers need another maintenance tool"
+                className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Contradiction (Widerlegung)</label>
+              <textarea
+                value={form.contradiction}
+                onChange={e => setForm({ ...form, contradiction: e.target.value })}
+                placeholder="z.B. Existing software already solves the problem"
+                rows={3}
+                className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Quelle</label>
+                <input
+                  type="text"
+                  value={form.source}
+                  onChange={e => setForm({ ...form, source: e.target.value })}
+                  placeholder="z.B. Reddit, Interview, Report"
+                  className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Confidence (0–1)</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={form.confidence}
+                  onChange={e => setForm({ ...form, confidence: parseFloat(e.target.value) })}
+                  className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowForm(false)}
+                className="inline-flex h-9 items-center rounded-md border px-4 text-sm hover:bg-muted"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={createEvidence}
+                disabled={saving || !form.claim.trim() || !form.contradiction.trim()}
+                className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {saving ? "Speichern..." : "Speichern"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {contradicting.length === 0 ? (
+          <div className="text-center py-6 text-muted-foreground rounded-lg border bg-card">
+            Noch keine widerlegende Evidence erfasst.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {contradicting.map(ne => (
+              <div key={ne.id} className="rounded-lg border bg-card p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-red-100 text-red-700">widerlegend</span>
+                      <span className="text-xs text-muted-foreground">{ne.source}</span>
+                    </div>
+                    <div className="font-medium mt-1">{ne.claim}</div>
+                    <p className="text-sm text-muted-foreground mt-1">{ne.contradiction}</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm text-muted-foreground">{Math.round(ne.confidence * 100)}% Confidence</div>
+                    <button
+                      onClick={() => deleteEvidence(ne.id)}
+                      className="text-xs text-red-600 hover:text-red-800 mt-1"
+                    >
+                      Löschen
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

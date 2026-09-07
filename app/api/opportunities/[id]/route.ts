@@ -263,9 +263,106 @@ export async function PUT(
       updateData.scoreB = bValues.reduce((a, b) => a + (b || 0), 0);
     }
 
+    // ---- AUTOMATISCHE CONFIDENCE-BERECHNUNG ----
+    // Confidence = average of all non-null validation scores (0.0 - 1.0)
+    const validationScores = [
+      updateData.problemValidation as number,
+      updateData.buyerValidation as number,
+      updateData.pricingValidation as number,
+      updateData.distributionValidation as number,
+      updateData.solutionValidation as number,
+    ].filter(v => v !== undefined && v !== null);
+
+    if (validationScores.length > 0) {
+      updateData.confidence = validationScores.reduce((a, b) => a + b, 0) / validationScores.length;
+    }
+
+    // ---- AUTOMATISCHE EVIDENCE LEVEL BERECHNUNG ----
+    // evidenceLevel = (verified signals >= 0.7) / 8 + experiment results
+    const verifiedSignals = await prisma.signal.count({
+      where: { opportunityId: params.id, verified: true, confidence: { gte: 0.7 } },
+    });
+    const completedExperiments = await prisma.experiment.count({
+      where: { opportunityId: params.id, status: "completed" },
+    });
+    updateData.evidenceLevel = Math.min(8, verifiedSignals + completedExperiments);
+
     const opportunity = await prisma.opportunity.update({
       where: { id: params.id },
       data: updateData,
+    });
+
+    // ---- AUTOMATISCHE STATE MACHINE TRANSITIONS ----
+    // discovered → pain_verification → pain_verified → scored → build_approved/kill/experiment
+    let newStatus = opportunity.status;
+    
+    // Transition 1: pain → pain_verified wenn painSeverity >= 5
+    if (newStatus === "pain_verification" && opportunity.painSeverity >= 5) {
+      newStatus = "pain_verified";
+    }
+    
+    // Transition 2: pain_verified → scored wenn scoreA >= 50 && scoreB >= 50
+    if (newStatus === "pain_verified" && opportunity.scoreA >= 50 && opportunity.scoreB >= 50) {
+      newStatus = "scored";
+    }
+    
+    // Transition 3: scored → kill wenn score < 50
+    if (newStatus === "scored" && (opportunity.scoreA < 50 || opportunity.scoreB < 50)) {
+      newStatus = "kill";
+      await prisma.decision.create({
+        data: {
+          opportunityId: params.id,
+          type: "kill",
+          reason: `Auto-KILL: Score A=${opportunity.scoreA}, Score B=${opportunity.scoreB}`,
+          scoreA: opportunity.scoreA,
+          scoreB: opportunity.scoreB,
+          confidence: opportunity.confidence,
+          evidenceLevel: opportunity.evidenceLevel,
+        },
+      });
+    }
+    
+    // Transition 4: scored → experiment wenn confidence < 0.4
+    if (newStatus === "scored" && opportunity.confidence < 0.4) {
+      newStatus = "experiment";
+    }
+    
+    // Transition 5: experiment/scored → build_approved wenn confidence >= 0.7 && evidenceLevel >= 6
+    if ((newStatus === "scored" || newStatus === "experiment") && opportunity.confidence >= 0.7 && opportunity.evidenceLevel >= 6) {
+      newStatus = "build_approved";
+      await prisma.decision.create({
+        data: {
+          opportunityId: params.id,
+          type: "build_approved",
+          reason: `Auto-APPROVED: Confidence=${Math.round(opportunity.confidence * 100)}%, Evidence=${opportunity.evidenceLevel}/8`,
+          scoreA: opportunity.scoreA,
+          scoreB: opportunity.scoreB,
+          confidence: opportunity.confidence,
+          evidenceLevel: opportunity.evidenceLevel,
+        },
+      });
+    }
+
+    if (newStatus !== opportunity.status) {
+      await prisma.opportunity.update({
+        where: { id: params.id },
+        data: { status: newStatus },
+      });
+    }
+
+    // Automatische Evidence Counts neu berechnen
+    const supportingCount = await prisma.signal.count({
+      where: { opportunityId: params.id, verified: true },
+    });
+    const contradictingCount = await prisma.negativeEvidence.count({
+      where: { opportunityId: params.id },
+    });
+    await prisma.opportunity.update({
+      where: { id: params.id },
+      data: {
+        supportingEvidenceCount: supportingCount,
+        contradictingEvidenceCount: contradictingCount,
+      },
     });
 
     // Automatische Stop-Condition Prüfung
@@ -274,7 +371,7 @@ export async function PUT(
       scoreB: opportunity.scoreB,
       confidence: opportunity.confidence,
       evidenceLevel: opportunity.evidenceLevel,
-      status: opportunity.status,
+      status: newStatus,
       buyerClarity: opportunity.buyerClarity,
       frequency: opportunity.frequency,
       competitionGap: opportunity.competitionGap,
@@ -287,7 +384,8 @@ export async function PUT(
 
     return NextResponse.json({
       message: "Opportunity aktualisiert",
-      opportunity,
+      opportunity: { ...opportunity, status: newStatus },
+      statusChanged: newStatus !== opportunity.status ? `${opportunity.status} → ${newStatus}` : null,
       stopConditionsTriggered: triggered,
     });
   } catch (error) {
