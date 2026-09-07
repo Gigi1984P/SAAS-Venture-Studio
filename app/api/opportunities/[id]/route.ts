@@ -19,6 +19,8 @@ export async function GET(
       include: {
         signals: { orderBy: { fetchedAt: "desc" } },
         gates: { orderBy: { gateType: "asc" } },
+        assumptions: { orderBy: { code: "asc" } },
+        experiments: { orderBy: { createdAt: "desc" } },
         ventures: { select: { id: true, name: true, slug: true, status: true } },
       },
     });
@@ -47,51 +49,69 @@ export async function PUT(
 
     const body = await req.json();
 
-    // Score neu berechnen, falls Scoring-Felder übergeben
-    const painScore = body.painScore !== undefined ? Math.min(10, Math.max(0, body.painScore)) : undefined;
-    const marketScore = body.marketScore !== undefined ? Math.min(10, Math.max(0, body.marketScore)) : undefined;
-    const feasScore = body.feasScore !== undefined ? Math.min(10, Math.max(0, body.feasScore)) : undefined;
-    const timingScore = body.timingScore !== undefined ? Math.min(10, Math.max(0, body.timingScore)) : undefined;
+    // Score A neu berechnen
+    const scoreAFields = [
+      'painSeverity', 'frequency', 'economicImpact', 'existingSpend',
+      'buyerClarity', 'reachability', 'competitionGap', 'switchingMotivation',
+      'recurringNature', 'evidenceQuality'
+    ];
+    
+    const scoreBFields = [
+      'mvpSimplicity', 'aiLeverage', 'grossMargin', 'distributionAdvantage',
+      'lowSupportBurden', 'expansionPotential', 'defensibility'
+    ];
 
-    let totalScore = body.totalScore;
-    if (painScore !== undefined || marketScore !== undefined || feasScore !== undefined || timingScore !== undefined) {
-      const current = await prisma.opportunity.findUnique({
-        where: { id: params.id },
-        select: { painScore: true, marketScore: true, feasScore: true, timingScore: true },
-      });
-      if (current) {
-        const scores = [
-          painScore ?? current.painScore,
-          marketScore ?? current.marketScore,
-          feasScore ?? current.feasScore,
-          timingScore ?? current.timingScore,
-        ];
-        totalScore = Math.round(scores.reduce((a, b) => a + b, 0) / 4);
+    let updateData: Record<string, unknown> = {};
+
+    // Alle übergebenen Felder übernehmen
+    Object.keys(body).forEach(key => {
+      if (body[key] !== undefined) {
+        updateData[key] = body[key];
       }
+    });
+
+    // Score A berechnen, wenn A-Felder geändert
+    const current = await prisma.opportunity.findUnique({
+      where: { id: params.id },
+      select: {
+        painSeverity: true, frequency: true, economicImpact: true, existingSpend: true,
+        buyerClarity: true, reachability: true, competitionGap: true, switchingMotivation: true,
+        recurringNature: true, evidenceQuality: true,
+        mvpSimplicity: true, aiLeverage: true, grossMargin: true, distributionAdvantage: true,
+        lowSupportBurden: true, expansionPotential: true, defensibility: true,
+      },
+    });
+
+    if (current) {
+      const aValues = [
+        (updateData.painSeverity as number) ?? current.painSeverity,
+        (updateData.frequency as number) ?? current.frequency,
+        (updateData.economicImpact as number) ?? current.economicImpact,
+        (updateData.existingSpend as number) ?? current.existingSpend,
+        (updateData.buyerClarity as number) ?? current.buyerClarity,
+        (updateData.reachability as number) ?? current.reachability,
+        (updateData.competitionGap as number) ?? current.competitionGap,
+        (updateData.switchingMotivation as number) ?? current.switchingMotivation,
+        (updateData.recurringNature as number) ?? current.recurringNature,
+        (updateData.evidenceQuality as number) ?? current.evidenceQuality,
+      ];
+      const bValues = [
+        (updateData.mvpSimplicity as number) ?? current.mvpSimplicity,
+        (updateData.aiLeverage as number) ?? current.aiLeverage,
+        (updateData.grossMargin as number) ?? current.grossMargin,
+        (updateData.distributionAdvantage as number) ?? current.distributionAdvantage,
+        (updateData.lowSupportBurden as number) ?? current.lowSupportBurden,
+        (updateData.expansionPotential as number) ?? current.expansionPotential,
+        (updateData.defensibility as number) ?? current.defensibility,
+      ];
+      
+      updateData.scoreA = aValues.reduce((a, b) => a + (b || 0), 0);
+      updateData.scoreB = bValues.reduce((a, b) => a + (b || 0), 0);
     }
 
     const opportunity = await prisma.opportunity.update({
       where: { id: params.id },
-      data: {
-        title: body.title,
-        description: body.description,
-        problem: body.problem,
-        solution: body.solution,
-        targetGroup: body.targetGroup,
-        businessModel: body.businessModel,
-        painScore,
-        marketScore,
-        feasScore,
-        timingScore,
-        totalScore,
-        marketSize: body.marketSize,
-        competition: body.competition,
-        mrrEstimate: body.mrrEstimate,
-        status: body.status,
-        priority: body.priority,
-        sourceUrl: body.sourceUrl,
-        tags: body.tags,
-      },
+      data: updateData,
     });
 
     return NextResponse.json({ message: "Opportunity aktualisiert", opportunity });
