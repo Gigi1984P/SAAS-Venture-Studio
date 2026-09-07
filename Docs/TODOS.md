@@ -17,7 +17,11 @@
 | 12 | Impressum | Offen | Mittel |
 | 13 | Venture Detail-Seite (Inline-Editing) | Offen | Mittel |
 | 14 | Superadmin-RBAC-System | ✅ Erledigt | Hoch |
-| 15 | Settings-Seite (Profil, Passwort) | Offen | Niedrig |
+| 15 | Settings-Seite (Profil, Passwort) | ✅ Erledigt | Niedrig |
+| 16 | Cookie-Consent-Banner | Offen | Hoch |
+| 17 | Datenschutzerklärung | Offen | Hoch |
+| 18 | Impressum | Offen | Mittel |
+| 19 | Venture Detail-Seite (Inline-Editing) | Offen | Mittel |
 
 ## Erledigt
 | # | Aufgabe | Datum |
