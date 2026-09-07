@@ -51,6 +51,12 @@ export default async function DashboardLayout({
             Radar
           </Link>
           <Link
+            href="/dashboard/agents"
+            className="flex items-center rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+          >
+            Agents
+          </Link>
+          <Link
             href="/ventures"
             className="flex items-center rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
           >

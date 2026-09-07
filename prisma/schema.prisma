@@ -265,6 +265,8 @@ model Opportunity {
   experiments   Experiment[]
   competitors   Competitor[]
   scoreComponents ScoreComponent[]
+  stopConditions StopCondition[]
+  researchBudgets ResearchBudget[]
   
   // Metadaten
   createdBy     String     @map("created_by")
@@ -332,6 +334,12 @@ model Signal {
   impactErrors  Boolean     @default(false) @map("impact_errors")
   revenueLoss   String?     @map("revenue_loss")
   verified      Boolean     @default(false)
+  
+  // Deduplication
+  sourceHash    String?     @map("source_hash")
+  isDuplicate   Boolean     @default(false) @map("is_duplicate")
+  duplicateOfId String?     @map("duplicate_of_id")
+  isRelevant    Boolean     @default(true) @map("is_relevant")
   
   fetchedAt     DateTime    @default(now()) @map("fetched_at")
 
@@ -605,3 +613,30 @@ model Decision {
 
   @@map("decisions")
 }
+
+// ============================================================
+// STOP CONDITIONS (Automated Kill/Watch/Experiment rules)
+// ============================================================
+
+model StopCondition {
+  id              String      @id @default(cuid())
+  opportunityId   String      @map("opportunity_id")
+  
+  conditionType   String      @map("condition_type")
+  // score_below_threshold, no_clear_buyer, no_repeated_problem, strong_competition_no_wedge,
+  // economic_pain_unknown, wtp_unknown, distribution_unknown, evidence_sufficient,
+  // budget_exhausted, time_exhausted, max_runs_reached
+  
+  threshold       Int?
+  
+  triggered       Boolean     @default(false)
+  triggeredAt     DateTime?   @map("triggered_at")
+  
+  action          String      @default("none") // kill, watch, experiment, stop_research, human_review, none
+  reason          String?
+  
+  createdAt       DateTime    @default(now()) @map("created_at")
+
+  @@map("stop_conditions")
+}
+

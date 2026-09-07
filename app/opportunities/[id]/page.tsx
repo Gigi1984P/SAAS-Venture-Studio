@@ -28,17 +28,32 @@ type Opp = {
   mrrEstimate: number | null;
   competition: string | null;
   marketSize: string | null;
+  buyerClarity: number | null;
+  frequency: number | null;
+  competitionGap: number | null;
+  economicImpact: number | null;
+  existingSpend: number | null;
+  reachability: number | null;
   createdAt: string;
   gates: Gate[];
   assumptions: Assumption[];
   experiments: Experiment[];
   competitors: Competitor[];
+  signals: Signal[];
+  researchBudgets: ResearchBudget[];
+  stopConditions: StopCondition[];
 };
 
 type Gate = { id: string; gateType: string; requirement: string | null; passed: boolean; passedAt: string | null; };
 type Assumption = { id: string; code: string; statement: string; category: string; confidence: number; status: string; nextExperiment: string | null; estimatedCost: number | null; };
 type Experiment = { id: string; hypothesis: string; method: string; status: string; sampleTarget: number; startDate: string | null; conclusion: string | null; };
 type Competitor = { id: string; name: string; type: string; website: string | null; description: string | null; pricing: string | null; strengths: string | null; weaknesses: string | null; gaps: string | null; createdAt: string; };
+type Signal = { id: string; type: string; title: string; description: string | null; source: string; sourceUrl: string | null; confidence: number; verified: boolean; isDuplicate: boolean; isRelevant: boolean; actorRole: string | null; actorIndustry: string | null; fetchedAt: string; };
+type ResearchBudget = { id: string; phase: string; maxRuntime: number; maxAgentRuns: number; minimumEvidence: number; budgetEur: number; spentEur: number; status: string; createdAt: string; };
+type StopCondition = { id: string; conditionType: string; triggered: boolean; triggeredAt: string | null; action: string; reason: string | null; };
+type Budget = { id: string; phase: string; maxRuntime: number; maxAgentRuns: number; minimumEvidence: number; budgetEur: number; spentEur: number; status: string; createdAt: string; };
+type StopCond = { id: string; conditionType: string; threshold: number | null; triggered: boolean; triggeredAt: string | null; action: string; reason: string | null; };
+type DedupStats = { total: number; duplicates: number; irrelevant: number; highConfidence: number; independent: number; };
 
 export default function OpportunityDetailPage() {
   const router = useRouter();
@@ -49,7 +64,32 @@ export default function OpportunityDetailPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
 
-  useEffect(() => { fetchOpp(); }, [id]);
+  // Budget
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [showBudgetForm, setShowBudgetForm] = useState(false);
+  const [budgetForm, setBudgetForm] = useState({
+    phase: "quick_scan",
+    maxRuntime: 15,
+    maxAgentRuns: 3,
+    minimumEvidence: 5,
+    budgetEur: 50,
+  });
+
+  // Stop Conditions
+  const [stopConditions, setStopConditions] = useState<StopCond[]>([]);
+  const [showStopForm, setShowStopForm] = useState(false);
+  const [stopForm, setStopForm] = useState({
+    conditionType: "score_below_threshold",
+    threshold: 50,
+    action: "kill",
+    reason: "",
+  });
+
+  // Deduplication Stats
+  const [dedupStats, setDedupStats] = useState<DedupStats | null>(null);
+  const [dedupLoading, setDedupLoading] = useState(false);
+
+  useEffect(() => { fetchOpp(); fetchBudgets(); fetchStopConditions(); fetchDedupStats(); }, [id]);
 
   async function fetchOpp() {
     try {
@@ -57,6 +97,55 @@ export default function OpportunityDetailPage() {
       if (res.ok) setOpp(await res.json());
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
+  }
+
+  async function fetchBudgets() {
+    try {
+      const res = await fetch(`/api/opportunities/${id}/budget`);
+      if (res.ok) setBudgets(await res.json());
+    } catch (e) { console.error(e); }
+  }
+
+  async function fetchStopConditions() {
+    try {
+      const res = await fetch(`/api/opportunities/${id}/stop-conditions`);
+      if (res.ok) setStopConditions(await res.json());
+    } catch (e) { console.error(e); }
+  }
+
+  async function fetchDedupStats() {
+    try {
+      const res = await fetch(`/api/opportunities/${id}/signals?dedup=stats`);
+      if (res.ok) setDedupStats(await res.json());
+    } catch (e) { console.error(e); }
+  }
+
+  async function createBudget() {
+    await fetch(`/api/opportunities/${id}/budget`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(budgetForm),
+    });
+    setShowBudgetForm(false);
+    fetchBudgets();
+  }
+
+  async function createStopCondition() {
+    await fetch(`/api/opportunities/${id}/stop-conditions`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(stopForm),
+    });
+    setShowStopForm(false);
+    fetchStopConditions();
+  }
+
+  async function runDeduplication() {
+    setDedupLoading(true);
+    await fetch(`/api/opportunities/${id}/signals`, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    await fetchDedupStats();
+    setDedupLoading(false);
   }
 
   async function toggleGate(gateId: string, passed: boolean) {
@@ -123,7 +212,7 @@ export default function OpportunityDetailPage() {
 
       {/* Tabs */}
       <div className="border-b">
-        <nav className="flex gap-6">
+        <nav className="flex gap-6 flex-wrap">
           {[
             { id: "overview", label: "Overview" },
             { id: "pain", label: "Pain Graph" },
@@ -131,6 +220,9 @@ export default function OpportunityDetailPage() {
             { id: "experiments", label: `Experiments (${opp.experiments?.length || 0})` },
             { id: "gates", label: `Gates (${passedGates}/${totalGates})` },
             { id: "competitors", label: `Competitors (${opp.competitors?.length || 0})` },
+            { id: "budget", label: `Budget` },
+            { id: "stop", label: `Stop Conditions (${stopConditions.filter(c => c.triggered).length}/${stopConditions.length})` },
+            { id: "dedup", label: "Signals" },
           ].map(tab => (
             <button
               key={tab.id}
@@ -452,6 +544,252 @@ export default function OpportunityDetailPage() {
                     )}
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* RESEARCH BUDGET */}
+        {activeTab === "budget" && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold">Research Budget</h2>
+              <button
+                onClick={() => setShowBudgetForm(!showBudgetForm)}
+                className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                {showBudgetForm ? "Abbrechen" : "+ Budget Phase"}
+              </button>
+            </div>
+
+            {showBudgetForm && (
+              <div className="rounded-lg border bg-card p-4 space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Phase</label>
+                    <select
+                      value={budgetForm.phase}
+                      onChange={e => setBudgetForm({ ...budgetForm, phase: e.target.value })}
+                      className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+                    >
+                      <option value="quick_scan">Quick Scan</option>
+                      <option value="deep_research">Deep Research</option>
+                      <option value="validation">Validation</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Max Runtime (min)</label>
+                    <input type="number" value={budgetForm.maxRuntime} onChange={e => setBudgetForm({ ...budgetForm, maxRuntime: parseInt(e.target.value) || 0 })} className="mt-1 block w-full rounded-md border px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Max Agent Runs</label>
+                    <input type="number" value={budgetForm.maxAgentRuns} onChange={e => setBudgetForm({ ...budgetForm, maxAgentRuns: parseInt(e.target.value) || 0 })} className="mt-1 block w-full rounded-md border px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Min Evidence</label>
+                    <input type="number" value={budgetForm.minimumEvidence} onChange={e => setBudgetForm({ ...budgetForm, minimumEvidence: parseInt(e.target.value) || 0 })} className="mt-1 block w-full rounded-md border px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Budget (EUR)</label>
+                    <input type="number" value={budgetForm.budgetEur} onChange={e => setBudgetForm({ ...budgetForm, budgetEur: parseInt(e.target.value) || 0 })} className="mt-1 block w-full rounded-md border px-3 py-2 text-sm" />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button onClick={() => setShowBudgetForm(false)} className="inline-flex h-9 items-center rounded-md border px-4 text-sm hover:bg-muted">Abbrechen</button>
+                  <button onClick={createBudget} className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">Speichern</button>
+                </div>
+              </div>
+            )}
+
+            {budgets.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">Noch keine Budget-Phasen definiert.</div>
+            ) : (
+              <div className="space-y-3">
+                {budgets.map(b => (
+                  <div key={b.id} className="rounded-lg border bg-card p-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="font-medium capitalize">{b.phase.replace("_", " ")}</div>
+                        <div className="text-sm text-muted-foreground mt-1">
+                          {b.maxRuntime}min • {b.maxAgentRuns} Runs • {b.minimumEvidence} Evidence
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className={`text-sm font-medium ${b.spentEur > b.budgetEur ? "text-red-600" : "text-green-600"}`}>
+                          €{b.spentEur.toLocaleString("de-DE")} / €{b.budgetEur.toLocaleString("de-DE")}
+                        </div>
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium mt-1 ${
+                          b.status === "active" ? "bg-green-100 text-green-700" : 
+                          b.status === "exhausted" ? "bg-red-100 text-red-700" : 
+                          "bg-yellow-100 text-yellow-700"
+                        }`}>{b.status}</span>
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <div className="w-full bg-muted rounded-full h-2">
+                        <div className={`h-2 rounded-full transition-all ${b.spentEur > b.budgetEur ? "bg-red-500" : "bg-primary"}`} style={{ width: `${Math.min((b.spentEur / b.budgetEur) * 100, 100)}%` }} />
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">{Math.round((b.spentEur / b.budgetEur) * 100)}% ausgeschöpft</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* STOP CONDITIONS */}
+        {activeTab === "stop" && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold">Stop Conditions</h2>
+              <button
+                onClick={() => setShowStopForm(!showStopForm)}
+                className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                {showStopForm ? "Abbrechen" : "+ Condition"}
+              </button>
+            </div>
+
+            {showStopForm && (
+              <div className="rounded-lg border bg-card p-4 space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Condition Type</label>
+                    <select
+                      value={stopForm.conditionType}
+                      onChange={e => setStopForm({ ...stopForm, conditionType: e.target.value })}
+                      className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+                    >
+                      <option value="score_below_threshold">Score below threshold</option>
+                      <option value="no_clear_buyer">No clear buyer</option>
+                      <option value="no_repeated_problem">No repeated problem</option>
+                      <option value="strong_competition_no_wedge">Strong competition + no wedge</option>
+                      <option value="economic_pain_unknown">Economic pain unknown</option>
+                      <option value="wtp_unknown">WTP unknown</option>
+                      <option value="distribution_unknown">Distribution unknown</option>
+                      <option value="evidence_sufficient">Evidence sufficient</option>
+                      <option value="confidence_too_low">Confidence too low</option>
+                      <option value="budget_exhausted">Budget exhausted</option>
+                      <option value="time_exhausted">Time exhausted</option>
+                      <option value="max_runs_reached">Max runs reached</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Threshold (optional)</label>
+                    <input type="number" value={stopForm.threshold} onChange={e => setStopForm({ ...stopForm, threshold: parseInt(e.target.value) || 0 })} className="mt-1 block w-full rounded-md border px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Action</label>
+                    <select
+                      value={stopForm.action}
+                      onChange={e => setStopForm({ ...stopForm, action: e.target.value })}
+                      className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+                    >
+                      <option value="kill">KILL</option>
+                      <option value="watch">WATCH</option>
+                      <option value="experiment">EXPERIMENT</option>
+                      <option value="stop_research">STOP RESEARCH</option>
+                      <option value="human_review">HUMAN REVIEW</option>
+                      <option value="none">None (monitor only)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Reason</label>
+                    <input type="text" value={stopForm.reason} onChange={e => setStopForm({ ...stopForm, reason: e.target.value })} placeholder="Optional..." className="mt-1 block w-full rounded-md border px-3 py-2 text-sm" />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button onClick={() => setShowStopForm(false)} className="inline-flex h-9 items-center rounded-md border px-4 text-sm hover:bg-muted">Abbrechen</button>
+                  <button onClick={createStopCondition} className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">Speichern</button>
+                </div>
+              </div>
+            )}
+
+            {stopConditions.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">Noch keine Stop Conditions definiert.</div>
+            ) : (
+              <div className="space-y-3">
+                {stopConditions.map(c => (
+                  <div key={c.id} className={`rounded-lg border p-4 ${c.triggered ? "bg-red-50 border-red-200" : "bg-card"}`}>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${c.triggered ? "bg-red-100 text-red-700" : "bg-muted text-muted-foreground"}`}>
+                          {c.triggered ? "!" : "○"}
+                        </div>
+                        <div>
+                          <div className="font-medium">{c.conditionType.replace(/_/g, " ")}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {c.threshold !== null && <>Threshold: {c.threshold} • </>}
+                            Action: <span className={`font-medium ${c.action === "kill" ? "text-red-600" : c.action === "experiment" ? "text-blue-600" : ""}`}>{c.action}</span>
+                            {c.reason && <> • {c.reason}</>}
+                          </div>
+                        </div>
+                      </div>
+                      {c.triggeredAt && (
+                        <span className="text-xs text-red-600 font-medium">
+                          Triggered {new Date(c.triggeredAt).toLocaleDateString("de-DE")}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* SIGNALS / DEDUPLICATION */}
+        {activeTab === "dedup" && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold">Signal Deduplication</h2>
+              <button
+                onClick={runDeduplication}
+                disabled={dedupLoading}
+                className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {dedupLoading ? "Läuft..." : "Deduplizierung starten"}
+              </button>
+            </div>
+
+            {dedupStats && (
+              <div className="grid grid-cols-5 gap-4">
+                {[
+                  { label: "Total", value: dedupStats.total, color: "text-gray-600" },
+                  { label: "Duplicates", value: dedupStats.duplicates, color: "text-yellow-600" },
+                  { label: "Irrelevant", value: dedupStats.irrelevant, color: "text-orange-600" },
+                  { label: "High Confidence", value: dedupStats.highConfidence, color: "text-blue-600" },
+                  { label: "Independent", value: dedupStats.independent, color: "text-green-600" },
+                ].map(stat => (
+                  <div key={stat.label} className="rounded-lg border bg-card p-4 text-center">
+                    <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
+                    <div className="text-xs text-muted-foreground">{stat.label}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {dedupStats && (
+              <div className="rounded-lg border bg-card p-6">
+                <h3 className="text-sm font-semibold mb-4">Deduplizierungs-Funnel</h3>
+                <div className="space-y-2">
+                  {[
+                    { label: "Raw Signals", value: dedupStats.total },
+                    { label: "After Duplicate Removal", value: dedupStats.total - dedupStats.duplicates },
+                    { label: "After Same-Origin Removal", value: dedupStats.total - dedupStats.duplicates - dedupStats.irrelevant },
+                    { label: "Independent Signals", value: dedupStats.independent },
+                    { label: "High-Confidence Signals", value: dedupStats.highConfidence },
+                  ].map((step, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="text-xs w-24 text-right text-muted-foreground">{step.label}</div>
+                      <div className="flex-1 bg-muted rounded-full h-4">
+                        <div className="bg-primary h-4 rounded-full transition-all" style={{ width: `${dedupStats.total > 0 ? (step.value / dedupStats.total) * 100 : 0}%` }} />
+                      </div>
+                      <div className="text-sm font-medium w-8 text-right">{step.value}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
