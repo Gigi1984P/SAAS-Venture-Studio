@@ -18,10 +18,11 @@
 | 13 | Venture Detail-Seite (Inline-Editing) | Offen | Mittel |
 | 14 | Superadmin-RBAC-System | ✅ Erledigt | Hoch |
 | 15 | Settings-Seite (Profil, Passwort) | ✅ Erledigt | Niedrig |
-| 16 | Cookie-Consent-Banner | Offen | Hoch |
-| 17 | Datenschutzerklärung | Offen | Hoch |
-| 18 | Impressum | Offen | Mittel |
-| 19 | Venture Detail-Seite (Inline-Editing) | Offen | Mittel |
+| 16 | Opportunity Engine (Discovery + Scoring + Gates) | ✅ Erledigt | Hoch |
+| 17 | Venture Detail-Seite (Inline-Editing) | Offen | Mittel |
+| 18 | Cookie-Consent-Banner | Offen | Hoch |
+| 19 | Datenschutzerklärung | Offen | Hoch |
+| 20 | Impressum | Offen | Mittel |
 
 ## Erledigt
 | # | Aufgabe | Datum |
@@ -38,3 +39,8 @@
 | - | SQLite Dev-DB eingerichtet (PostgreSQL remote nicht erreichbar) | 2026-09-06 |
 | - | Venture Model + API + Inline-Create Formular | 2026-09-06 |
 | - | Initial Commit (29 Dateien, ~15.000 Zeilen) | 2026-09-06 |
+| - | PostgreSQL-DB wieder verbunden (neue Credentials) | 2026-09-06 |
+| - | NEXTAUTH_URL korrigiert, Auth-Logging hinzugefügt | 2026-09-06 |
+| - | Superadmin-Passwort aktualisiert | 2026-09-06 |
+| - | Settings-Seite (Profil-Edit + Passwort-Änderung) | 2026-09-06 |
+| - | Opportunity Engine (Schema, API, UI komplett) | 2026-09-06 |
