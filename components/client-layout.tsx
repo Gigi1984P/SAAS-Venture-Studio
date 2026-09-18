@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { SidebarNav } from "./sidebar-nav";
+import { locales } from "@/i18n/config";
 
 export function ClientLayout({
   children,
@@ -11,8 +12,16 @@ export function ClientLayout({
   roleName?: string;
 }) {
   const pathname = usePathname();
-  const isAuthPage = pathname?.startsWith("/auth/") ?? false;
-  const isPublic = pathname === "/" || isAuthPage;
+
+  // Strip locale prefix for route matching (e.g. /de/dashboard -> /dashboard)
+  const localePrefix = pathname?.split("/")[1];
+  const isLocalePath = locales.includes(localePrefix as any);
+  const cleanPath = isLocalePath
+    ? pathname!.substring(3) // remove /de or /en etc.
+    : pathname;
+
+  const isAuthPage = cleanPath?.startsWith("/auth/") ?? false;
+  const isPublic = cleanPath === "/" || isAuthPage;
 
   if (isPublic) {
     return <>{children}</>;

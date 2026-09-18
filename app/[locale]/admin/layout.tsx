@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { SidebarNav } from "@/components/sidebar-nav";
 
-export default async function DashboardLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -14,11 +14,8 @@ export default async function DashboardLayout({
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    include: {
-      memberships: { include: { role: true } },
-    },
+    include: { memberships: { include: { role: true } } },
   });
-
   const roleName = user?.memberships[0]?.role?.name;
 
   return (
