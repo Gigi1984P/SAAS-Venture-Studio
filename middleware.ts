@@ -1,14 +1,20 @@
+import createMiddleware from "next-intl/middleware";
 import { NextRequest, NextResponse } from "next/server";
+import { locales, defaultLocale } from "./i18n/config";
 
-const SESSION_ABSOLUTE_TIMEOUT = 24 * 60 * 60 * 1000; // 24h
+const SESSION_ABSOLUTE_TIMEOUT = 24 * 60 * 60 * 1000;
 const SESSION_CREATED_AT_COOKIE = "session-created-at";
 const CSRF_COOKIE_NAME = "csrf-token";
 
-// Geschützte Routen
 const PROTECTED_ROUTES = [
   "/dashboard",
   "/ventures",
   "/settings",
+  "/opportunities",
+  "/validation",
+  "/intelligence",
+  "/agents",
+  "/radar",
 ];
 
 function anonymizeIp(ip: string): string {
@@ -34,8 +40,19 @@ function generateCsrfToken(): string {
   return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+const intlMiddleware = createMiddleware({
+  locales,
+  defaultLocale,
+  localePrefix: "always",
+});
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const localePrefix = pathname.split("/")[1];
+  const isLocalePath = locales.includes(localePrefix as any);
+
+  // Strip locale prefix for route matching
+  const cleanPath = isLocalePath ? pathname.replace(/^\/[a-z]{2}/, "") : pathname;
 
   // HTTPS Redirect (Production)
   if (
@@ -52,19 +69,20 @@ export async function middleware(request: NextRequest) {
     request.cookies.get("__Secure-next-auth.session-token")?.value ||
     request.cookies.get("next-auth.session-token")?.value ||
     "";
-  const isProtectedRoute = PROTECTED_ROUTES.some(route =>
-    pathname === route || pathname.startsWith(route + "/")
+  const isProtectedRoute = PROTECTED_ROUTES.some(
+    (route) => cleanPath === route || cleanPath.startsWith(route + "/")
   );
-  const isAuthPage = pathname.startsWith("/auth/");
+  const isAuthPage = cleanPath.startsWith("/auth/");
 
   if (isProtectedRoute && !sessionToken && !isAuthPage) {
     const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = "/auth/login";
+    loginUrl.pathname = `${isLocalePath ? "/" + localePrefix : ""}/auth/login`;
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  const response = NextResponse.next();
+  // Run i18n middleware (handles locale detection/redirect)
+  const response = intlMiddleware(request);
   const now = Date.now();
 
   // IP-Anonymisierung (DSGVO)
@@ -80,12 +98,16 @@ export async function middleware(request: NextRequest) {
 
   // Session Timeout
   if (sessionToken) {
-    const sessionCreatedAt = parseInt(request.cookies.get(SESSION_CREATED_AT_COOKIE)?.value || "0", 10);
+    const sessionCreatedAt = parseInt(
+      request.cookies.get(SESSION_CREATED_AT_COOKIE)?.value || "0",
+      10
+    );
     if (!isAuthPage) {
-      const absoluteExpired = sessionCreatedAt > 0 && now - sessionCreatedAt > SESSION_ABSOLUTE_TIMEOUT;
+      const absoluteExpired =
+        sessionCreatedAt > 0 && now - sessionCreatedAt > SESSION_ABSOLUTE_TIMEOUT;
       if (absoluteExpired) {
         const loginUrl = request.nextUrl.clone();
-        loginUrl.pathname = "/auth/login";
+        loginUrl.pathname = `${isLocalePath ? "/" + localePrefix : ""}/auth/login`;
         loginUrl.searchParams.set("error", "SessionExpired");
         const redirect = NextResponse.redirect(loginUrl);
         redirect.cookies.delete(SESSION_CREATED_AT_COOKIE);
@@ -125,7 +147,10 @@ export async function middleware(request: NextRequest) {
     response.headers.set("X-XSS-Protection", "1; mode=block");
   }
 
-  if (process.env.NODE_ENV === "production" && request.headers.get("x-forwarded-proto") === "https") {
+  if (
+    process.env.NODE_ENV === "production" &&
+    request.headers.get("x-forwarded-proto") === "https"
+  ) {
     response.headers.set(
       "Strict-Transport-Security",
       "max-age=63072000; includeSubDomains; preload"

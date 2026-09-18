@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "../../../lib/auth";
+import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { prisma } from "../../../lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 export default async function AdminUsersPage() {
   const session = await getServerSession(authOptions);

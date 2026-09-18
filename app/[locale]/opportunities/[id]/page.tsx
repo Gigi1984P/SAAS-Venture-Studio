@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
+import { OpportunityScoring } from "@/components/opportunity-scoring";
 
 type Opp = {
   id: string;
@@ -34,6 +36,17 @@ type Opp = {
   economicImpact: number | null;
   existingSpend: number | null;
   reachability: number | null;
+  painSeverity: number | null;
+  switchingMotivation: number | null;
+  recurringNature: number | null;
+  evidenceQuality: number | null;
+  mvpSimplicity: number | null;
+  aiLeverage: number | null;
+  grossMargin: number | null;
+  distributionAdvantage: number | null;
+  lowSupportBurden: number | null;
+  expansionPotential: number | null;
+  defensibility: number | null;
   supportingEvidenceCount: number;
   contradictingEvidenceCount: number;
   createdAt: string;
@@ -71,7 +84,7 @@ export default function OpportunityDetailPage() {
 
   const [opp, setOpp] = useState<Opp | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("scoring");
 
   // Pain Signals & Clusters
   const [painSignals, setPainSignals] = useState<PainSignal[]>([]);
@@ -271,6 +284,7 @@ export default function OpportunityDetailPage() {
       <div className="border-b">
         <nav className="flex gap-6 flex-wrap">
           {[
+            { id: "scoring", label: "Scoring" },
             { id: "overview", label: "Overview" },
             { id: "pain", label: "Pain Graph" },
             { id: "pain-signals", label: `Pain Signals (${painSignals.length})` },
@@ -303,6 +317,70 @@ export default function OpportunityDetailPage() {
 
       {/* Tab Content */}
       <div className="space-y-6">
+        {/* SCORING */}
+        {activeTab === "scoring" && opp && (
+          <OpportunityScoring
+            data={{
+              id: opp.id,
+              painSeverity: opp.painSeverity || 0,
+              frequency: opp.frequency || 0,
+              economicImpact: opp.economicImpact || 0,
+              existingSpend: opp.existingSpend || 0,
+              buyerClarity: opp.buyerClarity || 0,
+              reachability: opp.reachability || 0,
+              competitionGap: opp.competitionGap || 0,
+              switchingMotivation: opp.switchingMotivation || 0,
+              recurringNature: opp.recurringNature || 0,
+              evidenceQuality: opp.evidenceQuality || 0,
+              scoreA: opp.scoreA || 0,
+              mvpSimplicity: opp.mvpSimplicity || 0,
+              aiLeverage: opp.aiLeverage || 0,
+              grossMargin: opp.grossMargin || 0,
+              distributionAdvantage: opp.distributionAdvantage || 0,
+              lowSupportBurden: opp.lowSupportBurden || 0,
+              expansionPotential: opp.expansionPotential || 0,
+              defensibility: opp.defensibility || 0,
+              scoreB: opp.scoreB || 0,
+              confidence: opp.confidence || 0,
+              evidenceLevel: opp.evidenceLevel || 0,
+              biggestUncertainty: opp.biggestUncertainty,
+            }}
+            onChange={(k, v) => setOpp((prev: any) => prev ? { ...prev, [k]: v } : prev)}
+            onSave={async () => {
+              try {
+                await fetch(`/api/opportunities/${id}`, {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    painSeverity: opp.painSeverity,
+                    frequency: opp.frequency,
+                    economicImpact: opp.economicImpact,
+                    existingSpend: opp.existingSpend,
+                    buyerClarity: opp.buyerClarity,
+                    reachability: opp.reachability,
+                    competitionGap: opp.competitionGap,
+                    switchingMotivation: opp.switchingMotivation,
+                    recurringNature: opp.recurringNature,
+                    evidenceQuality: opp.evidenceQuality,
+                    mvpSimplicity: opp.mvpSimplicity,
+                    aiLeverage: opp.aiLeverage,
+                    grossMargin: opp.grossMargin,
+                    distributionAdvantage: opp.distributionAdvantage,
+                    lowSupportBurden: opp.lowSupportBurden,
+                    expansionPotential: opp.expansionPotential,
+                    defensibility: opp.defensibility,
+                    confidence: opp.confidence,
+                    evidenceLevel: opp.evidenceLevel,
+                    biggestUncertainty: opp.biggestUncertainty,
+                  }),
+                });
+                await fetchOpp();
+              } catch (e) { console.error(e); }
+            }}
+            saving={false}
+          />
+        )}
+
         {/* OVERVIEW */}
         {activeTab === "overview" && (
           <div className="grid gap-6 md:grid-cols-2">

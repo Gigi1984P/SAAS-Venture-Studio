@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "../../lib/auth";
+import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { prisma } from "../../lib/prisma";
+import { prisma } from "@/lib/prisma";
 import SettingsClient from "./settings-client";
 
 export default async function SettingsPage() {

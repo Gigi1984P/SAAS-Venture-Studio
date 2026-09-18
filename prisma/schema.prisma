@@ -24,8 +24,7 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
@@ -55,37 +54,35 @@ model VerificationToken {
 // ============================================================
 
 model User {
-  id                 String    @id @default(cuid())
-  name               String?
-  email              String    @unique
-  emailVerified      DateTime? @map("email_verified")
-  image              String?
-  avatarUrl          String?   @map("avatar_url")
-  password           String?
-  createdAt          DateTime  @default(now()) @map("created_at")
-  updatedAt          DateTime  @updatedAt @map("updated_at")
-
-  accounts     Account[]
-  sessions     Session[]
-  memberships  Member[]
-  ownedOrgs    Organization[] @relation("OwnedOrganizations")
-  ventures     Venture[]
+  id            String         @id @default(cuid())
+  name          String?
+  email         String         @unique
+  emailVerified DateTime?      @map("email_verified")
+  image         String?
+  avatarUrl     String?        @map("avatar_url")
+  password      String?
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  accounts      Account[]
+  sessions      Session[]
+  memberships   Member[]
+  ownedOrgs     Organization[] @relation("OwnedOrganizations")
+  ventures      Venture[]
 
   @@map("users")
 }
 
 model Organization {
-  id          String   @id @default(cuid())
-  name        String
-  slug        String   @unique
-  logo        String?
-  status      String   @default("active")
-  ownerId     String?  @map("owner_id")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  owner       User?    @relation("OwnedOrganizations", fields: [ownerId], references: [id])
-  members     Member[]
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  logo      String?
+  status    String   @default("active")
+  ownerId   String?  @map("owner_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  owner     User?    @relation("OwnedOrganizations", fields: [ownerId], references: [id])
+  members   Member[]
 
   @@map("organizations")
 }
@@ -98,24 +95,22 @@ model Member {
   status         String       @default("active")
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
-
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role         Role         @relation(fields: [roleId], references: [id])
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           Role         @relation(fields: [roleId], references: [id])
 
   @@unique([organizationId, userId])
   @@map("members")
 }
 
 model Role {
-  id          String       @id @default(cuid())
-  name        String       @unique
+  id          String           @id @default(cuid())
+  name        String           @unique
   label       String
   description String?
-  level       Int          @default(0)
-  isDefault   Boolean      @default(false) @map("is_default")
-  createdAt   DateTime     @default(now()) @map("created_at")
-
+  level       Int              @default(0)
+  isDefault   Boolean          @default(false) @map("is_default")
+  createdAt   DateTime         @default(now()) @map("created_at")
   members     Member[]
   permissions RolePermission[]
 
@@ -129,7 +124,6 @@ model Permission {
   category    String
   description String?
   createdAt   DateTime         @default(now()) @map("created_at")
-
   roles       RolePermission[]
 
   @@map("permissions")
@@ -140,7 +134,6 @@ model RolePermission {
   roleId       String     @map("role_id")
   permissionId String     @map("permission_id")
   createdAt    DateTime   @default(now()) @map("created_at")
-
   role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
@@ -153,553 +146,1024 @@ model RolePermission {
 // ============================================================
 
 model Venture {
-  id            String        @id @default(cuid())
+  id            String           @id @default(cuid())
   name          String
-  slug          String        @unique
+  slug          String           @unique
   description   String?
-  status        String        @default("idea") // idea, validation, mvp, growth, scale, sunset
+  status        String           @default("idea")
   website       String?
   github        String?
-  mrr           Int           @default(0)
-  ownerId       String        @map("owner_id")
-  opportunityId String?       @map("opportunity_id")
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
-
-  owner         User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  opportunity   Opportunity?  @relation(fields: [opportunityId], references: [id])
+  mrr           Int              @default(0)
+  ownerId       String           @map("owner_id")
+  opportunityId String?          @map("opportunity_id")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+  owner         User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  opportunity   Opportunity?     @relation(fields: [opportunityId], references: [id])
   events        VentureEvent[]
+  handoffs      VentureHandoff[]
 
   @@map("ventures")
 }
 
 model VentureEvent {
-  id          String   @id @default(cuid())
-  ventureId   String   @map("venture_id")
-  type        String
-  payload     Json
-  actorId     String   @map("actor_id")
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  venture     Venture  @relation(fields: [ventureId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  ventureId String   @map("venture_id")
+  type      String
+  payload   Json
+  actorId   String   @map("actor_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  venture   Venture  @relation(fields: [ventureId], references: [id], onDelete: Cascade)
 
   @@map("venture_events")
 }
 
 // ============================================================
-// OPPORTUNITY ENGINE (Complete)
+// OPPORTUNITY ENGINE (Extended)
 // ============================================================
 
 model Opportunity {
-  id            String     @id @default(cuid())
-  title         String
-  description   String?
-  
-  // Pain Graph
-  industryId    String?    @map("industry_id")
-  personaId     String?    @map("persona_id")
-  job           String?    // z.B. "Maintenance Coordination"
-  pain          String?    // Fragmented intake, contractor follow-up
-  workaround    String?    // WhatsApp, Excel, Email
-  consequence   String?    // 5h/week, missed jobs, tenant complaints
-  
-  // Lösungsidee
-  solution      String?
-  targetGroup   String?    @map("target_group")
-  businessModel String?    @map("business_model")
-  
-  // Two-Faktor Scoring (A = Opportunity Quality, B = Venture Fit)
-  // Score A — Opportunity Quality (1-100)
-  painSeverity      Int     @default(0) @map("pain_severity")      // 15 Punkte
-  frequency         Int     @default(0) // 10 Punkte
-  economicImpact    Int     @default(0) @map("economic_impact")      // 15 Punkte
-  existingSpend     Int     @default(0) @map("existing_spend")       // 10 Punkte
-  buyerClarity      Int     @default(0) @map("buyer_clarity")       // 10 Punkte
-  reachability      Int     @default(0) // 10 Punkte
-  competitionGap    Int     @default(0) @map("competition_gap")      // 10 Punkte
-  switchingMotivation Int   @default(0) @map("switching_motivation") // 10 Punkte
-  recurringNature   Int     @default(0) @map("recurring_nature")    // 5 Punkte
-  evidenceQuality   Int     @default(0) @map("evidence_quality")    // 5 Punkte
-  
-  scoreA            Int     @default(0) @map("score_a") // Summe A (max 100)
-  
-  // Score B — Venture Fit (1-100)
-  mvpSimplicity     Int     @default(0) @map("mvp_simplicity")       // 20 Punkte
-  aiLeverage        Int     @default(0) @map("ai_leverage")           // 15 Punkte
-  grossMargin       Int     @default(0) @map("gross_margin")            // 15 Punkte
-  distributionAdvantage Int @default(0) @map("distribution_advantage") // 20 Punkte
-  lowSupportBurden  Int     @default(0) @map("low_support_burden")    // 10 Punkte
-  expansionPotential Int   @default(0) @map("expansion_potential")   // 10 Punkte
-  defensibility     Int     @default(0) // 10 Punkte
-  
-  scoreB            Int     @default(0) @map("score_b") // Summe B (max 100)
-  
-  // Confidence & Evidence
-  confidence        Float   @default(0.0) // 0.0 - 1.0
-  evidenceLevel     Int     @default(0) @map("evidence_level") // 0-8
-  biggestUncertainty String? @map("biggest_uncertainty")
-
-  // Granular Validation Scores (0.0 - 1.0)
-  problemValidation    Float   @default(0.0) @map("problem_validation")
-  buyerValidation      Float   @default(0.0) @map("buyer_validation")
-  pricingValidation    Float   @default(0.0) @map("pricing_validation")
-  distributionValidation Float @default(0.0) @map("distribution_validation")
-  solutionValidation   Float   @default(0.0) @map("solution_validation")
-  
-  // Marktdaten
-  marketSize    String?    @map("market_size")
-  competition   String?    // "low", "medium", "high"
-  mrrEstimate   Int?       @map("mrr_estimate")
-  
-  // Erweiterte State Machine
-  status        String     @default("discovered")
-  // discovered → clustered → pain_verification → pain_verified → market_research → 
-  // competition_research → business_analysis → fact_check → critic_review → scored → 
-  // kill / watch / experiment / validating → score_update → human_gate → build_approved
-  
-  priority      String     @default("medium") // low, medium, high, urgent
-  
-  // Quelle
-  source        String     @default("manual")
-  sourceUrl     String?    @map("source_url")
-  tags          String?
-  
-  // Evidence Engine
-  supportingEvidenceCount   Int     @default(0) @map("supporting_evidence_count")
-  contradictingEvidenceCount Int    @default(0) @map("contradicting_evidence_count")
-
-  // Verknüpfungen
-  signals       Signal[]
-  painSignals   PainSignal[]
-  painClusters  PainCluster[]
-  claims        OpportunityClaim[]
-  ventures      Venture[]
-  gates         OpportunityGate[]
-  assumptions   Assumption[]
-  experiments   Experiment[]
-  competitors   Competitor[]
-  scoreComponents ScoreComponent[]
-  stopConditions StopCondition[]
-  researchBudgets ResearchBudget[]
-  negativeEvidence NegativeEvidence[]
-  artifacts     Artifact[]
-
-  // Metadaten
-  createdBy     String     @map("created_by")
-  createdAt     DateTime   @default(now()) @map("created_at")
-  updatedAt     DateTime   @updatedAt @map("updated_at")
-
-  industry      Industry?   @relation(fields: [industryId], references: [id])
-  persona       Persona?    @relation(fields: [personaId], references: [id])
+  id                         String                @id @default(cuid())
+  title                      String
+  description                String?
+  industryId                 String?               @map("industry_id")
+  personaId                  String?               @map("persona_id")
+  job                        String?
+  pain                       String?
+  workaround                 String?
+  consequence                String?
+  solution                   String?
+  targetGroup                String?               @map("target_group")
+  businessModel              String?               @map("business_model")
+  painSeverity               Int                   @default(0) @map("pain_severity")
+  frequency                  Int                   @default(0)
+  economicImpact             Int                   @default(0) @map("economic_impact")
+  existingSpend              Int                   @default(0) @map("existing_spend")
+  buyerClarity               Int                   @default(0) @map("buyer_clarity")
+  reachability               Int                   @default(0)
+  competitionGap             Int                   @default(0) @map("competition_gap")
+  switchingMotivation        Int                   @default(0) @map("switching_motivation")
+  recurringNature            Int                   @default(0) @map("recurring_nature")
+  evidenceQuality            Int                   @default(0) @map("evidence_quality")
+  scoreA                     Int                   @default(0) @map("score_a")
+  mvpSimplicity              Int                   @default(0) @map("mvp_simplicity")
+  aiLeverage                 Int                   @default(0) @map("ai_leverage")
+  grossMargin                Int                   @default(0) @map("gross_margin")
+  distributionAdvantage      Int                   @default(0) @map("distribution_advantage")
+  lowSupportBurden           Int                   @default(0) @map("low_support_burden")
+  expansionPotential         Int                   @default(0) @map("expansion_potential")
+  defensibility              Int                   @default(0)
+  scoreB                     Int                   @default(0) @map("score_b")
+  marketScore                Int                   @default(0) @map("market_score")
+  businessScore              Int                   @default(0) @map("business_score")
+  studioFitScore             Int                   @default(0) @map("studio_fit_score")
+  synergyScore               Int                   @default(0) @map("synergy_score")
+  rightToWin                 String?               @map("right_to_win")
+  confidence                 Float                 @default(0.0)
+  evidenceLevel              Int                   @default(0) @map("evidence_level")
+  biggestUncertainty         String?               @map("biggest_uncertainty")
+  problemValidation          Float                 @default(0.0) @map("problem_validation")
+  buyerValidation            Float                 @default(0.0) @map("buyer_validation")
+  pricingValidation          Float                 @default(0.0) @map("pricing_validation")
+  distributionValidation     Float                 @default(0.0) @map("distribution_validation")
+  solutionValidation         Float                 @default(0.0) @map("solution_validation")
+  retentionValidation        Float                 @default(0.0) @map("retention_validation")
+  totalProblemSpend          Int?                  @map("total_problem_spend")
+  addressableSpend           Int?                  @map("addressable_spend")
+  potentialValueCreation     Int?                  @map("potential_value_creation")
+  potentialValueCapture      Int?                  @map("potential_value_capture")
+  realisticRevenuePool       Int?                  @map("realistic_revenue_pool")
+  marketSize                 String?               @map("market_size")
+  competition                String?
+  mrrEstimate                Int?                  @map("mrr_estimate")
+  acvEstimate                Int?                  @map("acv_estimate")
+  status                     String                @default("discovered")
+  priority                   String                @default("medium")
+  source                     String                @default("manual")
+  sourceUrl                  String?               @map("source_url")
+  tags                       String?
+  supportingEvidenceCount    Int                   @default(0) @map("supporting_evidence_count")
+  contradictingEvidenceCount Int                   @default(0) @map("contradicting_evidence_count")
+  validationPassed           Boolean?              @map("validation_passed")
+  validationFailed           Boolean?              @map("validation_failed")
+  conversionRate             Float?                @map("conversion_rate")
+  cac                        Int?                  @map("cac")
+  salesCycleDays             Int?                  @map("sales_cycle_days")
+  pilotConversion            Float?                @map("pilot_conversion")
+  retention                  Float?
+  churn                      Float?
+  grossMarginActual          Float?                @map("gross_margin_actual")
+  arr                        Int?
+  pmfScore                   Float?                @map("pmf_score")
+  ventureEnded               Boolean?              @map("venture_ended")
+  exitValue                  Int?                  @map("exit_value")
+  roic                       Float?
+  createdBy                  String                @map("created_by")
+  createdAt                  DateTime              @default(now()) @map("created_at")
+  updatedAt                  DateTime              @updatedAt @map("updated_at")
+  industry                   Industry?             @relation(fields: [industryId], references: [id])
+  persona                    Persona?              @relation(fields: [personaId], references: [id])
+  signals                    Signal[]
+  painSignals                PainSignal[]
+  painClusters               PainCluster[]
+  claims                     OpportunityClaim[]
+  ventures                   Venture[]
+  gates                      OpportunityGate[]
+  assumptions                Assumption[]
+  experiments                Experiment[]
+  competitors                Competitor[]
+  scoreComponents            ScoreComponent[]
+  stopConditions             StopCondition[]
+  researchBudgets            ResearchBudget[]
+  negativeEvidence           NegativeEvidence[]
+  artifacts                  Artifact[]
+  validationRuns             ValidationRun[]
+  prospects                  Prospect[]
+  workflowObservations       WorkflowObservation[]
+  redTeamReviews             RedTeamReview[]
+  unitEconomics              UnitEconomicsModel[]
+  validationMemos            ValidationMemo[]
+  outcomeReviews             OutcomeReview[]
+  hypotheses                 Hypothesis[]
+  hardGates                  HardGate[]
+  ventureHandoffs            VentureHandoff[]
 
   @@map("opportunities")
 }
 
+model Industry {
+  id            String        @id @default(cuid())
+  name          String        @unique
+  description   String?
+  opportunities Opportunity[]
+  personas      Persona[]
+
+  @@map("industries")
+}
+
+model Persona {
+  id            String        @id @default(cuid())
+  name          String
+  role          String
+  industryId    String        @map("industry_id")
+  description   String?
+  painPoints    String?       @map("pain_points")
+  opportunities Opportunity[]
+  industry      Industry      @relation(fields: [industryId], references: [id], onDelete: Cascade)
+
+  @@map("personas")
+}
+
 // ============================================================
-// PAIN SIGNALS (Spezialisierte Signale für Pain-Points)
+// PAIN SIGNALS & CLUSTERS
 // ============================================================
 
 model PainSignal {
-  id            String      @id @default(cuid())
-  opportunityId String      @map("opportunity_id")
-  
-  // Quelle
-  source        String      // "reddit", "g2", "trustpilot", "forum", "interview"
-  sourceUrl     String?     @map("source_url")
-  rawText       String      @map("raw_text") // Originaler Text
-  
-  // Extrahierte Pain-Daten
-  actorRole     String?     @map("actor_role") // "Operations Manager"
-  actorIndustry String?     @map("actor_industry")
-  job           String?     // "Maintenance Coordination"
-  pain          String?     // Konkretes Problem
-  painIntensity Int?        @map("pain_intensity") // 1-10
-  workaround    String?     // Was machen sie stattdessen?
-  workaroundCost String?     @map("workaround_cost") // "5h/week", "€500/month"
-  consequence   String?     // "missed jobs", "tenant complaints"
-  
-  // Metadaten
-  confidence    Float       @default(0.5)
-  language      String      @default("en")
-  fetchedAt     DateTime    @default(now()) @map("fetched_at")
-  
-  // Clustering
-  clusterId     String?     @map("cluster_id")
-  sourceId      String?     @map("source_id") // Link zu ResearchSource
-  
-  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
-  cluster       PainCluster? @relation(fields: [clusterId], references: [id])
+  id             String          @id @default(cuid())
+  opportunityId  String          @map("opportunity_id")
+  source         String
+  sourceUrl      String?         @map("source_url")
+  rawText        String          @map("raw_text")
+  actorRole      String?         @map("actor_role")
+  actorIndustry  String?         @map("actor_industry")
+  job            String?
+  pain           String?
+  painIntensity  Int?            @map("pain_intensity")
+  workaround     String?
+  workaroundCost String?         @map("workaround_cost")
+  consequence    String?
+  confidence     Float           @default(0.5)
+  language       String          @default("en")
+  fetchedAt      DateTime        @default(now()) @map("fetched_at")
+  clusterId      String?         @map("cluster_id")
+  sourceId       String?         @map("source_id")
+  opportunity    Opportunity     @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  cluster        PainCluster?    @relation(fields: [clusterId], references: [id])
   researchSource ResearchSource? @relation("SourcePainSignals", fields: [sourceId], references: [id])
 
   @@map("pain_signals")
 }
 
-// ============================================================
-// PAIN CLUSTERS (Gruppierte ähnliche Pain-Signale)
-// ============================================================
-
 model PainCluster {
-  id              String      @id @default(cuid())
-  opportunityId   String      @map("opportunity_id")
-  
-  // Cluster-Daten
-  label           String      // "Fragmented maintenance intake"
-  description     String?     // Zusammenfassung
+  id              String       @id @default(cuid())
+  opportunityId   String       @map("opportunity_id")
+  label           String
+  description     String?
   painSignals     PainSignal[]
-  
-  // Metriken
-  signalCount     Int         @default(0) @map("signal_count")
-  avgIntensity    Float       @default(0) @map("avg_intensity")
-  topWorkarounds  String?     @map("top_workarounds") // JSON Array
-  topConsequences String?     @map("top_consequences") // JSON Array
-  
-  // Status
-  status          String      @default("active") // active, merged, split, archived
-  
-  createdAt       DateTime    @default(now()) @map("created_at")
-  updatedAt       DateTime    @updatedAt @map("updated_at")
-  
-  opportunity     Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  signalCount     Int          @default(0) @map("signal_count")
+  avgIntensity    Float        @default(0) @map("avg_intensity")
+  topWorkarounds  String?      @map("top_workarounds")
+  topConsequences String?      @map("top_consequences")
+  status          String       @default("active")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  opportunity     Opportunity  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
 
   @@map("pain_clusters")
 }
 
-// ============================================================
-// OPPORTUNITY CLAIMS (Extrahierte Claims für Evidence)
-// ============================================================
-
 model OpportunityClaim {
   id              String      @id @default(cuid())
   opportunityId   String      @map("opportunity_id")
-  
-  // Claim
-  claim           String      // "Property managers lose 5h/week on maintenance"
-  category        String      // "pain", "market", "competition", "buyer"
+  claim           String
+  category        String
   confidence      Float       @default(0.5)
-  
-  // Quellen
-  sourceSignalIds String?     @map("source_signal_ids") // JSON Array of IDs
-  sourceUrls      String?     @map("source_urls") // JSON Array
-  
-  // Status
-  status          String      @default("pending") // pending, verified, contradicted, uncertain
-  
+  sourceSignalIds String?     @map("source_signal_ids")
+  sourceUrls      String?     @map("source_urls")
+  status          String      @default("pending")
   createdAt       DateTime    @default(now()) @map("created_at")
-  
   opportunity     Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
 
   @@map("opportunity_claims")
 }
 
-// ============================================================
-// ARTIFACTS (Generierte Reports, Analysen, Dokumente)
-// ============================================================
-
 model Artifact {
-  id              String      @id @default(cuid())
-  opportunityId   String      @map("opportunity_id")
-  
-  // Inhalt
-  type            String      // "competitor_report", "market_analysis", "pain_summary", "experiment_report"
-  title           String
-  content         String?     // Markdown/HTML Content
-  summary         String?     // Kurze Zusammenfassung
-  
-  // Quellen
-  sourceData      Json?       @map("source_data") // Welche Daten wurden verwendet
-  
-  // Status
-  status          String      @default("draft") // draft, published, archived
-  
-  createdAt       DateTime    @default(now()) @map("created_at")
-  updatedAt       DateTime    @updatedAt @map("updated_at")
-  
-  opportunity     Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  id            String      @id @default(cuid())
+  opportunityId String      @map("opportunity_id")
+  type          String
+  title         String
+  content       String?
+  summary       String?
+  sourceData    Json?       @map("source_data")
+  status        String      @default("draft")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
 
   @@map("artifacts")
 }
 
 // ============================================================
-// PAIN GRAPH
-// ============================================================
-
-model Industry {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  description String?
-  opportunities Opportunity[]
-  personas    Persona[]
-  
-  @@map("industries")
-}
-
-model Persona {
-  id          String   @id @default(cuid())
-  name        String
-  role        String   // z.B. "Operations Manager"
-  industryId  String   @map("industry_id")
-  description String?
-  painPoints  String?  @map("pain_points") // JSON
-  opportunities Opportunity[]
-  
-  industry    Industry @relation(fields: [industryId], references: [id], onDelete: Cascade)
-  
-  @@map("personas")
-}
-
-// ============================================================
-// SIGNALS & EVIDENCE
+// SIGNALS & EVIDENCE (Extended with Evidence Strength Hierarchy)
 // ============================================================
 
 model Signal {
-  id            String      @id @default(cuid())
-  opportunityId String      @map("opportunity_id")
-  sourceId      String?     @map("source_id") // Link zu ResearchSource
-  type          String      // "trend", "pain_point", "competitor", "keyword", "pricing"
-  title         String
-  description   String?
-  source        String
-  sourceUrl     String?     @map("source_url")
-  data          Json?
-  confidence    Float       @default(0.5)
-  
-  // Evidence Engine
-  actorRole     String?     @map("actor_role")
-  actorIndustry String?     @map("actor_industry")
-  job           String?     // Was versucht die Person zu erledigen?
-  pain          String?     // Konkretes Problem
-  workaround    String?     // Was machen sie stattdessen?
-  intent        String?     // complaint, question, recommendation
-  impactTime    String?     @map("impact_time")
-  impactMoney   String?     @map("impact_money")
-  impactErrors  Boolean     @default(false) @map("impact_errors")
-  revenueLoss   String?     @map("revenue_loss")
-  verified      Boolean     @default(false)
-  
-  // Deduplication
-  sourceHash    String?     @map("source_hash")
-  isDuplicate   Boolean     @default(false) @map("is_duplicate")
-  duplicateOfId String?     @map("duplicate_of_id")
-  isRelevant    Boolean     @default(true) @map("is_relevant")
-  
-  fetchedAt     DateTime    @default(now()) @map("fetched_at")
-
-  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
-  researchSource ResearchSource? @relation("SourceSignals", fields: [sourceId], references: [id])
+  id               String          @id @default(cuid())
+  opportunityId    String          @map("opportunity_id")
+  sourceId         String?         @map("source_id")
+  type             String
+  title            String
+  description      String?
+  source           String
+  sourceUrl        String?         @map("source_url")
+  data             Json?
+  confidence       Float           @default(0.5)
+  actorRole        String?         @map("actor_role")
+  actorIndustry    String?         @map("actor_industry")
+  job              String?
+  pain             String?
+  workaround       String?
+  intent           String?
+  impactTime       String?         @map("impact_time")
+  impactMoney      String?         @map("impact_money")
+  impactErrors     Boolean         @default(false) @map("impact_errors")
+  revenueLoss      String?         @map("revenue_loss")
+  verified         Boolean         @default(false)
+  sourceHash       String?         @map("source_hash")
+  isDuplicate      Boolean         @default(false) @map("is_duplicate")
+  duplicateOfId    String?         @map("duplicate_of_id")
+  isRelevant       Boolean         @default(true) @map("is_relevant")
+  fetchedAt        DateTime        @default(now()) @map("fetched_at")
+  evidenceStrength String?         @map("evidence_strength")
+  direction        String?
+  reliability      Float?
+  recency          DateTime?
+  independence     Boolean         @default(true)
+  rawReference     String?         @map("raw_reference")
+  opportunity      Opportunity     @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  researchSource   ResearchSource? @relation("SourceSignals", fields: [sourceId], references: [id])
 
   @@map("signals")
 }
 
 // ============================================================
-// VALIDATION GATES
+// VALIDATION ENGINE: CORE
 // ============================================================
 
-model OpportunityGate {
-  id              String      @id @default(cuid())
-  opportunityId   String      @map("opportunity_id")
-  gateType        String      @map("gate_type")
-  requirement     String?
-  evidence        String?
-  passed          Boolean     @default(false)
-  passedAt        DateTime?   @map("passed_at")
-  notes           String?
+model ValidationRun {
+  id                          String           @id @default(cuid())
+  opportunityId               String           @map("opportunity_id")
+  sprintName                  String           @map("sprint_name")
+  timeBoxDays                 Int              @default(21) @map("time_box_days")
+  maxBudgetEur                Int              @default(8000) @map("max_budget_eur")
+  spentEur                    Int              @default(0) @map("spent_eur")
+  status                      String           @default("INTAKE")
+  finalDecision               String?          @map("final_decision")
+  finalDecisionAt             DateTime?        @map("final_decision_at")
+  finalDecisionBy             String?          @map("final_decision_by")
+  problemEvidenceScore        Int?             @map("problem_evidence_score")
+  icpEvidenceScore            Int?             @map("icp_evidence_score")
+  buyerClarityScore           Int?             @map("buyer_clarity_score")
+  wtpScore                    Int?             @map("wtp_score")
+  purchaseEvidenceScore       Int?             @map("purchase_evidence_score")
+  solutionFitScore            Int?             @map("solution_fit_score")
+  technicalFeasibilityScore   Int?             @map("technical_feasibility_score")
+  distributionEvidenceScore   Int?             @map("distribution_evidence_score")
+  unitEconomicsScore          Int?             @map("unit_economics_score")
+  retentionEvidenceScore      Int?             @map("retention_evidence_score")
+  overallValidationConfidence Float?           @map("overall_validation_confidence")
+  startedAt                   DateTime?        @map("started_at")
+  endedAt                     DateTime?        @map("ended_at")
+  createdAt                   DateTime         @default(now()) @map("created_at")
+  updatedAt                   DateTime         @updatedAt @map("updated_at")
+  opportunity                 Opportunity      @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  hypotheses                  Hypothesis[]
+  experiments                 Experiment[]
+  prospects                   Prospect[]
+  interviews                  Interview[]
+  offers                      Offer[]
+  priceTests                  PriceTest[]
+  proposals                   Proposal[]
+  pilots                      Pilot[]
+  paymentSignals              PaymentSignal[]
+  technicalTests              TechnicalTest[]
+  validationMemos             ValidationMemo[]
+  conciergeRuns               ConciergeRun[]
+  evidenceObjects             EvidenceObject[]
+  hardGates                   HardGate[]
 
-  opportunity     Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  @@map("validation_runs")
+}
 
-  @@map("opportunity_gates")
+model Hypothesis {
+  id                 String           @id @default(cuid())
+  validationRunId    String           @map("validation_run_id")
+  opportunityId      String           @map("opportunity_id")
+  code               String
+  type               String
+  statement          String
+  importance         Int              @default(5)
+  failureImpact      Int              @default(5) @map("failure_impact")
+  uncertainty        Float            @default(1.0)
+  priorityScore      Float?           @map("priority_score")
+  startingConfidence Float            @default(0.0) @map("starting_confidence")
+  successThreshold   String?          @map("success_threshold")
+  failureThreshold   String?          @map("failure_threshold")
+  evidenceRequired   String?          @map("evidence_required")
+  budgetEur          Int?             @map("budget_eur")
+  deadline           DateTime?
+  finalConfidence    Float?           @map("final_confidence")
+  status             String           @default("untested")
+  validatedAt        DateTime?        @map("validated_at")
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+  validationRun      ValidationRun    @relation(fields: [validationRunId], references: [id], onDelete: Cascade)
+  opportunity        Opportunity      @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  experiments        Experiment[]
+  evidenceObjects    EvidenceObject[]
+
+  @@map("hypotheses")
 }
 
 // ============================================================
-// ASSUMPTION ENGINE
-// ============================================================
-
-model Assumption {
-  id              String      @id @default(cuid())
-  opportunityId   String      @map("opportunity_id")
-  code            String      // A1, A2, A3...
-  statement       String      // "Property managers need maintenance automation"
-  category        String      // "problem", "buyer", "pricing", "distribution", "solution"
-  
-  // Validierung
-  confidence      Float       @default(0.0) // 0.0 - 1.0
-  evidenceCount   Int         @default(0) @map("evidence_count")
-  status          String      @default("untested") // untested, testing, validated, invalidated
-  
-  // Nächster Experiment
-  nextExperiment  String?     @map("next_experiment")
-  estimatedCost   Int?        @map("estimated_cost") // in EUR
-  estimatedDuration String?   @map("estimated_duration") // "5-7 days"
-  
-  createdAt       DateTime    @default(now()) @map("created_at")
-  updatedAt       DateTime    @updatedAt @map("updated_at")
-
-  opportunity     Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
-  experiments     Experiment[]
-
-  @@map("assumptions")
-}
-
-// ============================================================
-// EXPERIMENT ENGINE
+// EXPERIMENT ENGINE (Extended)
 // ============================================================
 
 model Experiment {
-  id              String      @id @default(cuid())
-  opportunityId   String      @map("opportunity_id")
-  assumptionId    String?     @map("assumption_id")
-  
-  hypothesis      String      // "Target buyers will pay at least €149/month"
-  method          String      // "paid_pilot_offer", "interview", "landing_page", "demo"
-  
-  // Design
-  sampleTarget    Int         @default(0) @map("sample_target")
-  successCriteria Json?       @map("success_criteria") // { pilot_acceptances: 3 }
-  failureCriteria Json?       @map("failure_criteria") // { pilot_acceptances: 0 }
-  
-  // Durchführung
-  status          String      @default("planned") // planned, running, completed, failed
-  startDate       DateTime?   @map("start_date")
-  endDate         DateTime?   @map("end_date")
-  actualCost      Int?        @map("actual_cost")
-  
-  // Ergebnisse → landen wieder im Evidence Store
-  results         Json?       // { pilot_acceptances: 4, interviews_conducted: 15 }
-  conclusion      String?     // "Hypothesis confirmed"
-  
-  createdAt       DateTime    @default(now()) @map("created_at")
-  updatedAt       DateTime    @updatedAt @map("updated_at")
-
-  opportunity     Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
-  assumption    Assumption? @relation(fields: [assumptionId], references: [id])
+  id               String         @id @default(cuid())
+  opportunityId    String         @map("opportunity_id")
+  assumptionId     String?        @map("assumption_id")
+  validationRunId  String?        @map("validation_run_id")
+  hypothesisId     String?        @map("hypothesis_id")
+  hypothesis       String
+  method           String
+  sampleTarget     Int            @default(0) @map("sample_target")
+  successCriteria  Json?          @map("success_criteria")
+  failureCriteria  Json?          @map("failure_criteria")
+  channel          String?
+  script           String?
+  asset            String?
+  evidenceStrength String?        @map("evidence_strength")
+  owner            String?
+  status           String         @default("planned")
+  startDate        DateTime?      @map("start_date")
+  endDate          DateTime?      @map("end_date")
+  actualCost       Int?           @map("actual_cost")
+  results          Json?
+  conclusion       String?
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  opportunity      Opportunity    @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  assumption       Assumption?    @relation(fields: [assumptionId], references: [id])
+  validationRun    ValidationRun? @relation(fields: [validationRunId], references: [id])
+  linkedHypothesis Hypothesis?    @relation(fields: [hypothesisId], references: [id])
 
   @@map("experiments")
 }
 
 // ============================================================
-// COMPETITOR ANALYSIS
+// CUSTOMER DISCOVERY: PROSPECTS & INTERVIEWS
+// ============================================================
+
+model Prospect {
+  id              String        @id @default(cuid())
+  validationRunId String        @map("validation_run_id")
+  opportunityId   String        @map("opportunity_id")
+  companyName     String        @map("company_name")
+  companySize     String?       @map("company_size")
+  geography       String?
+  vertical        String?
+  techStack       String?       @map("tech_stack")
+  contactName     String?       @map("contact_name")
+  contactRole     String?       @map("contact_role")
+  contactEmail    String?       @map("contact_email")
+  contactLinkedin String?       @map("contact_linkedin")
+  isBuyer         Boolean       @default(false) @map("is_buyer")
+  isChampion      Boolean       @default(false) @map("is_champion")
+  isUser          Boolean       @default(false) @map("is_user")
+  isEconomicBuyer Boolean       @default(false) @map("is_economic_buyer")
+  isBlocker       Boolean       @default(false) @map("is_blocker")
+  pipelineStatus  String        @default("target") @map("pipeline_status")
+  outcome         String?
+  notes           String?
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  validationRun   ValidationRun @relation(fields: [validationRunId], references: [id], onDelete: Cascade)
+  opportunity     Opportunity   @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  interviews      Interview[]
+
+  @@map("prospects")
+}
+
+model Interview {
+  id                    String           @id @default(cuid())
+  validationRunId       String           @map("validation_run_id")
+  prospectId            String           @map("prospect_id")
+  scheduledAt           DateTime         @map("scheduled_at")
+  durationMinutes       Int?             @map("duration_minutes")
+  interviewer           String?
+  transcript            String?
+  summary               String?
+  extractedPain         String?          @map("extracted_pain")
+  extractedFrequency    String?          @map("extracted_frequency")
+  extractedSpend        String?          @map("extracted_spend")
+  extractedBuyer        String?          @map("extracted_buyer")
+  extractedUrgency      String?          @map("extracted_urgency")
+  extractedQuotes       String?          @map("extracted_quotes")
+  buyingSignals         String?          @map("buying_signals")
+  contradictoryEvidence String?          @map("contradictory_evidence")
+  evidenceObjects       EvidenceObject[]
+  createdAt             DateTime         @default(now()) @map("created_at")
+  updatedAt             DateTime         @updatedAt @map("updated_at")
+  validationRun         ValidationRun    @relation(fields: [validationRunId], references: [id], onDelete: Cascade)
+  prospect              Prospect         @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+
+  @@map("interviews")
+}
+
+model WorkflowObservation {
+  id              String      @id @default(cuid())
+  opportunityId   String      @map("opportunity_id")
+  validationRunId String?     @map("validation_run_id")
+  workflowName    String      @map("workflow_name")
+  steps           String?
+  currentTools    String?     @map("current_tools")
+  painPoints      String?     @map("pain_points")
+  timeSpent       String?     @map("time_spent")
+  errorRate       String?     @map("error_rate")
+  observer        String?
+  companyName     String?     @map("company_name")
+  observedAt      DateTime?   @map("observed_at")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  opportunity     Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("workflow_observations")
+}
+
+// ============================================================
+// PRICING & COMMERCIAL VALIDATION
+// ============================================================
+
+model Offer {
+  id                  String        @id @default(cuid())
+  validationRunId     String        @map("validation_run_id")
+  name                String
+  description         String?
+  pricingModel        String        @map("pricing_model")
+  priceAmount         Int           @map("price_amount")
+  priceCurrency       String        @default("EUR") @map("price_currency")
+  packaging           String?
+  terms               String?
+  status              String        @default("draft")
+  acceptedAt          DateTime?     @map("accepted_at")
+  rejectedAt          DateTime?     @map("rejected_at")
+  rejectionReason     String?       @map("rejection_reason")
+  counteroffer        Int?
+  budgetTiming        String?       @map("budget_timing")
+  procurementRequired Boolean       @default(false) @map("procurement_required")
+  contractPreference  String?       @map("contract_preference")
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+  validationRun       ValidationRun @relation(fields: [validationRunId], references: [id], onDelete: Cascade)
+  priceTests          PriceTest[]
+
+  @@map("offers")
+}
+
+model PriceTest {
+  id              String        @id @default(cuid())
+  validationRunId String        @map("validation_run_id")
+  offerId         String?       @map("offer_id")
+  testName        String        @map("test_name")
+  anchorPrice     Int           @map("anchor_price")
+  testedPrice     Int           @map("tested_price")
+  variant         String?
+  impressions     Int           @default(0)
+  clicks          Int           @default(0)
+  conversions     Int           @default(0)
+  revenue         Int           @default(0)
+  status          String        @default("planned")
+  startedAt       DateTime?     @map("started_at")
+  endedAt         DateTime?     @map("ended_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  validationRun   ValidationRun @relation(fields: [validationRunId], references: [id], onDelete: Cascade)
+  offer           Offer?        @relation(fields: [offerId], references: [id])
+
+  @@map("price_tests")
+}
+
+model Proposal {
+  id              String        @id @default(cuid())
+  validationRunId String        @map("validation_run_id")
+  prospectId      String?       @map("prospect_id")
+  title           String
+  content         String?
+  price           Int?
+  status          String        @default("draft")
+  sentAt          DateTime?     @map("sent_at")
+  respondedAt     DateTime?     @map("responded_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  validationRun   ValidationRun @relation(fields: [validationRunId], references: [id], onDelete: Cascade)
+
+  @@map("proposals")
+}
+
+// ============================================================
+// PILOTS & PAYMENT SIGNALS
+// ============================================================
+
+model Pilot {
+  id                   String          @id @default(cuid())
+  validationRunId      String          @map("validation_run_id")
+  prospectId           String?         @map("prospect_id")
+  name                 String
+  description          String?
+  startDate            DateTime        @map("start_date")
+  endDate              DateTime?       @map("end_date")
+  priceEur             Int?            @map("price_eur")
+  automationRate       Float?          @map("automation_rate")
+  humanMinutesPerCase  Int?            @map("human_minutes_per_case")
+  errorRate            Float?          @map("error_rate")
+  escalationRate       Float?          @map("escalation_rate")
+  cycleTime            Int?            @map("cycle_time")
+  aiCost               Int?            @map("ai_cost")
+  humanCost            Int?            @map("human_cost")
+  infrastructureCost   Int?            @map("infrastructure_cost")
+  customerSatisfaction Float?          @map("customer_satisfaction")
+  reworkRate           Float?          @map("rework_rate")
+  status               String          @default("planned")
+  createdAt            DateTime        @default(now()) @map("created_at")
+  updatedAt            DateTime        @updatedAt @map("updated_at")
+  validationRun        ValidationRun   @relation(fields: [validationRunId], references: [id], onDelete: Cascade)
+  paymentSignals       PaymentSignal[]
+
+  @@map("pilots")
+}
+
+model PaymentSignal {
+  id              String        @id @default(cuid())
+  validationRunId String        @map("validation_run_id")
+  pilotId         String?       @map("pilot_id")
+  amountEur       Int           @map("amount_eur")
+  currency        String        @default("EUR")
+  signalType      String        @map("signal_type")
+  status          String        @default("pending")
+  receivedAt      DateTime?     @map("received_at")
+  confirmedAt     DateTime?     @map("confirmed_at")
+  notes           String?
+  createdAt       DateTime      @default(now()) @map("created_at")
+  validationRun   ValidationRun @relation(fields: [validationRunId], references: [id], onDelete: Cascade)
+  pilot           Pilot?        @relation(fields: [pilotId], references: [id])
+
+  @@map("payment_signals")
+}
+
+// ============================================================
+// TECHNICAL FEASIBILITY
+// ============================================================
+
+model TechnicalTest {
+  id                  String        @id @default(cuid())
+  validationRunId     String        @map("validation_run_id")
+  name                String
+  testType            String        @map("test_type")
+  testData            String?       @map("test_data")
+  acceptableThreshold Float?        @map("acceptable_threshold")
+  resultValue         Float?        @map("result_value")
+  resultUnit          String?       @map("result_unit")
+  passed              Boolean       @default(false)
+  notes               String?
+  modelVersion        String?       @map("model_version")
+  testVersion         Int           @default(1) @map("test_version")
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+  validationRun       ValidationRun @relation(fields: [validationRunId], references: [id], onDelete: Cascade)
+
+  @@map("technical_tests")
+}
+
+// ============================================================
+// CONCIERGE / WIZARD-OF-OZ ENGINE
+// ============================================================
+
+model ConciergeRun {
+  id                   String        @id @default(cuid())
+  validationRunId      String        @map("validation_run_id")
+  name                 String
+  description          String?
+  startDate            DateTime      @map("start_date")
+  endDate              DateTime?     @map("end_date")
+  automationRate       Float?        @map("automation_rate")
+  humanMinutesPerCase  Float?        @map("human_minutes_per_case")
+  errorRate            Float?        @map("error_rate")
+  escalationRate       Float?        @map("escalation_rate")
+  cycleTime            Int?          @map("cycle_time")
+  aiCost               Int?          @map("ai_cost")
+  humanCost            Int?          @map("human_cost")
+  infrastructureCost   Int?          @map("infrastructure_cost")
+  customerSatisfaction Float?        @map("customer_satisfaction")
+  reworkRate           Float?        @map("rework_rate")
+  status               String        @default("planned")
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
+  validationRun        ValidationRun @relation(fields: [validationRunId], references: [id], onDelete: Cascade)
+
+  @@map("concierge_runs")
+}
+
+// ============================================================
+// EVIDENCE OBJECTS (Central Evidence Store)
+// ============================================================
+
+model EvidenceObject {
+  id              String        @id @default(cuid())
+  validationRunId String        @map("validation_run_id")
+  hypothesisId    String?       @map("hypothesis_id")
+  interviewId     String?       @map("interview_id")
+  evidenceId      String        @unique @map("evidence_id")
+  source          String
+  sourceType      String        @map("source_type")
+  sourceUrl       String?       @map("source_url")
+  date            DateTime
+  persona         String?
+  company         String?
+  observation     String
+  direction       String
+  strength        String
+  reliability     Float?
+  recency         DateTime?
+  independence    Boolean       @default(true)
+  rawReference    String?       @map("raw_reference")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  validationRun   ValidationRun @relation(fields: [validationRunId], references: [id], onDelete: Cascade)
+  hypothesis      Hypothesis?   @relation(fields: [hypothesisId], references: [id])
+  interview       Interview?    @relation(fields: [interviewId], references: [id])
+
+  @@map("evidence_objects")
+}
+
+// ============================================================
+// HARD GATES (Non-Compensable Criteria)
+// ============================================================
+
+model HardGate {
+  id              String        @id @default(cuid())
+  validationRunId String        @map("validation_run_id")
+  opportunityId   String        @map("opportunity_id")
+  gateType        String        @map("gate_type")
+  description     String?
+  threshold       String?
+  passed          Boolean       @default(false)
+  passedAt        DateTime?     @map("passed_at")
+  ventureType     String?       @map("venture_type")
+  stage           String?
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  validationRun   ValidationRun @relation(fields: [validationRunId], references: [id], onDelete: Cascade)
+  opportunity     Opportunity   @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("hard_gates")
+}
+
+// ============================================================
+// VALIDATION MEMO & INVESTMENT COMMITTEE
+// ============================================================
+
+model ValidationMemo {
+  id                   String        @id @default(cuid())
+  validationRunId      String        @map("validation_run_id")
+  opportunityId        String        @map("opportunity_id")
+  title                String
+  content              String?
+  originalHypotheses   String?       @map("original_hypotheses")
+  experiments          String?
+  evidence             String?
+  commercialResults    String?       @map("commercial_results")
+  pricingResults       String?       @map("pricing_results")
+  technicalResults     String?       @map("technical_results")
+  economics            String?
+  risks                String?
+  contradictions       String?
+  remainingUnknowns    String?       @map("remaining_unknowns")
+  validationScore      Int?          @map("validation_score")
+  confidence           Float?
+  recommendation       String
+  reasoning            String?
+  status               String        @default("draft")
+  reviewedBy           String?       @map("reviewed_by")
+  reviewedAt           DateTime?     @map("reviewed_at")
+  recommendedBudgetEur Int?          @map("recommended_budget_eur")
+  recommendedTimeDays  Int?          @map("recommended_time_days")
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
+  validationRun        ValidationRun @relation(fields: [validationRunId], references: [id], onDelete: Cascade)
+  opportunity          Opportunity   @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("validation_memos")
+}
+
+// ============================================================
+// VENTURE HANDOFF (Uebergabe an Venture Engine)
+// ============================================================
+
+model VentureHandoff {
+  id                   String      @id @default(cuid())
+  opportunityId        String      @map("opportunity_id")
+  ventureId            String?     @map("venture_id")
+  validationRunId      String?     @map("validation_run_id")
+  icp                  String?
+  buyer                String?
+  user                 String?
+  coreProblem          String?     @map("core_problem")
+  workflow             String?
+  valueProposition     String?     @map("value_proposition")
+  paidEvidence         String?     @map("paid_evidence")
+  pricing              String?
+  businessModel        String?     @map("business_model")
+  initialCustomers     String?     @map("initial_customers")
+  productRequirements  String?     @map("product_requirements")
+  mustHaveIntegrations String?     @map("must_have_integrations")
+  technicalConstraints String?     @map("technical_constraints")
+  unitEconomics        String?     @map("unit_economics")
+  gtmEvidence          String?     @map("gtm_evidence")
+  keyRisks             String?     @map("key_risks")
+  remainingUnknowns    String?     @map("remaining_unknowns")
+  initial90DayGoals    String?     @map("initial_90_day_goals")
+  investmentBudget     Int?        @map("investment_budget")
+  status               String      @default("draft")
+  createdAt            DateTime    @default(now()) @map("created_at")
+  updatedAt            DateTime    @updatedAt @map("updated_at")
+  opportunity          Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  venture              Venture?    @relation(fields: [ventureId], references: [id])
+
+  @@map("venture_handoffs")
+}
+
+// ============================================================
+// RED TEAM / ADVERSARIAL ANALYSIS
+// ============================================================
+
+model RedTeamReview {
+  id                  String      @id @default(cuid())
+  opportunityId       String      @map("opportunity_id")
+  criticalRisks       String?     @map("critical_risks")
+  unknowns            String?
+  counterEvidence     String?     @map("counter_evidence")
+  failureScenarios    String?     @map("failure_scenarios")
+  reasonsToKill       String?     @map("reasons_to_kill")
+  experimentsRequired String?     @map("experiments_required")
+  scoreImpact         Int?        @map("score_impact")
+  recommendation      String?
+  reviewedBy          String?     @map("reviewed_by")
+  reviewedAt          DateTime?   @map("reviewed_at")
+  createdAt           DateTime    @default(now()) @map("created_at")
+  updatedAt           DateTime    @updatedAt @map("updated_at")
+  opportunity         Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("red_team_reviews")
+}
+
+// ============================================================
+// UNIT ECONOMICS MODEL
+// ============================================================
+
+model UnitEconomicsModel {
+  id                     String      @id @default(cuid())
+  opportunityId          String      @map("opportunity_id")
+  validationRunId        String?     @map("validation_run_id")
+  currentLaborCost       Int?        @map("current_labor_cost")
+  currentSoftwareCost    Int?        @map("current_software_cost")
+  currentOutsourcingCost Int?        @map("current_outsourcing_cost")
+  currentErrorCost       Int?        @map("current_error_cost")
+  revenueLeakage         Int?        @map("revenue_leakage")
+  opportunityCost        Int?        @map("opportunity_cost")
+  totalProblemCost       Int?        @map("total_problem_cost")
+  addressableCost        Int?        @map("addressable_cost")
+  potentialSavings       Int?        @map("potential_savings")
+  valueCreated           Int?        @map("value_created")
+  pricingEnvelopeMin     Int?        @map("pricing_envelope_min")
+  pricingEnvelopeMax     Int?        @map("pricing_envelope_max")
+  assumptions            String?
+  createdAt              DateTime    @default(now()) @map("created_at")
+  updatedAt              DateTime    @updatedAt @map("updated_at")
+  opportunity            Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("unit_economics_models")
+}
+
+// ============================================================
+// OUTCOME REVIEW (Learning Loop)
+// ============================================================
+
+model OutcomeReview {
+  id                         String      @id @default(cuid())
+  opportunityId              String      @map("opportunity_id")
+  signalToOutcomeCorrelation String?     @map("signal_to_outcome_correlation")
+  scorePredictionAccuracy    Float?      @map("score_prediction_accuracy")
+  buyerSpeed                 String?     @map("buyer_speed")
+  pricingHypothesisWorked    Boolean?    @map("pricing_hypothesis_worked")
+  channelEfficiency          String?     @map("channel_efficiency")
+  aiAutomationOverestimated  Boolean?    @map("ai_automation_overestimated")
+  actualCAC                  Int?        @map("actual_cac")
+  actualARR                  Int?        @map("actual_arr")
+  actualRetention            Float?      @map("actual_retention")
+  actualChurn                Float?      @map("actual_churn")
+  actualPMF                  Float?      @map("actual_pmf")
+  actualGrossMargin          Float?      @map("actual_gross_margin")
+  reviewNotes                String?     @map("review_notes")
+  reviewedBy                 String?     @map("reviewed_by")
+  reviewedAt                 DateTime?   @map("reviewed_at")
+  createdAt                  DateTime    @default(now()) @map("created_at")
+  updatedAt                  DateTime    @updatedAt @map("updated_at")
+  opportunity                Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("outcome_reviews")
+}
+
+// ============================================================
+// VALIDATION GATES (Extended)
+// ============================================================
+
+model OpportunityGate {
+  id               String      @id @default(cuid())
+  opportunityId    String      @map("opportunity_id")
+  gateType         String      @map("gate_type")
+  requirement      String?
+  evidence         String?
+  passed           Boolean     @default(false)
+  passedAt         DateTime?   @map("passed_at")
+  notes            String?
+  evidenceStrength String?     @map("evidence_strength")
+  reviewedBy       String?     @map("reviewed_by")
+  opportunity      Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("opportunity_gates")
+}
+
+// ============================================================
+// ASSUMPTION ENGINE (Extended with Risk-First)
+// ============================================================
+
+model Assumption {
+  id                String       @id @default(cuid())
+  opportunityId     String       @map("opportunity_id")
+  code              String
+  statement         String
+  category          String
+  confidence        Float        @default(0.0)
+  evidenceCount     Int          @default(0) @map("evidence_count")
+  status            String       @default("untested")
+  nextExperiment    String?      @map("next_experiment")
+  estimatedCost     Int?         @map("estimated_cost")
+  estimatedDuration String?      @map("estimated_duration")
+  importance        Int          @default(5)
+  failureImpact     Int          @default(5) @map("failure_impact")
+  uncertainty       Float        @default(1.0)
+  priorityScore     Float?       @map("priority_score")
+  successThreshold  String?      @map("success_threshold")
+  failureThreshold  String?      @map("failure_threshold")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+  opportunity       Opportunity  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  experiments       Experiment[]
+
+  @@map("assumptions")
+}
+
+// ============================================================
+// COMPETITOR ANALYSIS (Extended)
 // ============================================================
 
 model Competitor {
-  id              String      @id @default(cuid())
-  opportunityId   String      @map("opportunity_id")
-  name            String
-  type            String      // "direct", "indirect", "alternative"
-  website         String?
-  description     String?
-  
-  // Analyse
-  pricing         String?     // Gefundene Pricing-Info
-  strengths       String?
-  weaknesses      String?
-  gaps            String?     // Market gaps identified
-  
-  // Evidence
-  reviewSources   String?     @map("review_sources")
-  evidenceIds     String?     @map("evidence_ids") // Verknüpfte Evidence-IDs
-  
-  createdAt       DateTime    @default(now()) @map("created_at")
-
-  opportunity     Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  id            String      @id @default(cuid())
+  opportunityId String      @map("opportunity_id")
+  name          String
+  type          String
+  website       String?
+  description   String?
+  pricing       String?
+  strengths     String?
+  weaknesses    String?
+  gaps          String?
+  reviewSources String?     @map("review_sources")
+  evidenceIds   String?     @map("evidence_ids")
+  foundedYear   Int?        @map("founded_year")
+  employeeCount String?     @map("employee_count")
+  funding       String?
+  marketShare   String?     @map("market_share")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
 
   @@map("competitors")
 }
 
 // ============================================================
-// SCORE COMPONENTS (Audit Trail)
+// SCORE COMPONENTS
 // ============================================================
 
 model ScoreComponent {
-  id              String      @id @default(cuid())
-  opportunityId   String      @map("opportunity_id")
-  factor          String      // "pain_severity", "mvp_simplicity", etc.
-  category        String      // "A" (Opportunity Quality) oder "B" (Venture Fit)
-  score           Int         // Punkte für diesen Faktor
-  maxScore        Int         @map("max_score") // Maximal mögliche Punkte
-  evidence        String?     // Begründung
-  
-  createdAt       DateTime    @default(now()) @map("created_at")
-
-  opportunity     Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  id            String      @id @default(cuid())
+  opportunityId String      @map("opportunity_id")
+  factor        String
+  category      String
+  score         Int
+  maxScore      Int         @map("max_score")
+  evidence      String?
+  createdAt     DateTime    @default(now()) @map("created_at")
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
 
   @@map("score_components")
 }
 
 // ============================================================
-// TASK QUEUE (Orchestrator)
+// TASK QUEUE (Extended Agent Types)
 // ============================================================
 
 model Task {
-  id              String      @id @default(cuid())
-  type            String      // "market_research", "competitor_research", "fact_check", "critic_review", "business_analysis"
-  entityId        String      @map("entity_id") // opportunity_id oder venture_id
-  entityType      String      @map("entity_type") // "opportunity" oder "venture"
-  agent           String      // Welcher Agent soll das übernehmen
-  priority        Int         @default(5) // 1-10
-  status          String      @default("queued") // queued, running, completed, failed, retry, human_review
-  attempts        Int         @default(0)
-  maxAttempts     Int         @default(3) @map("max_attempts")
-  
-  // Ergebnis
-  result          Json?       // Agent-Output
-  error           String?     // Fehlermeldung bei failed
-  
-  // Budget
-  estimatedCost   Int?        @map("estimated_cost") // in EUR
-  actualCost      Int?        @map("actual_cost")
-  
-  // Zeiten
-  startedAt       DateTime?   @map("started_at")
-  completedAt     DateTime?   @map("completed_at")
-  createdAt       DateTime    @default(now()) @map("created_at")
-  
-  // Verknüpfungen
-  agentRuns       AgentRun[]
+  id            String     @id @default(cuid())
+  type          String
+  entityId      String     @map("entity_id")
+  entityType    String     @map("entity_type")
+  agent         String
+  priority      Int        @default(5)
+  status        String     @default("queued")
+  attempts      Int        @default(0)
+  maxAttempts   Int        @default(3) @map("max_attempts")
+  result        Json?
+  error         String?
+  estimatedCost Int?       @map("estimated_cost")
+  actualCost    Int?       @map("actual_cost")
+  startedAt     DateTime?  @map("started_at")
+  completedAt   DateTime?  @map("completed_at")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  agentRuns     AgentRun[]
 
   @@map("tasks")
 }
 
 // ============================================================
-// AGENT ARCHITECTUR
+// AGENT ARCHITECTUR (Extended)
 // ============================================================
 
 model AgentRun {
-  id              String      @id @default(cuid())
-  taskId          String      @map("task_id")
-  agentType       String      @map("agent_type") // "market_researcher", "competitor_researcher", "fact_checker", "critic_reviewer", "business_strategist", "financial_analyst"
-  
-  // Input/Output
-  input           Json?       // Was der Agent bekommen hat
-  output          Json?       // Was der Agent geliefert hat
-  
-  // Status
-  status          String      @default("running") // running, completed, failed
-  
-  // Metriken
-  tokensUsed      Int?        @map("tokens_used")
-  runtimeSeconds  Int?        @map("runtime_seconds")
-  cost            Float?      // Kosten für diesen Run
-  
-  startedAt       DateTime    @default(now()) @map("started_at")
-  completedAt     DateTime?   @map("completed_at")
-  
-  // Verknüpfungen
-  task            Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  messages        AgentMessage[]
+  id             String         @id @default(cuid())
+  taskId         String         @map("task_id")
+  agentType      String         @map("agent_type")
+  input          Json?
+  output         Json?
+  status         String         @default("running")
+  tokensUsed     Int?           @map("tokens_used")
+  runtimeSeconds Int?           @map("runtime_seconds")
+  cost           Float?
+  startedAt      DateTime       @default(now()) @map("started_at")
+  completedAt    DateTime?      @map("completed_at")
+  task           Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  messages       AgentMessage[]
 
   @@map("agent_runs")
 }
 
 model AgentMessage {
-  id              String      @id @default(cuid())
-  agentRunId      String      @map("agent_run_id")
-  role            String      // "system", "user", "assistant", "tool"
-  content         String
-  toolCalls       Json?       @map("tool_calls") // Falls Tool Calls
-  toolResults     Json?       @map("tool_results") // Falls Tool Results
-  
-  createdAt       DateTime    @default(now()) @map("created_at")
-  
-  agentRun        AgentRun    @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  agentRunId  String   @map("agent_run_id")
+  role        String
+  content     String
+  toolCalls   Json?    @map("tool_calls")
+  toolResults Json?    @map("tool_results")
+  createdAt   DateTime @default(now()) @map("created_at")
+  agentRun    AgentRun @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
 
   @@map("agent_messages")
 }
@@ -709,149 +1173,117 @@ model AgentMessage {
 // ============================================================
 
 model ResearchBudget {
-  id              String      @id @default(cuid())
-  opportunityId   String?     @map("opportunity_id")
-  
-  // Budget
-  phase           String      // "quick_scan", "deep_research", "validation"
-  maxRuntime      Int         @map("max_runtime") // in Minuten
-  maxAgentRuns    Int         @map("max_agent_runs")
-  minimumEvidence Int         @map("minimum_evidence")
-  budgetEur       Int         @map("budget_eur")
-  spentEur        Int         @default(0) @map("spent_eur")
-  
-  // Status
-  status          String      @default("active") // active, exhausted, paused
-  
-  createdAt       DateTime    @default(now()) @map("created_at")
-  updatedAt       DateTime    @updatedAt @map("updated_at")
-
+  id              String       @id @default(cuid())
+  opportunityId   String?      @map("opportunity_id")
+  phase           String
+  maxRuntime      Int          @map("max_runtime")
+  maxAgentRuns    Int          @map("max_agent_runs")
+  minimumEvidence Int          @map("minimum_evidence")
+  budgetEur       Int          @map("budget_eur")
+  spentEur        Int          @default(0) @map("spent_eur")
+  status          String       @default("active")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
   opportunity     Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
 
   @@map("research_budgets")
 }
 
 // ============================================================
-// DECISIONS (Kill / Watch / Experiment)
+// DECISIONS (Extended)
 // ============================================================
 
 model Decision {
-  id              String      @id @default(cuid())
-  opportunityId   String      @map("opportunity_id")
-  
-  type            String      // "kill", "watch", "experiment", "human_gate", "build_approved"
-  reason          String      // Begründung
-  
-  // Trigger
-  scoreA          Int?        @map("score_a")
-  scoreB          Int?        @map("score_b")
-  confidence      Float?
-  evidenceLevel   Int?        @map("evidence_level")
-  
-  // Human Review
-  reviewedBy      String?     @map("reviewed_by")
-  reviewedAt      DateTime?   @map("reviewed_at")
-  approved        Boolean     @default(false)
-  
-  createdAt       DateTime    @default(now()) @map("created_at")
+  id                   String    @id @default(cuid())
+  opportunityId        String    @map("opportunity_id")
+  validationRunId      String?   @map("validation_run_id")
+  type                 String
+  reason               String?
+  scoreA               Int?      @map("score_a")
+  scoreB               Int?      @map("score_b")
+  confidence           Float?
+  evidenceLevel        Int?      @map("evidence_level")
+  reviewedBy           String?   @map("reviewed_by")
+  reviewedAt           DateTime? @map("reviewed_at")
+  approved             Boolean   @default(false)
+  validationScore      Int?      @map("validation_score")
+  validationConfidence Float?    @map("validation_confidence")
+  createdAt            DateTime  @default(now()) @map("created_at")
 
   @@map("decisions")
 }
 
 // ============================================================
-// STOP CONDITIONS (Automated Kill/Watch/Experiment rules)
+// STOP CONDITIONS
 // ============================================================
 
 model StopCondition {
-  id              String      @id @default(cuid())
-  opportunityId   String      @map("opportunity_id")
-  
-  conditionType   String      @map("condition_type")
-  // score_below_threshold, no_clear_buyer, no_repeated_problem, strong_competition_no_wedge,
-  // economic_pain_unknown, wtp_unknown, distribution_unknown, evidence_sufficient,
-  // budget_exhausted, time_exhausted, max_runs_reached
-  
-  threshold       Int?
-  
-  triggered       Boolean     @default(false)
-  triggeredAt     DateTime?   @map("triggered_at")
-  
-  action          String      @default("none") // kill, watch, experiment, stop_research, human_review, none
-  reason          String?
-  
-  createdAt       DateTime    @default(now()) @map("created_at")
-
-  opportunity     Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  id            String      @id @default(cuid())
+  opportunityId String      @map("opportunity_id")
+  conditionType String      @map("condition_type")
+  threshold     Int?
+  triggered     Boolean     @default(false)
+  triggeredAt   DateTime?   @map("triggered_at")
+  action        String      @default("none")
+  reason        String?
+  createdAt     DateTime    @default(now()) @map("created_at")
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
 
   @@map("stop_conditions")
 }
 
 // ============================================================
-// NEGATIVE EVIDENCE (Contradictions)
+// NEGATIVE EVIDENCE (Extended)
 // ============================================================
 
 model NegativeEvidence {
-  id              String      @id @default(cuid())
-  opportunityId   String      @map("opportunity_id")
-  claim           String      // z.B. "Property managers need another maintenance tool"
-  contradiction   String      // z.B. "existing software already solves problem"
-  source          String      // Quelle der Widerlegung
-  confidence      Float       @default(0.5) // 0.0 - 1.0
-  createdAt       DateTime    @default(now()) @map("created_at")
-
-  opportunity     Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  id               String      @id @default(cuid())
+  opportunityId    String      @map("opportunity_id")
+  claim            String
+  contradiction    String
+  source           String
+  sourceUrl        String?     @map("source_url")
+  confidence       Float       @default(0.5)
+  evidenceStrength String?     @map("evidence_strength")
+  reviewedBy       String?     @map("reviewed_by")
+  reviewedAt       DateTime?   @map("reviewed_at")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  opportunity      Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
 
   @@map("negative_evidence")
 }
 
 // ============================================================
-// RESEARCH SOURCES (Konfigurierbare Quellen fuer Intelligence Engine)
+// RESEARCH SOURCES
 // ============================================================
 
 model ResearchSource {
-  id              String      @id @default(cuid())
-  
-  name            String      // "Reddit", "G2", "HackerNews", "TechCrunch"
-  slug            String      @unique // "reddit", "g2", "hackernews"
-  type            String      // "forum", "review", "news", "blog", "social", "api"
-  
-  baseUrl         String      @map("base_url") // "https://www.reddit.com"
-  searchUrl       String?     @map("search_url") // "https://www.reddit.com/search/?q={query}"
-  
-  isActive        Boolean     @default(true) @map("is_active")
-  priority        Int         @default(5) // 1-10 (hoeher = wichtiger)
-  
-  // Scraping Konfiguration
-  scrapeMethod    String      @default("browser") @map("scrape_method") // "browser", "api", "rss", "sitemap"
-  selectorTitle   String?     @map("selector_title") // CSS Selector fuer Titel
-  selectorContent String?     @map("selector_content") // CSS Selector fuer Content
-  selectorAuthor  String?     @map("selector_author") // CSS Selector fuer Autor
-  selectorDate    String?     @map("selector_date") // CSS Selector fuer Datum
-  
-  // Rate Limiting
-  rateLimitRequests Int       @default(10) @map("rate_limit_requests") // Requests pro Minute
-  rateLimitWindow   Int       @default(60) @map("rate_limit_window") // Fenster in Sekunden
-  
-  // API Konfiguration (falls API-basiert)
-  apiKey          String?     @map("api_key")
-  apiEndpoint     String?     @map("api_endpoint")
-  apiHeaders      Json?       @map("api_headers")
-  
-  // Kategorien (komma-separiert)
-  categories      String?     // "saas, property-management, maintenance"
-  
-  // Statistiken
-  lastScrapedAt   DateTime?   @map("last_scraped_at")
-  totalScrapes    Int         @default(0) @map("total_scrapes")
-  avgQualityScore Float?      @map("avg_quality_score")
-  
-  createdAt       DateTime    @default(now()) @map("created_at")
-  updatedAt       DateTime    @updatedAt @map("updated_at")
-  
-  // Relationen
-  signals         Signal[]    @relation("SourceSignals")
-  painSignals     PainSignal[] @relation("SourcePainSignals")
-  
+  id                String       @id @default(cuid())
+  name              String
+  slug              String       @unique
+  type              String
+  baseUrl           String       @map("base_url")
+  searchUrl         String?      @map("search_url")
+  isActive          Boolean      @default(true) @map("is_active")
+  priority          Int          @default(5)
+  scrapeMethod      String       @default("browser") @map("scrape_method")
+  selectorTitle     String?      @map("selector_title")
+  selectorContent   String?      @map("selector_content")
+  selectorAuthor    String?      @map("selector_author")
+  selectorDate      String?      @map("selector_date")
+  rateLimitRequests Int          @default(10) @map("rate_limit_requests")
+  rateLimitWindow   Int          @default(60) @map("rate_limit_window")
+  apiKey            String?      @map("api_key")
+  apiEndpoint       String?      @map("api_endpoint")
+  apiHeaders        Json?        @map("api_headers")
+  categories        String?
+  lastScrapedAt     DateTime?    @map("last_scraped_at")
+  totalScrapes      Int          @default(0) @map("total_scrapes")
+  avgQualityScore   Float?       @map("avg_quality_score")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+  signals           Signal[]     @relation("SourceSignals")
+  painSignals       PainSignal[] @relation("SourcePainSignals")
+
   @@map("research_sources")
 }
-

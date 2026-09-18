@@ -50,6 +50,7 @@
     "mailparser": "^3.9.20",
     "next": "14.1.0",
     "next-auth": "^4.24.5",
+    "next-intl": "^4.14.5",
     "nodemailer": "^7.0.13",
     "pg": "^8.23.0",
     "playwright": "^1.63.0",
