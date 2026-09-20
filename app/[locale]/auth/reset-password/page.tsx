@@ -1,0 +1,117 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Link } from "@/i18n/navigation";
+
+export default function ResetPasswordPage() {
+  const t = useTranslations("AuthFlows");
+  const tc = useTranslations("Auth");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const token = searchParams.get("token");
+
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!token) {
+      setError("Ungültiger oder fehlender Token");
+    }
+  }, [token]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+
+    if (password !== confirmPassword) {
+      setError(tc("passwordsMismatch"));
+      return;
+    }
+    if (password.length < 8) {
+      setError(tc("passwordTooShort"));
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, password }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSuccess(true);
+      } else {
+        setError(data.message || "Fehler");
+      }
+    } catch {
+      setError("Fehler");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="flex min-h-screen items-center justify-center p-4">
+      <div className="w-full max-w-sm space-y-6">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold">{t("resetPasswordTitle")}</h1>
+          <p className="text-sm text-muted-foreground mt-2">{t("resetPasswordDesc")}</p>
+        </div>
+
+        {success ? (
+          <div className="space-y-4">
+            <div className="rounded-lg border bg-emerald-50 p-4 text-sm text-emerald-700">
+              {t("passwordResetSuccess")}
+            </div>
+            <Link
+              href="/auth/login"
+              className="block w-full text-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              {tc("signIn")}
+            </Link>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">{t("newPassword")}</label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">{tc("confirmPassword")}</label>
+              <input
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+              />
+            </div>
+            {error && (
+              <div className="text-sm text-red-600">{error}</div>
+            )}
+            <button
+              type="submit"
+              disabled={loading || !token}
+              className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              {loading ? "..." : t("resetPassword")}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}

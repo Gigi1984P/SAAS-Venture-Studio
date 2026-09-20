@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 
 type Venture = {
   id: string;
@@ -13,6 +14,12 @@ type Venture = {
   website: string | null;
   github: string | null;
   mrr: number;
+  mau: number;
+  churnRate: number;
+  cac: number;
+  teamSize: number;
+  burnRate: number;
+  runway: number;
   opportunityId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -24,6 +31,8 @@ export default function VentureDetailPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
+  const t = useTranslations("Ventures");
+  const tc = useTranslations("Common");
 
   const [venture, setVenture] = useState<Venture | null>(null);
   const [loading, setLoading] = useState(true);
@@ -111,7 +120,7 @@ export default function VentureDetailPage() {
             <>
               <button onClick={cancelEdit} className="inline-flex h-9 items-center rounded-md border px-4 text-sm hover:bg-muted">Abbrechen</button>
               <button onClick={saveChanges} disabled={saving} className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
-                {saving ? "Speichern..." : "Speichern"}
+                {saving ? tc("save") : tc("save")}
               </button>
             </>
           ) : (
@@ -121,7 +130,7 @@ export default function VentureDetailPage() {
               </button>
               <button
                 onClick={async () => {
-                  if (confirm("Venture wirklich loeschen?")) {
+                  if (confirm(tc("delete") + "?")) {
                     await fetch(`/api/ventures/${id}`, { method: "DELETE" });
                     router.push("/ventures");
                   }
@@ -160,44 +169,65 @@ export default function VentureDetailPage() {
                 placeholder="Beschreibung..."
               />
             ) : (
-              <p className="text-sm text-muted-foreground">{venture.description || "Keine Beschreibung vorhanden."}</p>
+              <p className="text-sm text-muted-foreground">{venture.description || "—"}</p>
             )}
           </div>
 
-          {/* Status & MRR */}
+          {/* Metrics */}
           <div className="rounded-lg border bg-card p-6 space-y-4">
-            <h2 className="text-lg font-semibold">Details</h2>
+            <h2 className="text-lg font-semibold">{t("metrics")}</h2>
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { key: "mrr", label: t("mrr"), suffix: "€" },
+                { key: "mau", label: t("mau"), suffix: "" },
+                { key: "churnRate", label: t("churnRate"), suffix: "%" },
+                { key: "cac", label: t("cac"), suffix: "€" },
+                { key: "teamSize", label: t("teamSize"), suffix: "" },
+                { key: "burnRate", label: t("burnRate"), suffix: "€" },
+                { key: "runway", label: t("runway"), suffix: "Mo" },
+              ].map((metric) => (
+                <div key={metric.key} className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">{metric.label}</label>
+                  {isEditing ? (
+                    <input
+                      type={metric.key === "churnRate" ? "number" : "number"}
+                      step={metric.key === "churnRate" ? "0.1" : "1"}
+                      value={(editData as any)[metric.key] || 0}
+                      onChange={(e) => setEditData({ ...editData, [metric.key]: metric.key === "churnRate" ? parseFloat(e.target.value) || 0 : parseInt(e.target.value) || 0 })}
+                      className="block w-full rounded-md border px-3 py-2 text-sm"
+                    />
+                  ) : (
+                    <div className="text-sm font-semibold">
+                      {metric.suffix === "€" ? "€" : ""}{(venture as any)[metric.key]?.toLocaleString("de-DE") || 0}{metric.suffix === "%" ? "%" : metric.suffix === "Mo" ? " Mo" : metric.suffix}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Status & Status Dropdown */}
+          <div className="rounded-lg border bg-card p-6 space-y-3">
+            <h2 className="text-lg font-semibold">{t("status")}</h2>
             <div className="space-y-3">
               <div>
-                <label className="text-sm font-medium">Status</label>
                 {isEditing ? (
                   <select
                     value={editData.status || "idea"}
-                    onChange={e => setEditData({ ...editData, status: e.target.value })}
-                    className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+                    onChange={(e) => setEditData({ ...editData, status: e.target.value })}
+                    className="block w-full rounded-md border px-3 py-2 text-sm"
                   >
-                    <option value="idea">Idea</option>
-                    <option value="validation">Validation</option>
-                    <option value="mvp">MVP</option>
-                    <option value="growth">Growth</option>
-                    <option value="scale">Scale</option>
-                    <option value="sunset">Sunset</option>
+                    <option value="idea">{t("statusIdea")}</option>
+                    <option value="validation">{t("statusValidation")}</option>
+                    <option value="mvp">{t("statusMvp")}</option>
+                    <option value="growth">{t("statusGrowth")}</option>
+                    <option value="scale">{t("statusScale")}</option>
+                    <option value="sunset">{t("statusSunset")}</option>
                   </select>
                 ) : (
-                  <p className="text-sm text-muted-foreground capitalize">{venture.status}</p>
-                )}
-              </div>
-              <div>
-                <label className="text-sm font-medium">MRR (€)</label>
-                {isEditing ? (
-                  <input
-                    type="number"
-                    value={editData.mrr || 0}
-                    onChange={e => setEditData({ ...editData, mrr: parseInt(e.target.value) || 0 })}
-                    className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
-                  />
-                ) : (
-                  <p className="text-sm text-muted-foreground">€{venture.mrr.toLocaleString("de-DE")}</p>
+                  <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium capitalize ${statusColor(venture.status)}`}>
+                    {venture.status}
+                  </span>
                 )}
               </div>
             </div>

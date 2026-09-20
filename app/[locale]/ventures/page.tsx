@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
+import { LoadingSkeleton } from "@/components/loading-skeleton";
+import { EmptyState } from "@/components/empty-state";
 
 type Venture = {
   id: string;
@@ -18,6 +21,8 @@ type Venture = {
 
 export default function VenturesPage() {
   const router = useRouter();
+  const t = useTranslations(t("title"));
+  const tc = useTranslations("Common");
   const [ventures, setVentures] = useState<Venture[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -102,9 +107,9 @@ export default function VenturesPage() {
 
   function getStatusLabel(status: string): string {
     const labels: Record<string, string> = {
-      idea: "Idee",
-      validation: "Validierung",
-      mvp: "MVP",
+      idea: t("statusIdea"),
+      validation: t("statusValidation"),
+      mvp: t("statusMvp"),
       growth: "Wachstum",
       scale: "Skalierung",
     };
@@ -132,7 +137,7 @@ export default function VenturesPage() {
           onClick={() => setShowForm(!showForm)}
           className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
-          {showForm ? "Abbrechen" : "+ Neues Venture"}
+          {showForm ? tc("cancel") : "+ Neues Venture"}
         </button>
       </div>
 
@@ -216,7 +221,7 @@ export default function VenturesPage() {
               disabled={saving}
               className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
             >
-              {saving ? "Speichern..." : "Speichern"}
+              {saving ? "Speichern..." : tc("save")}
             </button>
             <button
               type="button"

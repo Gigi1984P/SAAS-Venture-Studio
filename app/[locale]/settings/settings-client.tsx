@@ -87,7 +87,7 @@ export default function SettingsClient({ user }: { user: UserProfile }) {
       const data = await res.json();
 
       if (res.ok) {
-        setPwMessage("Passwort erfolgreich geändert");
+        setPwMessage(t("passwordChanged"));
         setCurrentPassword("");
         setNewPassword("");
         setConfirmPassword("");
@@ -180,7 +180,7 @@ export default function SettingsClient({ user }: { user: UserProfile }) {
               disabled={loading}
               className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
             >
-              {loading ? "Speichern..." : "Speichern"}
+              {loading ? "Speichern..." : t("save")}
             </button>
             <button
               onClick={handleCancel}
@@ -248,7 +248,7 @@ export default function SettingsClient({ user }: { user: UserProfile }) {
             disabled={pwLoading}
             className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
           >
-            {pwLoading ? "Wird geändert..." : "Passwort ändern"}
+            {pwLoading ? "Wird geändert..." : t("changePassword")}
           </button>
         </form>
       </div>

@@ -61,7 +61,7 @@ export async function PUT(
       return NextResponse.json({ message: "Venture nicht gefunden" }, { status: 404 });
     }
 
-    const { name, description, status, website, github, mrr, opportunityId } = body;
+    const { name, description, status, website, github, mrr, mau, churnRate, cac, teamSize, burnRate, runway, opportunityId } = body;
 
     const updateData: Record<string, unknown> = {};
     if (name !== undefined) updateData.name = name.trim();
@@ -70,6 +70,12 @@ export async function PUT(
     if (website !== undefined) updateData.website = website || null;
     if (github !== undefined) updateData.github = github || null;
     if (mrr !== undefined) updateData.mrr = typeof mrr === "number" ? mrr : parseInt(mrr) || 0;
+    if (mau !== undefined) updateData.mau = typeof mau === "number" ? mau : parseInt(mau) || 0;
+    if (churnRate !== undefined) updateData.churnRate = typeof churnRate === "number" ? churnRate : parseFloat(churnRate) || 0;
+    if (cac !== undefined) updateData.cac = typeof cac === "number" ? cac : parseInt(cac) || 0;
+    if (teamSize !== undefined) updateData.teamSize = typeof teamSize === "number" ? teamSize : parseInt(teamSize) || 0;
+    if (burnRate !== undefined) updateData.burnRate = typeof burnRate === "number" ? burnRate : parseInt(burnRate) || 0;
+    if (runway !== undefined) updateData.runway = typeof runway === "number" ? runway : parseInt(runway) || 0;
     if (opportunityId !== undefined) updateData.opportunityId = opportunityId || null;
 
     const venture = await prisma.venture.update({

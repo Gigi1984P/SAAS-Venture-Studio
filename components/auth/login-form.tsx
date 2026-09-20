@@ -88,6 +88,12 @@ export default function LoginForm() {
         >
           {loading ? "Wird angemeldet..." : "Anmelden"}
         </button>
+
+        <div className="text-right">
+          <Link href="/auth/forgot-password" className="text-xs text-muted-foreground hover:text-primary">
+            Passwort vergessen?
+          </Link>
+        </div>
       </form>
 
       <p className="text-center text-sm text-muted-foreground">
