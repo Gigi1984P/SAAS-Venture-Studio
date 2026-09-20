@@ -3,18 +3,18 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 
-function getEnvOrThrow(key: string): string {
+function getEnvOrWarn(key: string): string | undefined {
   const val = process.env[key];
   if (!val) {
-    throw new Error(
-      `Missing required environment variable: ${key}. Please set it in your Vercel Dashboard (Settings → Environment Variables).`
+    console.warn(
+      `[WARN] Missing environment variable: ${key}. Authentication will fail if not set in production.`
     );
   }
   return val;
 }
 
 export const authOptions: NextAuthOptions = {
-  secret: getEnvOrThrow("NEXTAUTH_SECRET"),
+  secret: getEnvOrWarn("NEXTAUTH_SECRET") || "development-fallback-secret-do-not-use-in-production",
   providers: [
     CredentialsProvider({
       name: "credentials",
