@@ -46,8 +46,17 @@ export async function POST(request: Request) {
       { message: "Registrierung erfolgreich", user },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Registration error:", error);
+    
+    // Prisma connection error = DATABASE_URL fehlt
+    if (error?.message?.includes("DATABASE_URL") || error?.message?.includes("connection") || error?.message?.includes("P1001") || error?.message?.includes("P1002")) {
+      return NextResponse.json(
+        { message: "Datenbankverbindung fehlgeschlagen. Bitte prüfe die Environment Variables in Vercel Dashboard (DATABASE_URL)." },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
       { message: "Interner Serverfehler" },
       { status: 500 }
