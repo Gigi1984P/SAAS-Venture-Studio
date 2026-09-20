@@ -5,12 +5,6 @@
   "buildCommand": "npm run build",
   "installCommand": "npm install",
   "devCommand": "npm run dev",
-  "env": {
-    "DATABASE_URL": "@database_url",
-    "NEXTAUTH_SECRET": "@nextauth_secret",
-    "NEXTAUTH_URL": "@nextauth_url",
-    "OPENROUTER_API_KEY": "@openrouter_api_key"
-  },
   "functions": {
     "app/api/**/*.ts": {
       "maxDuration": 30
