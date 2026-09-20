@@ -3,9 +3,18 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 
+function getEnvOrThrow(key: string): string {
+  const val = process.env[key];
+  if (!val) {
+    throw new Error(
+      `Missing required environment variable: ${key}. Please set it in your Vercel Dashboard (Settings → Environment Variables).`
+    );
+  }
+  return val;
+}
+
 export const authOptions: NextAuthOptions = {
-  // Kein PrismaAdapter bei CredentialsProvider + JWT-Strategy
-  // Der Adapter versucht Sessions in die DB zu schreiben, was mit JWT nicht funktioniert
+  secret: getEnvOrThrow("NEXTAUTH_SECRET"),
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -14,7 +23,6 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Passwort", type: "password" },
       },
       async authorize(credentials) {
-        // Debug-Logging für Vercel
         console.log("[AUTH] Attempt login for:", credentials?.email);
 
         if (!credentials?.email || !credentials?.password) {
@@ -63,7 +71,7 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: "jwt",
-    maxAge: 24 * 60 * 60, // 24 Stunden
+    maxAge: 24 * 60 * 60,
   },
   jwt: {
     maxAge: 24 * 60 * 60,
