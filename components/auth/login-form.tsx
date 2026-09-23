@@ -27,7 +27,13 @@ export default function LoginForm() {
     });
 
     if (result?.error) {
-      setError("Ungültige E-Mail oder Passwort");
+      // NextAuth gibt verschiedene Fehlercodes zurück
+      const errorMap: Record<string, string> = {
+        "CredentialsSignin": "Ungültige E-Mail oder Passwort",
+        "SessionRequired": "Sitzung erforderlich. Bitte erneut anmelden.",
+        "Default": "Ein Fehler ist aufgetreten. Bitte versuche es erneut.",
+      };
+      setError(errorMap[result.error] || `Auth-Fehler: ${result.error}`);
       setLoading(false);
     } else {
       router.push(callbackUrl);
