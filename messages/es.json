@@ -498,7 +498,21 @@
     "runClustering": "Clustering starten",
     "clustering": "Clustering läuft...",
     "newAssumption": "+ Neue Annahme",
-    "newExperiment": "+ Neues Experiment"
+    "newExperiment": "+ Neues Experiment",
+    "changeStatus": "Status wechseln",
+    "fromTo": "Von {from} → {to}",
+    "reasonOptional": "Grund (optional)",
+    "statusChangePlaceholder": "Warum wechselst du den Status?",
+    "switching": "Wechsle...",
+    "noEvents": "Noch keine Events. Status-Änderungen und MRR-Updates werden hier automatisch protokolliert.",
+    "statusChanges": "Status-Änderungen",
+    "mrrUpdates": "MRR-Updates",
+    "otherEvents": "Andere Events",
+    "allowedTransitions": "Erlaubte Übergänge von \"{status}\":",
+    "noTransitionsAllowed": "Keine Übergänge erlaubt",
+    "clickToSwitch": "Klicken zum Wechseln",
+    "notAllowed": "Nicht erlaubt",
+    "currentStatus": "Aktueller Status"
   },
   "VentureDetail": {
     "back": "← Zurück",
@@ -532,6 +546,21 @@
     "placeholderName": "Venture Name",
     "placeholderDesc": "Beschreibung...",
     "placeholderWebsite": "https://...",
-    "placeholderGithub": "https://github.com/..."
+    "placeholderGithub": "https://github.com/...",
+    "changeStatus": "Status wechseln",
+    "fromTo": "Von {from} → {to}",
+    "reasonOptional": "Grund (optional)",
+    "statusChangePlaceholder": "Warum wechselst du den Status?",
+    "switching": "Wechsle...",
+    "noEvents": "Noch keine Events. Status-Änderungen und MRR-Updates werden hier automatisch protokolliert.",
+    "statusChanges": "Status-Änderungen",
+    "mrrUpdates": "MRR-Updates",
+    "otherEvents": "Andere Events",
+    "reason": "Grund",
+    "allowedTransitions": "Erlaubte Übergänge von \"{status}\":",
+    "noTransitionsAllowed": "Keine Übergänge erlaubt",
+    "clickToSwitch": "Klicken zum Wechseln",
+    "notAllowed": "Nicht erlaubt",
+    "currentStatus": "Aktueller Status"
   }
 }
