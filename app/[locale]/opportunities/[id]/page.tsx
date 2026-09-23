@@ -81,6 +81,8 @@ export default function OpportunityDetailPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
+  const t = useTranslations("OpportunityDetail");
+  const tc = useTranslations("Common");
 
   const [opp, setOpp] = useState<Opp | null>(null);
   const [loading, setLoading] = useState(true);
@@ -238,8 +240,8 @@ export default function OpportunityDetailPage() {
     return "text-red-600";
   }
 
-  if (loading) return <div className="p-6">Laden...</div>;
-  if (!opp) return <div className="p-6">Opportunity nicht gefunden</div>;
+  if (loading) return <div className="p-6">{t("loading")}</div>;
+  if (!opp) return <div className="p-6">{t("notFound")}</div>;
 
   const passedGates = opp.gates.filter(g => g.passed).length;
   const totalGates = opp.gates.length;
@@ -250,22 +252,22 @@ export default function OpportunityDetailPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <Link href="/opportunities" className="text-sm text-muted-foreground hover:text-foreground">← Zurück</Link>
+          <Link href="/opportunities" className="text-sm text-muted-foreground hover:text-foreground">{t("back")}</Link>
           <h1 className="text-3xl font-bold tracking-tight mt-2">{opp.title}</h1>
           {opp.description && <p className="text-muted-foreground mt-1">{opp.description}</p>}
         </div>
         <div className="flex items-center gap-4">
           {/* Two-Faktor Score Cards */}
           <div className="text-center">
-            <div className="text-xs text-muted-foreground">Score A</div>
+            <div className="text-xs text-muted-foreground">{t("scoreA")}</div>
             <div className={`text-2xl font-bold ${opp.scoreA >= 80 ? "text-green-600" : opp.scoreA >= 50 ? "text-yellow-600" : "text-red-600"}`}>{opp.scoreA}</div>
           </div>
           <div className="text-center">
-            <div className="text-xs text-muted-foreground">Score B</div>
+            <div className="text-xs text-muted-foreground">{t("scoreB")}</div>
             <div className={`text-2xl font-bold ${opp.scoreB >= 80 ? "text-green-600" : opp.scoreB >= 50 ? "text-yellow-600" : "text-red-600"}`}>{opp.scoreB}</div>
           </div>
           <div className="text-center">
-            <div className="text-xs text-muted-foreground">Confidence</div>
+            <div className="text-xs text-muted-foreground">{t("confidence")}</div>
             <div className={`text-2xl font-bold ${getConfidenceColor(opp.confidence)}`}>{Math.round(opp.confidence * 100)}%</div>
           </div>
         </div>
@@ -284,21 +286,21 @@ export default function OpportunityDetailPage() {
       <div className="border-b">
         <nav className="flex gap-6 flex-wrap">
           {[
-            { id: "scoring", label: "Scoring" },
-            { id: "overview", label: "Overview" },
-            { id: "pain", label: "Pain Graph" },
-            { id: "pain-signals", label: `Pain Signals (${painSignals.length})` },
-            { id: "pain-clusters", label: `Clusters (${painClusters.length})` },
-            { id: "evidence", label: `Evidence` },
-            { id: "claims", label: `Claims (${claims.length})` },
-            { id: "assumptions", label: `Assumptions (${opp.assumptions?.length || 0})` },
-            { id: "experiments", label: `Experiments (${opp.experiments?.length || 0})` },
-            { id: "gates", label: `Gates (${passedGates}/${totalGates})` },
-            { id: "competitors", label: `Competitors (${opp.competitors?.length || 0})` },
-            { id: "budget", label: `Budget` },
-            { id: "stop", label: `Stop (${stopConditions.filter(c => c.triggered).length}/${stopConditions.length})` },
-            { id: "dedup", label: "Signals" },
-            { id: "artifacts", label: `Artifacts (${artifacts.length})` },
+            { id: "scoring", label: t("tabScoring") },
+            { id: "overview", label: t("tabOverview") },
+            { id: "pain", label: t("tabPain") },
+            { id: "pain-signals", label: `${t("tabPainSignals")} (${painSignals.length})` },
+            { id: "pain-clusters", label: `${t("tabClusters")} (${painClusters.length})` },
+            { id: "evidence", label: t("tabEvidence") },
+            { id: "claims", label: `${t("tabClaims")} (${claims.length})` },
+            { id: "assumptions", label: `${t("tabAssumptions")} (${opp.assumptions?.length || 0})` },
+            { id: "experiments", label: `${t("tabExperiments")} (${opp.experiments?.length || 0})` },
+            { id: "gates", label: `${t("tabGates")} (${passedGates}/${totalGates})` },
+            { id: "competitors", label: `${t("tabCompetitors")} (${opp.competitors?.length || 0})` },
+            { id: "budget", label: t("tabBudget") },
+            { id: "stop", label: `${t("tabStop")} (${stopConditions.filter(c => c.triggered).length}/${stopConditions.length})` },
+            { id: "dedup", label: t("tabSignals") },
+            { id: "artifacts", label: `${t("tabArtifacts")} (${artifacts.length})` },
           ].map(tab => (
             <button
               key={tab.id}
@@ -385,41 +387,41 @@ export default function OpportunityDetailPage() {
         {activeTab === "overview" && (
           <div className="grid gap-6 md:grid-cols-2">
             <div className="rounded-lg border bg-card p-6 space-y-4">
-              <h2 className="text-lg font-semibold">Opportunity Details</h2>
+              <h2 className="text-lg font-semibold">{t("detailsTitle")}</h2>
               <div className="space-y-3">
                 {opp.pain && (
                   <div>
-                    <label className="text-sm font-medium">Pain</label>
+                    <label className="text-sm font-medium">{t("pain")}</label>
                     <p className="text-sm text-muted-foreground">{opp.pain}</p>
                   </div>
                 )}
                 {opp.workaround && (
                   <div>
-                    <label className="text-sm font-medium">Workaround</label>
+                    <label className="text-sm font-medium">{t("workaround")}</label>
                     <p className="text-sm text-muted-foreground">{opp.workaround}</p>
                   </div>
                 )}
                 {opp.consequence && (
                   <div>
-                    <label className="text-sm font-medium">Consequence</label>
+                    <label className="text-sm font-medium">{t("consequence")}</label>
                     <p className="text-sm text-muted-foreground">{opp.consequence}</p>
                   </div>
                 )}
                 {opp.solution && (
                   <div>
-                    <label className="text-sm font-medium">Solution Idea</label>
+                    <label className="text-sm font-medium">{t("solutionIdea")}</label>
                     <p className="text-sm text-muted-foreground">{opp.solution}</p>
                   </div>
                 )}
                 {opp.targetGroup && (
                   <div>
-                    <label className="text-sm font-medium">Target Group</label>
+                    <label className="text-sm font-medium">{t("targetGroup")}</label>
                     <p className="text-sm text-muted-foreground">{opp.targetGroup}</p>
                   </div>
                 )}
                 {opp.businessModel && (
                   <div>
-                    <label className="text-sm font-medium">Business Model</label>
+                    <label className="text-sm font-medium">{t("businessModel")}</label>
                     <p className="text-sm text-muted-foreground">{opp.businessModel}</p>
                   </div>
                 )}
@@ -427,28 +429,28 @@ export default function OpportunityDetailPage() {
             </div>
 
             <div className="rounded-lg border bg-card p-6 space-y-4">
-              <h2 className="text-lg font-semibold">Market Data</h2>
+              <h2 className="text-lg font-semibold">{t("marketDataTitle")}</h2>
               <div className="space-y-3">
                 {opp.marketSize && (
                   <div>
-                    <label className="text-sm font-medium">Market Size</label>
+                    <label className="text-sm font-medium">{t("marketSize")}</label>
                     <p className="text-sm text-muted-foreground">{opp.marketSize}</p>
                   </div>
                 )}
                 {opp.competition && (
                   <div>
-                    <label className="text-sm font-medium">Competition</label>
+                    <label className="text-sm font-medium">{t("competition")}</label>
                     <p className="text-sm text-muted-foreground capitalize">{opp.competition}</p>
                   </div>
                 )}
                 {opp.mrrEstimate && (
                   <div>
-                    <label className="text-sm font-medium">MRR Estimate</label>
+                    <label className="text-sm font-medium">{t("mrrEstimate")}</label>
                     <p className="text-sm text-muted-foreground">€{opp.mrrEstimate.toLocaleString("de-DE")}</p>
                   </div>
                 )}
                 <div>
-                  <label className="text-sm font-medium">Evidence Level</label>
+                  <label className="text-sm font-medium">{t("evidenceLevel")}</label>
                   <div className="flex items-center gap-2 mt-1">
                     <div className="flex-1 bg-muted rounded-full h-2">
                       <div className="bg-primary h-2 rounded-full" style={{ width: `${(opp.evidenceLevel / 8) * 100}%` }} />
@@ -464,14 +466,14 @@ export default function OpportunityDetailPage() {
         {/* PAIN GRAPH — Baumstruktur */}
         {activeTab === "pain" && (
           <div className="rounded-lg border bg-card p-6">
-            <h2 className="text-lg font-semibold mb-6">Pain Graph</h2>
+            <h2 className="text-lg font-semibold mb-6">{t("painGraphTitle")}</h2>
             <div className="space-y-6">
               {/* ROOT: INDUSTRY */}
               <div className="flex items-start gap-4">
                 <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm">I</div>
                 <div className="flex-1">
-                  <div className="font-medium text-lg">Industry</div>
-                  <p className="text-sm text-muted-foreground">{opp.industryId || "Not specified"}</p>
+                  <div className="font-medium text-lg">{t("industry")}</div>
+                  <p className="text-sm text-muted-foreground">{opp.industryId || t("notSpecified")}</p>
                 </div>
               </div>
               
@@ -480,8 +482,8 @@ export default function OpportunityDetailPage() {
                 <div className="flex items-start gap-4">
                   <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold text-sm">P</div>
                   <div className="flex-1">
-                    <div className="font-medium">Persona</div>
-                    <p className="text-sm text-muted-foreground">{opp.personaId || "Not specified"}</p>
+                    <div className="font-medium">{t("persona")}</div>
+                    <p className="text-sm text-muted-foreground">{opp.personaId || t("notSpecified")}</p>
                   </div>
                 </div>
                 
@@ -490,8 +492,8 @@ export default function OpportunityDetailPage() {
                   <div className="flex items-start gap-4">
                     <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-700 font-bold text-sm">J</div>
                     <div className="flex-1">
-                      <div className="font-medium">Job</div>
-                      <p className="text-sm text-muted-foreground">{opp.job || "Not specified"}</p>
+                      <div className="font-medium">{t("job")}</div>
+                      <p className="text-sm text-muted-foreground">{opp.job || t("notSpecified")}</p>
                     </div>
                   </div>
                   
@@ -540,12 +542,12 @@ export default function OpportunityDetailPage() {
         {activeTab === "assumptions" && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold">Assumptions</h2>
+              <h2 className="text-lg font-semibold">{t("tabAssumptions")}</h2>
               <button 
                 onClick={() => router.push(`/opportunities/${id}/assumptions/new`)}
                 className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
               >
-                + Neue Annahme
+                {t("newAssumption")}
               </button>
             </div>
 
@@ -557,18 +559,18 @@ export default function OpportunityDetailPage() {
               return (
                 <div className="rounded-lg border border-blue-200 bg-blue-50 p-5">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm font-bold text-blue-700">Nächstes Experiment empfohlen</span>
+                    <span className="text-sm font-bold text-blue-700">{t("nextExperiment")}</span>
                     <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700">{next.code}</span>
                   </div>
                   <p className="text-sm text-blue-900 mb-3">{next.statement}</p>
                   {next.nextExperiment && (
                     <div className="text-sm text-blue-800 mb-2">
-                      <span className="font-medium">Methode:</span> {next.nextExperiment}
+                      <span className="font-medium">{t("method")}:</span> {next.nextExperiment}
                     </div>
                   )}
                   {next.estimatedCost && (
                     <div className="text-sm text-blue-800 mb-2">
-                      <span className="font-medium">Kosten:</span> €{next.estimatedCost}
+                      <span className="font-medium">{t("cost")}:</span> €{next.estimatedCost}
                       {next.estimatedDuration && ` • ${next.estimatedDuration}`}
                     </div>
                   )}
@@ -577,7 +579,7 @@ export default function OpportunityDetailPage() {
                       onClick={() => router.push(`/opportunities/${id}/experiments/new?assumption=${next.id}`)}
                       className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90"
                     >
-                      Experiment starten
+                      {t("startExperiment")}
                     </button>
                   </div>
                 </div>
@@ -585,7 +587,7 @@ export default function OpportunityDetailPage() {
             })()}
             
             {opp.assumptions?.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">Noch keine Annahmen erfasst.</div>
+              <div className="text-center py-8 text-muted-foreground">{t("noAssumptions")}</div>
             ) : (
               <div className="space-y-3">
                 {opp.assumptions.map((a: Assumption) => (
@@ -600,13 +602,13 @@ export default function OpportunityDetailPage() {
                           "bg-gray-100 text-gray-700"
                         }`}>{a.status}</span>
                       </div>
-                      <div className="text-sm text-muted-foreground">{Math.round(a.confidence * 100)}% confidence</div>
+                      <div className="text-sm text-muted-foreground">{Math.round(a.confidence * 100)}% {t("confidence")}</div>
                     </div>
                     <p className="mt-2 text-sm">{a.statement}</p>
                     <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-                      <span>Category: {a.category}</span>
-                      {a.nextExperiment && <span>Next: {a.nextExperiment}</span>}
-                      {a.estimatedCost && <span>Cost: €{a.estimatedCost}</span>}
+                      <span>{t("Common")}.actions: {a.category}</span>
+                      {a.nextExperiment && <span>{t("Common")}.next: {a.nextExperiment}</span>}
+                      {a.estimatedCost && <span>{t("cost")}: €{a.estimatedCost}</span>}
                     </div>
                   </div>
                 ))}
@@ -619,18 +621,18 @@ export default function OpportunityDetailPage() {
         {activeTab === "experiments" && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold">Experiments</h2>
+              <h2 className="text-lg font-semibold">{t("tabExperiments")}</h2>
               <button 
                 onClick={() => router.push(`/opportunities/${id}/experiments/new`)}
                 className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
               >
-                + Neues Experiment
+                {t("newExperiment")}
               </button>
             </div>
 
             {/* Evidence Flow Diagram */}
             <div className="rounded-lg border bg-card p-5">
-              <h3 className="text-sm font-semibold text-muted-foreground mb-4">Experiment → Evidence → Confidence Flow</h3>
+              <h3 className="text-sm font-semibold text-muted-foreground mb-4">{t("experimentFlowTitle")}</h3>
               <div className="flex items-center gap-2 flex-wrap">
                 {[
                   { label: "Experiment", icon: "🔬", color: "bg-purple-100 text-purple-700" },
@@ -649,12 +651,12 @@ export default function OpportunityDetailPage() {
                 ))}
               </div>
               <div className="mt-4 text-xs text-muted-foreground">
-                Experiment-Ergebnisse landen automatisch im Evidence Store → Confidence wird neu berechnet → Score wird aktualisiert → Nächstes Experiment wird empfohlen
+                {t("experimentFlowDesc")}
               </div>
             </div>
             
             {opp.experiments?.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">Noch keine Experiments geplant. Starte ein Experiment, um eine Annahme zu testen.</div>
+              <div className="text-center py-8 text-muted-foreground">{t("noExperiments")}</div>
             ) : (
               <div className="space-y-3">
                 {opp.experiments.map((e: Experiment) => (
@@ -663,8 +665,8 @@ export default function OpportunityDetailPage() {
                       <div>
                         <div className="font-medium">{e.hypothesis}</div>
                         <div className="text-sm text-muted-foreground mt-1">
-                          Method: {e.method} • Target: {e.sampleTarget}
-                          {e.startDate && <span>• Started: {new Date(e.startDate).toLocaleDateString("de-DE")}</span>}
+                          {t("methodLabel")}: {e.method} • {t("targetLabel")}: {e.sampleTarget}
+                          {e.startDate && <span>• {t("startedLabel")}: {new Date(e.startDate).toLocaleDateString("de-DE")}</span>}
                         </div>
                       </div>
                       <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
@@ -676,7 +678,7 @@ export default function OpportunityDetailPage() {
                     </div>
                     {e.conclusion && (
                       <div className="mt-3 p-3 rounded-md bg-muted">
-                        <div className="text-xs font-medium text-muted-foreground mb-1">Conclusion</div>
+                        <div className="text-xs font-medium text-muted-foreground mb-1">{t("conclusionLabel")}</div>
                         <p className="text-sm">{e.conclusion}</p>
                       </div>
                     )}
@@ -691,7 +693,7 @@ export default function OpportunityDetailPage() {
         {activeTab === "gates" && (
           <div className="rounded-lg border bg-card p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Validation Gates</h2>
+              <h2 className="text-lg font-semibold">{t("validationGatesTitle")}</h2>
               <span className="text-sm text-muted-foreground">{passedGates}/{totalGates}</span>
             </div>
             
@@ -721,17 +723,17 @@ export default function OpportunityDetailPage() {
         {activeTab === "competitors" && (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold">Competitor Research</h2>
+              <h2 className="text-lg font-semibold">{t("competitorResearchTitle")}</h2>
               <button
                 onClick={() => router.push(`/opportunities/${id}/competitors`)}
                 className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
               >
-                + Competitor hinzufügen
+                {t("addCompetitor")}
               </button>
             </div>
 
             {opp.competitors?.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">Noch keine Competitors erfasst.</div>
+              <div className="text-center py-8 text-muted-foreground">{t("noCompetitors")}</div>
             ) : (
               <div className="space-y-3">
                 {opp.competitors.map(c => (
@@ -748,18 +750,18 @@ export default function OpportunityDetailPage() {
                     {c.description && <p className="mt-2 text-sm text-muted-foreground">{c.description}</p>}
                     {c.pricing && (
                       <div className="mt-2 text-sm">
-                        <span className="font-medium">Pricing:</span> {c.pricing}
+                        <span className="font-medium">{t("pricing")}:</span> {c.pricing}
                       </div>
                     )}
                     {(c.strengths || c.weaknesses) && (
                       <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
-                        {c.strengths && <div><span className="font-medium text-green-700">Strengths:</span> <span className="text-muted-foreground">{c.strengths}</span></div>}
-                        {c.weaknesses && <div><span className="font-medium text-red-700">Weaknesses:</span> <span className="text-muted-foreground">{c.weaknesses}</span></div>}
+                        {c.strengths && <div><span className="font-medium text-green-700">{t("strengths")}:</span> <span className="text-muted-foreground">{c.strengths}</span></div>}
+                        {c.weaknesses && <div><span className="font-medium text-red-700">{t("weaknesses")}:</span> <span className="text-muted-foreground">{c.weaknesses}</span></div>}
                       </div>
                     )}
                     {c.gaps && (
                       <div className="mt-2 text-sm">
-                        <span className="font-medium">Gap:</span> <span className="text-muted-foreground">{c.gaps}</span>
+                        <span className="font-medium">{t("gap")}:</span> <span className="text-muted-foreground">{c.gaps}</span>
                       </div>
                     )}
                   </div>
@@ -773,12 +775,12 @@ export default function OpportunityDetailPage() {
         {activeTab === "budget" && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold">Research Budget</h2>
+              <h2 className="text-lg font-semibold">{t("researchBudgetTitle")}</h2>
               <button
                 onClick={() => setShowBudgetForm(!showBudgetForm)}
                 className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
               >
-                {showBudgetForm ? "Abbrechen" : "+ Budget Phase"}
+                {showBudgetForm ? tc("cancel") : t("addBudgetPhase")}
               </button>
             </div>
 
@@ -786,7 +788,7 @@ export default function OpportunityDetailPage() {
               <div className="rounded-lg border bg-card p-4 space-y-3">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium">Phase</label>
+                    <label className="text-sm font-medium">{t("phase")}</label>
                     <select
                       value={budgetForm.phase}
                       onChange={e => setBudgetForm({ ...budgetForm, phase: e.target.value })}
@@ -798,31 +800,31 @@ export default function OpportunityDetailPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Max Runtime (min)</label>
+                    <label className="text-sm font-medium">{t("maxRuntime")}</label>
                     <input type="number" value={budgetForm.maxRuntime} onChange={e => setBudgetForm({ ...budgetForm, maxRuntime: parseInt(e.target.value) || 0 })} className="mt-1 block w-full rounded-md border px-3 py-2 text-sm" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Max Agent Runs</label>
+                    <label className="text-sm font-medium">{t("maxAgentRuns")}</label>
                     <input type="number" value={budgetForm.maxAgentRuns} onChange={e => setBudgetForm({ ...budgetForm, maxAgentRuns: parseInt(e.target.value) || 0 })} className="mt-1 block w-full rounded-md border px-3 py-2 text-sm" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Min Evidence</label>
+                    <label className="text-sm font-medium">{t("minEvidence")}</label>
                     <input type="number" value={budgetForm.minimumEvidence} onChange={e => setBudgetForm({ ...budgetForm, minimumEvidence: parseInt(e.target.value) || 0 })} className="mt-1 block w-full rounded-md border px-3 py-2 text-sm" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Budget (EUR)</label>
+                    <label className="text-sm font-medium">{t("budgetEur")}</label>
                     <input type="number" value={budgetForm.budgetEur} onChange={e => setBudgetForm({ ...budgetForm, budgetEur: parseInt(e.target.value) || 0 })} className="mt-1 block w-full rounded-md border px-3 py-2 text-sm" />
                   </div>
                 </div>
                 <div className="flex justify-end gap-2">
-                  <button onClick={() => setShowBudgetForm(false)} className="inline-flex h-9 items-center rounded-md border px-4 text-sm hover:bg-muted">Abbrechen</button>
-                  <button onClick={createBudget} className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">Speichern</button>
+                  <button onClick={() => setShowBudgetForm(false)} className="inline-flex h-9 items-center rounded-md border px-4 text-sm hover:bg-muted">{tc("cancel")}</button>
+                  <button onClick={createBudget} className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">{tc("save")}</button>
                 </div>
               </div>
             )}
 
             {budgets.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">Noch keine Budget-Phasen definiert.</div>
+              <div className="text-center py-8 text-muted-foreground">Noch keine Budget-{t("phase")}n definiert.</div>
             ) : (
               <div className="space-y-3">
                 {budgets.map(b => (
@@ -849,7 +851,7 @@ export default function OpportunityDetailPage() {
                       <div className="w-full bg-muted rounded-full h-2">
                         <div className={`h-2 rounded-full transition-all ${b.spentEur > b.budgetEur ? "bg-red-500" : "bg-primary"}`} style={{ width: `${Math.min((b.spentEur / b.budgetEur) * 100, 100)}%` }} />
                       </div>
-                      <div className="text-xs text-muted-foreground mt-1">{Math.round((b.spentEur / b.budgetEur) * 100)}% ausgeschöpft</div>
+                      <div className="text-xs text-muted-foreground mt-1">{Math.round((b.spentEur / b.budgetEur) * 100)}% {t("spent")}</div>
                     </div>
                   </div>
                 ))}
@@ -862,12 +864,12 @@ export default function OpportunityDetailPage() {
         {activeTab === "stop" && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold">Stop Conditions</h2>
+              <h2 className="text-lg font-semibold">{t("stopConditionsTitle")}</h2>
               <button
                 onClick={() => setShowStopForm(!showStopForm)}
                 className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
               >
-                {showStopForm ? "Abbrechen" : "+ Condition"}
+                {showStopForm ? tc("cancel") : t("addCondition")}
               </button>
             </div>
 
@@ -875,7 +877,7 @@ export default function OpportunityDetailPage() {
               <div className="rounded-lg border bg-card p-4 space-y-3">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium">Condition Type</label>
+                    <label className="text-sm font-medium">{t("conditionType")}</label>
                     <select
                       value={stopForm.conditionType}
                       onChange={e => setStopForm({ ...stopForm, conditionType: e.target.value })}
@@ -896,7 +898,7 @@ export default function OpportunityDetailPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Threshold (optional)</label>
+                    <label className="text-sm font-medium">{t("threshold")}</label>
                     <input type="number" value={stopForm.threshold} onChange={e => setStopForm({ ...stopForm, threshold: parseInt(e.target.value) || 0 })} className="mt-1 block w-full rounded-md border px-3 py-2 text-sm" />
                   </div>
                   <div>
@@ -920,14 +922,14 @@ export default function OpportunityDetailPage() {
                   </div>
                 </div>
                 <div className="flex justify-end gap-2">
-                  <button onClick={() => setShowStopForm(false)} className="inline-flex h-9 items-center rounded-md border px-4 text-sm hover:bg-muted">Abbrechen</button>
-                  <button onClick={createStopCondition} className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">Speichern</button>
+                  <button onClick={() => setShowStopForm(false)} className="inline-flex h-9 items-center rounded-md border px-4 text-sm hover:bg-muted">{tc("cancel")}</button>
+                  <button onClick={createStopCondition} className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">{tc("save")}</button>
                 </div>
               </div>
             )}
 
             {stopConditions.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">Noch keine Stop Conditions definiert.</div>
+              <div className="text-center py-8 text-muted-foreground">{t("noStopConditions")}</div>
             ) : (
               <div className="space-y-3">
                 {stopConditions.map(c => (
@@ -1384,7 +1386,7 @@ function EvidenceTab({ opp, id, fetchOpp }: { opp: Opp; id: string; fetchOpp: ()
             onClick={() => setShowForm(!showForm)}
             className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            {showForm ? "Abbrechen" : "+ Negative Evidence"}
+            {showForm ? tc("cancel") : "+ Negative Evidence"}
           </button>
         </div>
 
@@ -1440,14 +1442,14 @@ function EvidenceTab({ opp, id, fetchOpp }: { opp: Opp; id: string; fetchOpp: ()
                 onClick={() => setShowForm(false)}
                 className="inline-flex h-9 items-center rounded-md border px-4 text-sm hover:bg-muted"
               >
-                Abbrechen
+                {tc("cancel")}
               </button>
               <button
                 onClick={createEvidence}
                 disabled={saving || !form.claim.trim() || !form.contradiction.trim()}
                 className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
-                {saving ? "Speichern..." : "Speichern"}
+                {saving ? `${tc("save")}...` : tc("save")}
               </button>
             </div>
           </div>
