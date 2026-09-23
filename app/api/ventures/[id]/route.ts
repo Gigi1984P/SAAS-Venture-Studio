@@ -101,7 +101,7 @@ export async function PUT(
         data: {
           ventureId: params.id,
           type: "status_change",
-          payload: { from: current.status, to: status },
+          payload: { from: current.status, to: status, reason: body.transitionReason || null },
           actorId,
         },
       });

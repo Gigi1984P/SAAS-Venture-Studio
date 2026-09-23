@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 
 interface ResearchSource {
   id: string;
@@ -27,6 +28,8 @@ export default function ResearchSourcesPage() {
   const [sources, setSources] = useState<ResearchSource[]>([]);
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
+  const t = useTranslations("Intelligence");
+  const tc = useTranslations("Common");
 
   useEffect(() => {
     fetchSources();
@@ -56,7 +59,7 @@ export default function ResearchSourcesPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        alert(`${data.created} Quellen importiert`);
+        alert(`${data.created} ${t("seedDefaults")}`);
         fetchSources();
       }
     } catch (e) {
@@ -79,40 +82,40 @@ export default function ResearchSourcesPage() {
     }
   }
 
-  if (loading) return <div className="p-6">Lade Quellen...</div>;
+  if (loading) return <div className="p-6">{tc("loading")}</div>;
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">🔍 Intelligence Engine — Quellen</h1>
-          <p className="text-sm text-muted-foreground">Konfiguriere, welche Quellen durchsucht werden</p>
+          <h1 className="text-2xl font-bold">🔍 {t("title")} — {t("source")}</h1>
+          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
         <button
           onClick={seedDefaults}
           disabled={seeding}
           className="h-10 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
         >
-          {seeding ? "Importiere..." : "🌱 Standard-Quellen importieren"}
+          {seeding ? t("seeding") : `🌱 ${t("seedDefaults")}`}
         </button>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-4 gap-4">
         <div className="rounded-lg border bg-card p-4">
-          <p className="text-sm text-muted-foreground">Aktive Quellen</p>
+          <p className="text-sm text-muted-foreground">{t("activeSources")}</p>
           <p className="text-2xl font-bold">{sources.filter(s => s.isActive).length}/{sources.length}</p>
         </div>
         <div className="rounded-lg border bg-card p-4">
-          <p className="text-sm text-muted-foreground">Gesamt Scrapes</p>
+          <p className="text-sm text-muted-foreground">{t("totalScrapes")}</p>
           <p className="text-2xl font-bold">{sources.reduce((s, src) => s + src.totalScrapes, 0).toLocaleString()}</p>
         </div>
         <div className="rounded-lg border bg-card p-4">
-          <p className="text-sm text-muted-foreground">Foren</p>
+          <p className="text-sm text-muted-foreground">{t("forums")}</p>
           <p className="text-2xl font-bold">{sources.filter(s => s.type === "forum").length}</p>
         </div>
         <div className="rounded-lg border bg-card p-4">
-          <p className="text-sm text-muted-foreground">Review-Seiten</p>
+          <p className="text-sm text-muted-foreground">{t("reviewSites")}</p>
           <p className="text-2xl font-bold">{sources.filter(s => s.type === "review").length}</p>
         </div>
       </div>
@@ -123,14 +126,14 @@ export default function ResearchSourcesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
-                <th className="p-3 text-left font-medium">Quelle</th>
-                <th className="p-3 text-left font-medium">Typ</th>
-                <th className="p-3 text-left font-medium">Status</th>
-                <th className="p-3 text-left font-medium">Priorität</th>
-                <th className="p-3 text-left font-medium">Rate Limit</th>
-                <th className="p-3 text-left font-medium">Scrapes</th>
-                <th className="p-3 text-left font-medium">Letzter Scan</th>
-                <th className="p-3 text-left font-medium">Aktion</th>
+                <th className="p-3 text-left font-medium">{t("source")}</th>
+                <th className="p-3 text-left font-medium">{t("type")}</th>
+                <th className="p-3 text-left font-medium">{t("status")}</th>
+                <th className="p-3 text-left font-medium">{t("priority")}</th>
+                <th className="p-3 text-left font-medium">{t("rateLimit")}</th>
+                <th className="p-3 text-left font-medium">{t("scrapes")}</th>
+                <th className="p-3 text-left font-medium">{t("lastScan")}</th>
+                <th className="p-3 text-left font-medium">{t("action")}</th>
               </tr>
             </thead>
             <tbody>
@@ -154,7 +157,7 @@ export default function ResearchSourcesPage() {
                     <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                       source.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"
                     }`}>
-                      {source.isActive ? "✅ Aktiv" : "⏸️ Inaktiv"}
+                      {source.isActive ? `✅ ${t("active")}` : `⏸️ ${t("inactive")}`}
                     </span>
                   </td>
                   <td className="p-3">
@@ -170,7 +173,7 @@ export default function ResearchSourcesPage() {
                   </td>
                   <td className="p-3">{source.totalScrapes.toLocaleString()}</td>
                   <td className="p-3 text-xs text-muted-foreground">
-                    {source.lastScrapedAt ? new Date(source.lastScrapedAt).toLocaleDateString() : "Nie"}
+                    {source.lastScrapedAt ? new Date(source.lastScrapedAt).toLocaleDateString() : t("never")}
                   </td>
                   <td className="p-3">
                     <button
@@ -181,7 +184,7 @@ export default function ResearchSourcesPage() {
                           : "bg-green-100 hover:bg-green-200 text-green-700"
                       }`}
                     >
-                      {source.isActive ? "Deaktivieren" : "Aktivieren"}
+                      {source.isActive ? t("deactivate") : t("activate")}
                     </button>
                   </td>
                 </tr>
@@ -193,13 +196,13 @@ export default function ResearchSourcesPage() {
 
       {/* Info */}
       <div className="rounded-lg border bg-blue-50 p-4 text-sm">
-        <p className="font-medium text-blue-800">💡 So funktioniert die Intelligence Engine</p>
+        <p className="font-medium text-blue-800">💡 {t("howItWorks")}</p>
         <ul className="mt-2 space-y-1 text-blue-700">
-          <li>Die Engine durchsucht alle <strong>aktiven Quellen</strong> nach Pain Points, Trends und Wettbewerbern</li>
-          <li><strong>Priorität</strong> bestimmt die Reihenfolge (10 = zuerst)</li>
-          <li><strong>Rate Limiting</strong> verhindert, dass Quellen blockieren</li>
-          <li>Ergebnisse werden <strong>24h gecacht</strong> um Kosten zu sparen</li>
-          <li>Jede Quelle hat eigene <strong>CSS Selectoren</strong> für präzises Scraping</li>
+          <li>{t("info1")}</li>
+          <li>{t("info2")}</li>
+          <li>{t("info3")}</li>
+          <li>{t("info4")}</li>
+          <li>{t("info5")}</li>
         </ul>
       </div>
     </div>

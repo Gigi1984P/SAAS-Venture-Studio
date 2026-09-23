@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 type Opp = {
   id: string;
@@ -23,6 +24,8 @@ export default function RadarPage() {
   const [sortDesc, setSortDesc] = useState(true);
   const [filterStatus, setFilterStatus] = useState("all");
   const [activeTab, setActiveTab] = useState("radar");
+  const t = useTranslations("Radar");
+  const tc = useTranslations("Common");
 
   useEffect(() => { fetchOpps(); }, []);
 
@@ -89,14 +92,14 @@ export default function RadarPage() {
     return colors[status] || "bg-gray-100 text-gray-700";
   }
 
-  if (loading) return <div className="p-6">Laden...</div>;
+  if (loading) return <div className="p-6">{tc("loading")}</div>;
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Opportunity Radar</h1>
-          <p className="text-muted-foreground mt-1">Score A x Score B x Confidence = Entscheidungsmatrix</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
+          <p className="text-muted-foreground mt-1">{t("subtitle")}</p>
         </div>
       </div>
 
@@ -104,10 +107,10 @@ export default function RadarPage() {
       <div className="border-b">
         <nav className="flex gap-6">
           {[
-            { id: "radar", label: "Radar" },
-            { id: "research", label: "Research" },
-            { id: "validation", label: "Validation" },
-            { id: "ventures", label: "Ventures" },
+            { id: "radar", label: t("tabRadar") },
+            { id: "research", label: t("tabResearch") },
+            { id: "validation", label: t("tabValidation") },
+            { id: "ventures", label: t("tabVentures") },
           ].map(tab => (
             <button
               key={tab.id}
@@ -128,11 +131,11 @@ export default function RadarPage() {
         <div className="space-y-6">
           <div className="grid grid-cols-5 gap-4">
             {[
-              { label: "Total", value: opps.length },
-              { label: "Score A > 80", value: opps.filter(o => o.scoreA >= 80).length, color: "text-green-600" },
-              { label: "Score B > 80", value: opps.filter(o => o.scoreB >= 80).length, color: "text-blue-600" },
-              { label: "Confidence > 70%", value: opps.filter(o => o.confidence >= 0.7).length, color: "text-purple-600" },
-              { label: "Evidence >= 5", value: opps.filter(o => o.evidenceLevel >= 5).length, color: "text-orange-600" },
+              { label: t("totalOpportunities"), value: opps.length },
+              { label: t("scoreAgt80"), value: opps.filter(o => o.scoreA >= 80).length, color: "text-green-600" },
+              { label: t("scoreBgt80"), value: opps.filter(o => o.scoreB >= 80).length, color: "text-blue-600" },
+              { label: t("confidenceGt70"), value: opps.filter(o => o.confidence >= 0.7).length, color: "text-purple-600" },
+              { label: t("evidenceGte5"), value: opps.filter(o => o.evidenceLevel >= 5).length, color: "text-orange-600" },
             ].map(stat => (
               <div key={stat.label} className="rounded-lg border bg-card p-4 text-center">
                 <div className={`text-2xl font-bold ${stat.color || ""}`}>{stat.value}</div>
@@ -142,13 +145,13 @@ export default function RadarPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-sm font-medium">Filter:</span>
+            <span className="text-sm font-medium">{t("filter")}:</span>
             <select 
               value={filterStatus} 
               onChange={e => setFilterStatus(e.target.value)}
               className="h-9 rounded-md border bg-background px-3 text-sm"
             >
-              <option value="all">All Status</option>
+              <option value="all">{t("allStatus")}</option>
               <option value="discovered">Discovered</option>
               <option value="scored">Scored</option>
               <option value="watch">Watch</option>
@@ -163,13 +166,13 @@ export default function RadarPage() {
               <thead className="bg-muted">
                 <tr>
                   {[
-                    { field: "title", label: "Opportunity" },
-                    { field: "scoreA", label: "Score A" },
-                    { field: "scoreB", label: "Fit (B)" },
-                    { field: "confidence", label: "Conf." },
-                    { field: "evidenceLevel", label: "Evid." },
-                    { field: "mrrEstimate", label: "MRR Est." },
-                    { field: "status", label: "Status" },
+                    { field: "title", label: t("opportunity") },
+                    { field: "scoreA", label: t("scoreA") },
+                    { field: "scoreB", label: t("scoreB") },
+                    { field: "confidence", label: t("confidence") },
+                    { field: "evidenceLevel", label: t("evidence") },
+                    { field: "mrrEstimate", label: t("mrrEstimate") },
+                    { field: "status", label: t("status") },
                   ].map(col => (
                     <th key={col.field} className="px-4 py-3 text-left font-medium">
                       <button onClick={() => toggleSort(col.field as keyof Opp)} className="flex items-center gap-1">
@@ -203,7 +206,7 @@ export default function RadarPage() {
               </tbody>
             </table>
             {sorted.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">Keine Opportunities gefunden.</div>
+              <div className="text-center py-8 text-muted-foreground">{t("noOpportunities")}</div>
             )}
           </div>
         </div>
@@ -211,9 +214,9 @@ export default function RadarPage() {
 
       {activeTab !== "radar" && (
         <div className="text-center py-12 text-muted-foreground">
-          {activeTab === "research" && "Research-Uebersicht kommt in Phase 2."}
-          {activeTab === "validation" && "Validation-Uebersicht kommt in Phase 2."}
-          {activeTab === "ventures" && <Link href="/ventures" className="text-primary hover:underline">→ Zur Ventures-Uebersicht</Link>}
+          {activeTab === "research" && t("researchComing")}
+          {activeTab === "validation" && t("validationComing")}
+          {activeTab === "ventures" && <Link href="/ventures" className="text-primary hover:underline">{t("venturesLink")}</Link>}
         </div>
       )}
     </div>
