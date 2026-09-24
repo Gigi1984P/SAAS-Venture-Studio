@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
 
 type Opp = {
   id: string;
@@ -24,8 +23,6 @@ export default function RadarPage() {
   const [sortDesc, setSortDesc] = useState(true);
   const [filterStatus, setFilterStatus] = useState("all");
   const [activeTab, setActiveTab] = useState("radar");
-  const t = useTranslations("Radar");
-  const tc = useTranslations("Common");
 
   useEffect(() => { fetchOpps(); }, []);
 
@@ -92,14 +89,14 @@ export default function RadarPage() {
     return colors[status] || "bg-gray-100 text-gray-700";
   }
 
-  if (loading) return <div className="p-6">{tc("loading")}</div>;
+  if (loading) return <div className="p-6">Laden...</div>;
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
-          <p className="text-muted-foreground mt-1">{t("subtitle")}</p>
+          <h1 className="text-3xl font-bold tracking-tight">Radar</h1>
+          <p className="text-muted-foreground mt-1">Übersicht aller Opportunities</p>
         </div>
       </div>
 
@@ -107,10 +104,10 @@ export default function RadarPage() {
       <div className="border-b">
         <nav className="flex gap-6">
           {[
-            { id: "radar", label: t("tabRadar") },
-            { id: "research", label: t("tabResearch") },
-            { id: "validation", label: t("tabValidation") },
-            { id: "ventures", label: t("tabVentures") },
+            { id: "radar", label: "Radar" },
+            { id: "research", label: "Recherche" },
+            { id: "validation", label: "Validierung" },
+            { id: "ventures", label: "Ventures" },
           ].map(tab => (
             <button
               key={tab.id}
@@ -131,11 +128,11 @@ export default function RadarPage() {
         <div className="space-y-6">
           <div className="grid grid-cols-5 gap-4">
             {[
-              { label: t("totalOpportunities"), value: opps.length },
-              { label: t("scoreAgt80"), value: opps.filter(o => o.scoreA >= 80).length, color: "text-green-600" },
-              { label: t("scoreBgt80"), value: opps.filter(o => o.scoreB >= 80).length, color: "text-blue-600" },
-              { label: t("confidenceGt70"), value: opps.filter(o => o.confidence >= 0.7).length, color: "text-purple-600" },
-              { label: t("evidenceGte5"), value: opps.filter(o => o.evidenceLevel >= 5).length, color: "text-orange-600" },
+              { label: "Gesamt", value: opps.length },
+              { label: "Score A ≥80", value: opps.filter(o => o.scoreA >= 80).length, color: "text-green-600" },
+              { label: "Score B ≥80", value: opps.filter(o => o.scoreB >= 80).length, color: "text-blue-600" },
+              { label: "Confidence ≥70%", value: opps.filter(o => o.confidence >= 0.7).length, color: "text-purple-600" },
+              { label: "Evidence ≥5", value: opps.filter(o => o.evidenceLevel >= 5).length, color: "text-orange-600" },
             ].map(stat => (
               <div key={stat.label} className="rounded-lg border bg-card p-4 text-center">
                 <div className={`text-2xl font-bold ${stat.color || ""}`}>{stat.value}</div>
@@ -145,13 +142,13 @@ export default function RadarPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-sm font-medium">{t("filter")}:</span>
+            <span className="text-sm font-medium">Filter:</span>
             <select 
               value={filterStatus} 
               onChange={e => setFilterStatus(e.target.value)}
               className="h-9 rounded-md border bg-background px-3 text-sm"
             >
-              <option value="all">{t("allStatus")}</option>
+              <option value="all">Alle Status</option>
               <option value="discovered">Discovered</option>
               <option value="scored">Scored</option>
               <option value="watch">Watch</option>
@@ -166,13 +163,13 @@ export default function RadarPage() {
               <thead className="bg-muted">
                 <tr>
                   {[
-                    { field: "title", label: t("opportunity") },
-                    { field: "scoreA", label: t("scoreA") },
-                    { field: "scoreB", label: t("scoreB") },
-                    { field: "confidence", label: t("confidence") },
-                    { field: "evidenceLevel", label: t("evidence") },
-                    { field: "mrrEstimate", label: t("mrrEstimate") },
-                    { field: "status", label: t("status") },
+                    { field: "title", label: "Opportunity" },
+                    { field: "scoreA", label: "Score A" },
+                    { field: "scoreB", label: "Score B" },
+                    { field: "confidence", label: "Confidence" },
+                    { field: "evidenceLevel", label: "Evidence" },
+                    { field: "mrrEstimate", label: "MRR-Schätzung" },
+                    { field: "status", label: "Status" },
                   ].map(col => (
                     <th key={col.field} className="px-4 py-3 text-left font-medium">
                       <button onClick={() => toggleSort(col.field as keyof Opp)} className="flex items-center gap-1">
@@ -206,7 +203,7 @@ export default function RadarPage() {
               </tbody>
             </table>
             {sorted.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">{t("noOpportunities")}</div>
+              <div className="text-center py-8 text-muted-foreground">Keine Opportunities gefunden</div>
             )}
           </div>
         </div>
@@ -214,9 +211,9 @@ export default function RadarPage() {
 
       {activeTab !== "radar" && (
         <div className="text-center py-12 text-muted-foreground">
-          {activeTab === "research" && t("researchComing")}
-          {activeTab === "validation" && t("validationComing")}
-          {activeTab === "ventures" && <Link href="/ventures" className="text-primary hover:underline">{t("venturesLink")}</Link>}
+          {activeTab === "research" && "Recherche-Übersicht kommt bald..."}
+          {activeTab === "validation" && "Validierungs-Übersicht kommt bald..."}
+          {activeTab === "ventures" && <Link href="/ventures" className="text-primary hover:underline">Zu Ventures →</Link>}
         </div>
       )}
     </div>

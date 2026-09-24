@@ -2,11 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 
 export default function VerifyEmailPage() {
-  const t = useTranslations("AuthFlows");
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
@@ -23,7 +21,7 @@ export default function VerifyEmailPage() {
         const data = await res.json();
         if (res.ok) {
           setStatus("success");
-          setMessage(t("emailVerified"));
+          setMessage("E-Mail erfolgreich bestätigt!");
         } else {
           setStatus("error");
           setMessage(data.message || "Fehler");
@@ -33,16 +31,16 @@ export default function VerifyEmailPage() {
         setStatus("error");
         setMessage("Fehler");
       });
-  }, [token, t]);
+  }, [token]);
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-sm text-center space-y-6">
-        <h1 className="text-2xl font-bold">{t("verifyEmailTitle")}</h1>
-        <p className="text-sm text-muted-foreground">{t("verifyEmailDesc")}</p>
+        <h1 className="text-2xl font-bold">E-Mail bestätigen</h1>
+        <p className="text-sm text-muted-foreground">Bitte bestätige deine E-Mail-Adresse, um fortzufahren.</p>
 
         {status === "loading" && (
-          <div className="text-sm text-muted-foreground">{t("loading")}...</div>
+          <div className="text-sm text-muted-foreground">Lädt...</div>
         )}
         {status === "success" && (
           <div className="space-y-4">

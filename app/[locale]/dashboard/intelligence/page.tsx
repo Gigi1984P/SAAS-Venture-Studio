@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
 
 interface ResearchSource {
   id: string;
@@ -28,8 +27,6 @@ export default function ResearchSourcesPage() {
   const [sources, setSources] = useState<ResearchSource[]>([]);
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
-  const t = useTranslations("Intelligence");
-  const tc = useTranslations("Common");
 
   useEffect(() => {
     fetchSources();
@@ -59,7 +56,7 @@ export default function ResearchSourcesPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        alert(`${data.created} ${t("seedDefaults")}`);
+        alert(`${data.created} Quellen erstellt`);
         fetchSources();
       }
     } catch (e) {
@@ -82,40 +79,40 @@ export default function ResearchSourcesPage() {
     }
   }
 
-  if (loading) return <div className="p-6">{tc("loading")}</div>;
+  if (loading) return <div className="p-6">Laden...</div>;
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">🔍 {t("title")} — {t("source")}</h1>
-          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+          <h1 className="text-2xl font-bold">🔍 Intelligence — Research Sources</h1>
+          <p className="text-sm text-muted-foreground">Verwalte und konfiguriere Forschungsquellen</p>
         </div>
         <button
           onClick={seedDefaults}
           disabled={seeding}
           className="h-10 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
         >
-          {seeding ? t("seeding") : `🌱 ${t("seedDefaults")}`}
+          {seeding ? "Wird erstellt..." : "🌱 Standard-Quellen erstellen"}
         </button>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-4 gap-4">
         <div className="rounded-lg border bg-card p-4">
-          <p className="text-sm text-muted-foreground">{t("activeSources")}</p>
+          <p className="text-sm text-muted-foreground">Aktive Quellen</p>
           <p className="text-2xl font-bold">{sources.filter(s => s.isActive).length}/{sources.length}</p>
         </div>
         <div className="rounded-lg border bg-card p-4">
-          <p className="text-sm text-muted-foreground">{t("totalScrapes")}</p>
+          <p className="text-sm text-muted-foreground">Gesamt Scrapes</p>
           <p className="text-2xl font-bold">{sources.reduce((s, src) => s + src.totalScrapes, 0).toLocaleString()}</p>
         </div>
         <div className="rounded-lg border bg-card p-4">
-          <p className="text-sm text-muted-foreground">{t("forums")}</p>
+          <p className="text-sm text-muted-foreground">Foren</p>
           <p className="text-2xl font-bold">{sources.filter(s => s.type === "forum").length}</p>
         </div>
         <div className="rounded-lg border bg-card p-4">
-          <p className="text-sm text-muted-foreground">{t("reviewSites")}</p>
+          <p className="text-sm text-muted-foreground">Review-Seiten</p>
           <p className="text-2xl font-bold">{sources.filter(s => s.type === "review").length}</p>
         </div>
       </div>
@@ -126,14 +123,14 @@ export default function ResearchSourcesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
-                <th className="p-3 text-left font-medium">{t("source")}</th>
-                <th className="p-3 text-left font-medium">{t("type")}</th>
-                <th className="p-3 text-left font-medium">{t("status")}</th>
-                <th className="p-3 text-left font-medium">{t("priority")}</th>
-                <th className="p-3 text-left font-medium">{t("rateLimit")}</th>
-                <th className="p-3 text-left font-medium">{t("scrapes")}</th>
-                <th className="p-3 text-left font-medium">{t("lastScan")}</th>
-                <th className="p-3 text-left font-medium">{t("action")}</th>
+                <th className="p-3 text-left font-medium">Quelle</th>
+                <th className="p-3 text-left font-medium">Typ</th>
+                <th className="p-3 text-left font-medium">Status</th>
+                <th className="p-3 text-left font-medium">Priorität</th>
+                <th className="p-3 text-left font-medium">Rate Limit</th>
+                <th className="p-3 text-left font-medium">Scrapes</th>
+                <th className="p-3 text-left font-medium">Letzter Scan</th>
+                <th className="p-3 text-left font-medium">Aktion</th>
               </tr>
             </thead>
             <tbody>
@@ -157,7 +154,7 @@ export default function ResearchSourcesPage() {
                     <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                       source.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"
                     }`}>
-                      {source.isActive ? `✅ ${t("active")}` : `⏸️ ${t("inactive")}`}
+                      {source.isActive ? "✅ Aktiv" : "⏸️ Inaktiv"}
                     </span>
                   </td>
                   <td className="p-3">
@@ -173,7 +170,7 @@ export default function ResearchSourcesPage() {
                   </td>
                   <td className="p-3">{source.totalScrapes.toLocaleString()}</td>
                   <td className="p-3 text-xs text-muted-foreground">
-                    {source.lastScrapedAt ? new Date(source.lastScrapedAt).toLocaleDateString() : t("never")}
+                    {source.lastScrapedAt ? new Date(source.lastScrapedAt).toLocaleDateString() : "Nie"}
                   </td>
                   <td className="p-3">
                     <button
@@ -184,7 +181,7 @@ export default function ResearchSourcesPage() {
                           : "bg-green-100 hover:bg-green-200 text-green-700"
                       }`}
                     >
-                      {source.isActive ? t("deactivate") : t("activate")}
+                      {source.isActive ? "Deaktivieren" : "Aktivieren"}
                     </button>
                   </td>
                 </tr>
@@ -196,13 +193,13 @@ export default function ResearchSourcesPage() {
 
       {/* Info */}
       <div className="rounded-lg border bg-blue-50 p-4 text-sm">
-        <p className="font-medium text-blue-800">💡 {t("howItWorks")}</p>
+        <p className="font-medium text-blue-800">💡 Wie es funktioniert</p>
         <ul className="mt-2 space-y-1 text-blue-700">
-          <li>{t("info1")}</li>
-          <li>{t("info2")}</li>
-          <li>{t("info3")}</li>
-          <li>{t("info4")}</li>
-          <li>{t("info5")}</li>
+          <li>Forschungsquellen liefern Daten für Opportunity-Erkennung</li>
+          <li>Höhere Priorität = häufigere Abfrage</li>
+          <li>Rate Limits verhindern Blockierung</li>
+          <li>Deaktivierte Quellen werden nicht abgefragt</li>
+          <li>Klicke "Standard-Quellen erstellen" für Demo-Daten</li>
         </ul>
       </div>
     </div>

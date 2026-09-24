@@ -1,12 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 
 export default function ForgotPasswordPage() {
-  const t = useTranslations("AuthFlows");
-  const tc = useTranslations("Auth");
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -39,18 +36,18 @@ export default function ForgotPasswordPage() {
     <div className="flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">{t("forgotPasswordTitle")}</h1>
-          <p className="text-sm text-muted-foreground mt-2">{t("forgotPasswordDesc")}</p>
+          <h1 className="text-2xl font-bold">Passwort vergessen</h1>
+          <p className="text-sm text-muted-foreground mt-2">Gib deine E-Mail ein und wir senden dir einen Link zum Zurücksetzen.</p>
         </div>
 
         {sent ? (
           <div className="rounded-lg border bg-emerald-50 p-4 text-sm text-emerald-700">
-            {t("resetLinkSent")}
+            Link gesendet! Prüfe deine E-Mails.
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-sm font-medium">{tc("email")}</label>
+              <label className="text-sm font-medium">E-Mail</label>
               <input
                 type="email"
                 required
@@ -68,14 +65,14 @@ export default function ForgotPasswordPage() {
               disabled={loading}
               className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
             >
-              {loading ? "..." : t("sendResetLink")}
+              {loading ? "Wird gesendet..." : "Link senden"}
             </button>
           </form>
         )}
 
         <div className="text-center text-sm">
           <Link href="/auth/login" className="text-primary hover:underline">
-            {tc("loginHere")}
+            Zurück zum Login
           </Link>
         </div>
       </div>
