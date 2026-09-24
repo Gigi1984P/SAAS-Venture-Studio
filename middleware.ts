@@ -76,7 +76,9 @@ export async function middleware(request: NextRequest) {
   );
   const isAuthPage = cleanPath.startsWith("/auth/");
 
-  if (isProtectedRoute && !sessionToken && !isAuthPage) {
+  const isPublicRoute = cleanPath === "/status" || cleanPath === "/api/health";
+
+  if (isProtectedRoute && !sessionToken && !isAuthPage && !isPublicRoute) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = `${isLocalePath ? "/" + localePrefix : ""}/auth/login`;
     loginUrl.searchParams.set("callbackUrl", pathname);
