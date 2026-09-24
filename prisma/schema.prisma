@@ -1313,3 +1313,45 @@ model ResearchSource {
 
   @@map("research_sources")
 }
+
+
+// ============================================================
+// AGENT AND LLM PROVIDER CONFIGURATION
+// ============================================================
+
+model AgentConfig {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  label         String
+  description   String?
+  provider      String
+  model         String
+  baseUrl       String?  @map("base_url")
+  apiKey        String?  @map("api_key")
+  temperature   Float    @default(0.7)
+  maxTokens     Int      @default(4096) @map("max_tokens")
+  systemPrompt  String?  @map("system_prompt")
+  contextWindow Int      @default(128000) @map("context_window")
+  isEnabled     Boolean  @default(true) @map("is_enabled")
+  isDefault     Boolean  @default(false) @map("is_default")
+  costPer1kTokens Float? @map("cost_per_1k_tokens")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("agent_configs")
+}
+
+model LLMProvider {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  label     String
+  baseUrl   String   @map("base_url")
+  apiKey    String?  @map("api_key")
+  isEnabled Boolean  @default(true) @map("is_enabled")
+  isLocal   Boolean  @default(false) @map("is_local")
+  models    Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("llm_providers")
+}
