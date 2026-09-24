@@ -52,3 +52,4 @@ Siehe Checkliste in `PROJECT-STATE.md`.
 # Vercel ENV fix Thu Sep 24 11:38:09 UTC 2026
 # Redeploy 1790250342
 # DB fix 1790251106
+# Neue DB 1790253536
