@@ -55,3 +55,4 @@ Siehe Checkliste in `PROJECT-STATE.md`.
 # deploy agents 1790271595
 # deploy final 1790271845
 # deploy agent settings 1790272235
+# deploy settings fix 1790274410
