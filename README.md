@@ -53,3 +53,11 @@ Siehe Checkliste in `PROJECT-STATE.md`.
 # Redeploy 1790250342
 # DB fix 1790251106
 # Neue DB 1790253536
+# Force update Thu Sep 24 12:45:25 UTC 2026
+# deploy 1790266461
+# deploy 1790268160
+# deploy agents fix 1790268495
+# deploy agents 1790271595
+# deploy final 1790271845
+# deploy agent settings 1790272235
+# deploy settings fix 1790274410

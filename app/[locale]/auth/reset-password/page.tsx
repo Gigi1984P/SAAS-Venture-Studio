@@ -1,13 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useTranslations } from "next-intl";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 
 export default function ResetPasswordPage() {
-  const t = useTranslations("AuthFlows");
-  const tc = useTranslations("Auth");
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("token");
@@ -29,11 +26,11 @@ export default function ResetPasswordPage() {
     setError("");
 
     if (password !== confirmPassword) {
-      setError(tc("passwordsMismatch"));
+      setError("Die Passwörter stimmen nicht überein");
       return;
     }
     if (password.length < 8) {
-      setError(tc("passwordTooShort"));
+      setError("Passwort muss mindestens 8 Zeichen haben");
       return;
     }
 
@@ -61,26 +58,26 @@ export default function ResetPasswordPage() {
     <div className="flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">{t("resetPasswordTitle")}</h1>
-          <p className="text-sm text-muted-foreground mt-2">{t("resetPasswordDesc")}</p>
+          <h1 className="text-2xl font-bold">Passwort zurücksetzen</h1>
+          <p className="text-sm text-muted-foreground mt-2">Gib dein neues Passwort ein.</p>
         </div>
 
         {success ? (
           <div className="space-y-4">
             <div className="rounded-lg border bg-emerald-50 p-4 text-sm text-emerald-700">
-              {t("passwordResetSuccess")}
+              Passwort erfolgreich zurückgesetzt!
             </div>
             <Link
               href="/auth/login"
               className="block w-full text-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
-              {tc("signIn")}
+              Zum Login
             </Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-sm font-medium">{t("newPassword")}</label>
+              <label className="text-sm font-medium">Neues Passwort</label>
               <input
                 type="password"
                 required
@@ -90,7 +87,7 @@ export default function ResetPasswordPage() {
               />
             </div>
             <div>
-              <label className="text-sm font-medium">{tc("confirmPassword")}</label>
+              <label className="text-sm font-medium">Passwort bestätigen</label>
               <input
                 type="password"
                 required
@@ -107,7 +104,7 @@ export default function ResetPasswordPage() {
               disabled={loading || !token}
               className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
             >
-              {loading ? "..." : t("resetPassword")}
+              {loading ? "..." : "Passwort zurücksetzen"}
             </button>
           </form>
         )}
