@@ -38,7 +38,7 @@ export async function GET() {
     {
       status: allOk ? "ok" : "error",
       timestamp: new Date().toISOString(),
-      version: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || "dev",
+      version: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || "dev-v2",
       environment: process.env.VERCEL_ENV || "development",
       nodeEnv: process.env.NODE_ENV || "unknown",
       totalLatencyMs: totalLatency,
