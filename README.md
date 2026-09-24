@@ -48,3 +48,4 @@ npm run db:push
 
 ## DSGVO/GDPR
 Siehe Checkliste in `PROJECT-STATE.md`.
+# Redeploy trigger Thu Sep 24 10:25:51 UTC 2026
