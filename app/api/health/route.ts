@@ -21,10 +21,12 @@ export async function GET() {
     status: process.env.NEXTAUTH_SECRET ? "ok" : "missing",
   };
 
-  // 3. Database URL Check (nur ob vorhanden, nicht den Wert)
+  // 3. Database URL Check
   checks.databaseUrl = {
     status: process.env.DATABASE_URL ? "ok" : "missing",
-  };
+    length: process.env.DATABASE_URL ? process.env.DATABASE_URL.length : 0,
+    start: process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 20) + "..." : null,
+  } as any;
 
   // 4. Resend API Key Check
   checks.resend = {
