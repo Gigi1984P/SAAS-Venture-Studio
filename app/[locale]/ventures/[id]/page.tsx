@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import VenturePipeline from "@/components/venture-pipeline";
 
@@ -32,9 +31,6 @@ export default function VentureDetailPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
-  const t = useTranslations("VentureDetail");
-  const tv = useTranslations("Ventures");
-  const tc = useTranslations("Common");
 
   const [venture, setVenture] = useState<Venture | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,15 +85,15 @@ export default function VentureDetailPage() {
     return colors[status] || "bg-gray-100 text-gray-700";
   }
 
-  if (loading) return <div className="p-6">{t("loading")}</div>;
-  if (!venture) return <div className="p-6">{t("notFound")}</div>;
+  if (loading) return <div className="p-6">{"Laden..."}</div>;
+  if (!venture) return <div className="p-6">{"Venture nicht gefunden"}</div>;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <Link href="/ventures" className="text-sm text-muted-foreground hover:text-foreground">{t("back")}</Link>
+          <Link href="/ventures" className="text-sm text-muted-foreground hover:text-foreground">{"← Zurück"}</Link>
           {isEditing ? (
             <div className="mt-2">
               <input
@@ -105,7 +101,7 @@ export default function VentureDetailPage() {
                 value={editData.name || ""}
                 onChange={e => setEditData({ ...editData, name: e.target.value })}
                 className="text-2xl font-bold tracking-tight w-full rounded-md border px-3 py-2"
-                placeholder={t("placeholderName")}
+                placeholder={"Venture Name"}
               />
             </div>
           ) : (
@@ -113,33 +109,33 @@ export default function VentureDetailPage() {
           )}
           {venture.opportunity && (
             <p className="text-sm text-muted-foreground mt-1">
-              {tv("opportunity")}: <Link href={`/opportunities/${venture.opportunity.id}`} className="text-primary hover:underline">{venture.opportunity.title}</Link>
+              {"Opportunity"}: <Link href={`/opportunities/${venture.opportunity.id}`} className="text-primary hover:underline">{venture.opportunity.title}</Link>
             </p>
           )}
         </div>
         <div className="flex items-center gap-3">
           {isEditing ? (
             <>
-              <button onClick={cancelEdit} className="inline-flex h-9 items-center rounded-md border px-4 text-sm hover:bg-muted">{tc("cancel")}</button>
+              <button onClick={cancelEdit} className="inline-flex h-9 items-center rounded-md border px-4 text-sm hover:bg-muted">{"Abbrechen"}</button>
               <button onClick={saveChanges} disabled={saving} className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
-                {saving ? `${tc("save")}...` : tc("save")}
+                {saving ? `${"Speichern"}...` : "Speichern"}
               </button>
             </>
           ) : (
             <>
               <button onClick={() => setIsEditing(true)} className="inline-flex h-9 items-center rounded-md border border-input bg-background px-4 text-sm font-medium hover:bg-accent hover:text-accent-foreground">
-                {tc("edit")}
+                {"Bearbeiten"}
               </button>
               <button
                 onClick={async () => {
-                  if (confirm(t("deleteConfirm"))) {
+                  if (confirm("Venture wirklich löschen?")) {
                     await fetch(`/api/ventures/${id}`, { method: "DELETE" });
                     router.push("/ventures");
                   }
                 }}
                 className="inline-flex h-9 items-center rounded-md border border-red-200 bg-red-50 px-4 text-sm font-medium text-red-700 hover:bg-red-100"
               >
-                {tc("delete")}
+                {"Löschen"}
               </button>
             </>
           )}
@@ -152,7 +148,7 @@ export default function VentureDetailPage() {
           {venture.status}
         </span>
         <span className="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-gray-100 text-gray-600">
-          {tv("mrr")}: €{venture.mrr.toLocaleString("de-DE")}
+          {"MRR"}: €{venture.mrr.toLocaleString("de-DE")}
         </span>
       </div>
 
@@ -162,13 +158,13 @@ export default function VentureDetailPage() {
         <div className="space-y-6">
           {/* Description */}
           <div className="rounded-lg border bg-card p-6 space-y-3">
-            <h2 className="text-lg font-semibold">{t("descriptionTitle")}</h2>
+            <h2 className="text-lg font-semibold">{"Beschreibung"}</h2>
             {isEditing ? (
               <textarea
                 value={editData.description || ""}
                 onChange={e => setEditData({ ...editData, description: e.target.value })}
                 className="w-full rounded-md border px-3 py-2 text-sm min-h-[100px]"
-                placeholder={t("placeholderDesc")}
+                placeholder={"Beschreibung des Ventures..."}
               />
             ) : (
               <p className="text-sm text-muted-foreground">{venture.description || "—"}</p>
@@ -177,16 +173,16 @@ export default function VentureDetailPage() {
 
           {/* Metrics */}
           <div className="rounded-lg border bg-card p-6 space-y-4">
-            <h2 className="text-lg font-semibold">{t("metricsTitle")}</h2>
+            <h2 className="text-lg font-semibold">{"Kennzahlen"}</h2>
             <div className="grid grid-cols-2 gap-4">
               {[
-                { key: "mrr", label: tv("mrr"), suffix: "€" },
-                { key: "mau", label: tv("mau"), suffix: "" },
-                { key: "churnRate", label: tv("churnRate"), suffix: "%" },
-                { key: "cac", label: tv("cac"), suffix: "€" },
-                { key: "teamSize", label: tv("teamSize"), suffix: "" },
-                { key: "burnRate", label: tv("burnRate"), suffix: "€" },
-                { key: "runway", label: tv("runway"), suffix: "Mo" },
+                { key: "mrr", label: "MRR", suffix: "€" },
+                { key: "mau", label: "MAU", suffix: "" },
+                { key: "churnRate", label: "Churn Rate", suffix: "%" },
+                { key: "cac", label: "CAC", suffix: "€" },
+                { key: "teamSize", label: "Teamgröße", suffix: "" },
+                { key: "burnRate", label: "Burn Rate", suffix: "€" },
+                { key: "runway", label: "Runway", suffix: "Mo" },
               ].map((metric) => (
                 <div key={metric.key} className="space-y-1">
                   <label className="text-xs font-medium text-muted-foreground">{metric.label}</label>
@@ -210,7 +206,7 @@ export default function VentureDetailPage() {
 
           {/* Status */}
           <div className="rounded-lg border bg-card p-6 space-y-3">
-            <h2 className="text-lg font-semibold">{t("statusTitle")}</h2>
+            <h2 className="text-lg font-semibold">{"Status"}</h2>
             <div className="space-y-3">
               <div>
                 {isEditing ? (
@@ -219,12 +215,12 @@ export default function VentureDetailPage() {
                     onChange={(e) => setEditData({ ...editData, status: e.target.value })}
                     className="block w-full rounded-md border px-3 py-2 text-sm"
                   >
-                    <option value="idea">{tv("statusIdea")}</option>
-                    <option value="validation">{tv("statusValidation")}</option>
-                    <option value="mvp">{tv("statusMvp")}</option>
-                    <option value="growth">{tv("statusGrowth")}</option>
-                    <option value="scale">{tv("statusScale")}</option>
-                    <option value="sunset">{tv("statusSunset")}</option>
+                    <option value="idea">{"Idee"}</option>
+                    <option value="validation">{"Validierung"}</option>
+                    <option value="mvp">{"MVP"}</option>
+                    <option value="growth">{"Wachstum"}</option>
+                    <option value="scale">{"Skalierung"}</option>
+                    <option value="sunset">{"Sunset"}</option>
                   </select>
                 ) : (
                   <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium capitalize ${statusColor(venture.status)}`}>
@@ -240,38 +236,38 @@ export default function VentureDetailPage() {
         <div className="space-y-6">
           {/* Links */}
           <div className="rounded-lg border bg-card p-6 space-y-3">
-            <h2 className="text-lg font-semibold">{t("linksTitle")}</h2>
+            <h2 className="text-lg font-semibold">{"Links"}</h2>
             <div className="space-y-3">
               <div>
-                <label className="text-sm font-medium">{t("website")}</label>
+                <label className="text-sm font-medium">{"Website"}</label>
                 {isEditing ? (
                   <input
                     type="url"
                     value={editData.website || ""}
                     onChange={e => setEditData({ ...editData, website: e.target.value })}
                     className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
-                    placeholder={t("placeholderWebsite")}
+                    placeholder={"https://..."}
                   />
                 ) : venture.website ? (
                   <a href={venture.website} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">{venture.website}</a>
                 ) : (
-                  <p className="text-sm text-muted-foreground">{t("notSpecified")}</p>
+                  <p className="text-sm text-muted-foreground">{"Nicht angegeben"}</p>
                 )}
               </div>
               <div>
-                <label className="text-sm font-medium">{t("github")}</label>
+                <label className="text-sm font-medium">{"GitHub"}</label>
                 {isEditing ? (
                   <input
                     type="url"
                     value={editData.github || ""}
                     onChange={e => setEditData({ ...editData, github: e.target.value })}
                     className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
-                    placeholder={t("placeholderGithub")}
+                    placeholder={"https://github.com/..."}
                   />
                 ) : venture.github ? (
                   <a href={venture.github} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">{venture.github}</a>
                 ) : (
-                  <p className="text-sm text-muted-foreground">{t("notSpecified")}</p>
+                  <p className="text-sm text-muted-foreground">{"Nicht angegeben"}</p>
                 )}
               </div>
             </div>
@@ -279,11 +275,11 @@ export default function VentureDetailPage() {
 
           {/* Timestamps */}
           <div className="rounded-lg border bg-card p-6 space-y-3">
-            <h2 className="text-lg font-semibold">{t("metadataTitle")}</h2>
+            <h2 className="text-lg font-semibold">{"Metadaten"}</h2>
             <div className="space-y-2 text-sm text-muted-foreground">
-              <div>{t("created")}: {new Date(venture.createdAt).toLocaleString("de-DE")}</div>
-              <div>{t("updated")}: {new Date(venture.updatedAt).toLocaleString("de-DE")}</div>
-              <div>{t("slug")}: <span className="font-mono text-xs">{venture.slug}</span></div>
+              <div>{"Erstellt"}: {new Date(venture.createdAt).toLocaleString("de-DE")}</div>
+              <div>{"Aktualisiert"}: {new Date(venture.updatedAt).toLocaleString("de-DE")}</div>
+              <div>{"Slug"}: <span className="font-mono text-xs">{venture.slug}</span></div>
             </div>
           </div>
         </div>

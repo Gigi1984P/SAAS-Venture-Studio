@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { EmptyState } from "@/components/empty-state";
@@ -21,8 +20,6 @@ type Venture = {
 
 export default function VenturesPage() {
   const router = useRouter();
-  const t = useTranslations("Ventures");
-  const tc = useTranslations("Common");
   const [ventures, setVentures] = useState<Venture[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -107,9 +104,9 @@ export default function VenturesPage() {
 
   function getStatusLabel(status: string): string {
     const labels: Record<string, string> = {
-      idea: t("statusIdea"),
-      validation: t("statusValidation"),
-      mvp: t("statusMvp"),
+      idea: "Idee",
+      validation: "Validierung",
+      mvp: "MVP",
       growth: "Wachstum",
       scale: "Skalierung",
     };
@@ -128,14 +125,14 @@ export default function VenturesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
-          <p className="text-muted-foreground">{t("subtitle")}</p>
+          <h1 className="text-3xl font-bold tracking-tight">{"Ventures"}</h1>
+          <p className="text-muted-foreground">{"Übersicht über alle Ventures"}</p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
           className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
-          {showForm ? tc("cancel") : `+ ${t("newVenture")}`}
+          {showForm ? "Abbrechen" : `+ ${"Neues Venture"}`}
         </button>
       </div>
 
@@ -145,7 +142,7 @@ export default function VenturesPage() {
           onSubmit={handleSubmit}
           className="rounded-lg border bg-card p-6 shadow-sm space-y-4"
         >
-          <h3 className="text-lg font-semibold">{t("newVenture")}</h3>
+          <h3 className="text-lg font-semibold">{"Neues Venture"}</h3>
 
           {error && (
             <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>
@@ -153,7 +150,7 @@ export default function VenturesPage() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium">{t("name")} *</label>
+              <label className="text-sm font-medium">{"Name"} *</label>
               <input
                 type="text"
                 required
@@ -165,22 +162,22 @@ export default function VenturesPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">{t("status")}</label>
+              <label className="text-sm font-medium">{"Status"}</label>
               <select
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
-                <option value="idea">{t("statusIdea")}</option>
-                <option value="validation">{t("statusValidation")}</option>
-                <option value="mvp">{t("statusMvp")}</option>
-                <option value="growth">{t("statusGrowth")}</option>
-                <option value="scale">{t("statusScale")}</option>
+                <option value="idea">{"Idee"}</option>
+                <option value="validation">{"Validierung"}</option>
+                <option value="mvp">{"MVP"}</option>
+                <option value="growth">{"Wachstum"}</option>
+                <option value="scale">{"Skalierung"}</option>
               </select>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">{t("mrr")}</label>
+              <label className="text-sm font-medium">{"MRR"}</label>
               <input
                 type="number"
                 min="0"
@@ -192,7 +189,7 @@ export default function VenturesPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">{t("website")}</label>
+              <label className="text-sm font-medium">{"Website"}</label>
               <input
                 type="url"
                 value={formData.website}
@@ -204,7 +201,7 @@ export default function VenturesPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">{t("description")}</label>
+            <label className="text-sm font-medium">{"Beschreibung"}</label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -219,7 +216,7 @@ export default function VenturesPage() {
               disabled={saving}
               className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
             >
-              {saving ? `${tc("save")}...` : tc("save")}
+              {saving ? `${"Speichern"}...` : "Speichern"}
             </button>
             <button
               type="button"
@@ -235,8 +232,8 @@ export default function VenturesPage() {
       {/* Venture-Liste */}
       {ventures.length === 0 ? (
         <div className="rounded-lg border bg-card p-8 shadow-sm text-center">
-          <h2 className="text-lg font-semibold">{t("noVentures")}</h2>
-          <p className="mt-2 text-sm text-muted-foreground">{t("subtitle")}</p>
+          <h2 className="text-lg font-semibold">{"Keine Ventures"}</h2>
+          <p className="mt-2 text-sm text-muted-foreground">{"Übersicht über alle Ventures"}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -263,7 +260,7 @@ export default function VenturesPage() {
                   <div className="text-lg font-bold">
                     €{venture.mrr.toLocaleString("de-DE")}
                   </div>
-                  <div className="text-xs text-muted-foreground">{t("mrr")}</div>
+                  <div className="text-xs text-muted-foreground">{"MRR"}</div>
                 </div>
               </div>
 
