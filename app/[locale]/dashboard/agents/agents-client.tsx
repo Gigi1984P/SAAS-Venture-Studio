@@ -2,24 +2,44 @@
 
 import { useState } from "react";
 
-// Minimaler Client-Teil: nur Tabs und Buttons
-export default function AgentsClientPage({ 
-  tasks, 
-  translations 
-}: { 
-  tasks: any[]; 
-  translations: Record<string, string>;
-}) {
+// VOLLSTÄNDIGE AGENTS-SEITE — alle Features, aber mit next-intl entfernt
+export default function AgentsClientPage({ tasks }: { tasks: any[] }) {
   const [activeTab, setActiveTab] = useState("queue");
   const [orchestratorRunning, setOrchestratorRunning] = useState(false);
   const [agentRuns, setAgentRuns] = useState<any[]>([]);
 
-  const t = (key: string) => translations[key] || key;
-
-  const queued = tasks.filter((t: any) => t.status === "queued");
-  const running = tasks.filter((t: any) => t.status === "running");
-  const completed = tasks.filter((t: any) => t.status === "completed");
-  const failed = tasks.filter((t: any) => t.status === "failed");
+  // Hardcoded translations (de)
+  const t: Record<string, string> = {
+    title: "Agent System",
+    subtitle: "Multi-Agent-Orchestrierung für Opportunity-Research",
+    queued: "Queued",
+    running: "Running",
+    completed: "Completed",
+    failed: "Failed",
+    tabQueue: "Task Queue",
+    tabAgents: "Agents",
+    tabOrchestrator: "Orchestrator",
+    task: "Task",
+    agent: "Agent",
+    priority: "Priority",
+    entity: "Entity",
+    attempts: "Attempts",
+    created: "Created",
+    noTasks: "Keine Tasks in der Queue.",
+    manualTrigger: "Manuell triggern",
+    orchestratorTitle: "Multi-Agent Orchestrator",
+    orchestratorDesc: "Führt 5 Agenten aus: Market Research → Competitor Analysis → Fact Check → Red Team Review → Strategy",
+    startOrchestrator: "Orchestrator starten",
+    orchestratorRunning: "Läuft...",
+    orchestratorFlow: "Orchestrator Flow",
+    discovery: "Discovery",
+    analysis: "Analysis",
+    validation: "Validation",
+    review: "Review",
+    strategy: "Strategy",
+    recentRuns: "Recent Agent Runs",
+    noRuns: "Noch keine Agent-Runs. Starte den Orchestrator um einen neuen Run zu erstellen.",
+  };
 
   function statusColor(status: string) {
     const colors: Record<string, string> = {
@@ -57,22 +77,27 @@ export default function AgentsClientPage({
     }, 1000);
   }
 
+  const queued = tasks.filter((t: any) => t.status === "queued");
+  const running = tasks.filter((t: any) => t.status === "running");
+  const completed = tasks.filter((t: any) => t.status === "completed");
+  const failed = tasks.filter((t: any) => t.status === "failed");
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
-          <p className="text-muted-foreground mt-1">{t("subtitle")}</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t.title}</h1>
+          <p className="text-muted-foreground mt-1">{t.subtitle}</p>
         </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4">
         {[
-          { label: t("queued"), value: queued.length, color: "text-gray-600" },
-          { label: t("running"), value: running.length, color: "text-blue-600" },
-          { label: t("completed"), value: completed.length, color: "text-green-600" },
-          { label: t("failed"), value: failed.length, color: "text-red-600" },
+          { label: t.queued, value: queued.length, color: "text-gray-600" },
+          { label: t.running, value: running.length, color: "text-blue-600" },
+          { label: t.completed, value: completed.length, color: "text-green-600" },
+          { label: t.failed, value: failed.length, color: "text-red-600" },
         ].map(stat => (
           <div key={stat.label} className="rounded-lg border bg-card p-4 text-center">
             <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
@@ -87,7 +112,7 @@ export default function AgentsClientPage({
           {["queue", "agents", "orchestrator"].map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               className={`pb-2 text-sm font-medium border-b-2 transition-colors ${activeTab === tab ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}>
-              {t(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`)}
+              {t[`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}` as keyof typeof t]}
             </button>
           ))}
         </nav>
@@ -98,13 +123,13 @@ export default function AgentsClientPage({
           <table className="w-full text-sm">
             <thead className="bg-muted">
               <tr>
-                <th className="px-4 py-3 text-left font-medium">{t("task")}</th>
-                <th className="px-4 py-3 text-left font-medium">{t("agent")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t.task}</th>
+                <th className="px-4 py-3 text-left font-medium">{t.agent}</th>
                 <th className="px-4 py-3 text-left font-medium">Status</th>
-                <th className="px-4 py-3 text-left font-medium">{t("priority")}</th>
-                <th className="px-4 py-3 text-left font-medium">{t("entity")}</th>
-                <th className="px-4 py-3 text-left font-medium">{t("attempts")}</th>
-                <th className="px-4 py-3 text-left font-medium">{t("created")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t.priority}</th>
+                <th className="px-4 py-3 text-left font-medium">{t.entity}</th>
+                <th className="px-4 py-3 text-left font-medium">{t.attempts}</th>
+                <th className="px-4 py-3 text-left font-medium">{t.created}</th>
               </tr>
             </thead>
             <tbody>
@@ -123,7 +148,7 @@ export default function AgentsClientPage({
               ))}
             </tbody>
           </table>
-          {tasks.length === 0 && <div className="text-center py-8 text-muted-foreground">{t("noTasks")}</div>}
+          {tasks.length === 0 && <div className="text-center py-8 text-muted-foreground">{t.noTasks}</div>}
         </div>
       )}
 
@@ -145,7 +170,7 @@ export default function AgentsClientPage({
               <div className="text-sm text-muted-foreground">{agent.desc}</div>
               <button onClick={() => triggerTask("research", agent.name)}
                 className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90">
-                {t("manualTrigger")}
+                {t.manualTrigger}
               </button>
             </div>
           ))}
@@ -157,24 +182,24 @@ export default function AgentsClientPage({
           <div className="rounded-lg border border-blue-200 bg-blue-50 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-blue-900">{t("orchestratorTitle")}</h2>
-                <p className="text-sm text-blue-700 mt-1">{t("orchestratorDesc")}</p>
+                <h2 className="text-lg font-semibold text-blue-900">{t.orchestratorTitle}</h2>
+                <p className="text-sm text-blue-700 mt-1">{t.orchestratorDesc}</p>
               </div>
               <button onClick={runFullOrchestrator} disabled={orchestratorRunning}
                 className="inline-flex h-10 items-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
-                {orchestratorRunning ? t("orchestratorRunning") : t("startOrchestrator")}
+                {orchestratorRunning ? t.orchestratorRunning : t.startOrchestrator}
               </button>
             </div>
           </div>
 
           <div className="rounded-lg border bg-card p-6 space-y-4">
-            <h2 className="text-lg font-semibold">{t("orchestratorFlow")}</h2>
+            <h2 className="text-lg font-semibold">{t.orchestratorFlow}</h2>
             <div className="flex items-center gap-2 flex-wrap">
               {["Discovery", "Analysis", "Validation", "Review", "Strategy"].map((step, i) => (
                 <div key={step} className="flex items-center gap-2">
                   <div className="flex items-center gap-2 rounded-lg px-3 py-2 bg-blue-100 text-blue-700">
                     <span>🔍</span>
-                    <div className="text-sm font-medium">{t(step.toLowerCase())}</div>
+                    <div className="text-sm font-medium">{t[step.toLowerCase() as keyof typeof t]}</div>
                   </div>
                   {i < 4 && <span className="text-muted-foreground">→</span>}
                 </div>
@@ -183,9 +208,9 @@ export default function AgentsClientPage({
           </div>
 
           <div className="rounded-lg border bg-card p-6 space-y-4">
-            <h2 className="text-lg font-semibold">{t("recentRuns")}</h2>
+            <h2 className="text-lg font-semibold">{t.recentRuns}</h2>
             {agentRuns.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">{t("noRuns")}</div>
+              <div className="text-center py-8 text-muted-foreground">{t.noRuns}</div>
             ) : agentRuns.map((run: any) => (
               <div key={run.id} className="rounded-lg border p-4">
                 <div className="flex items-start justify-between">
