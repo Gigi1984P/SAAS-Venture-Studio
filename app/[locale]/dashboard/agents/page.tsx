@@ -1,8 +1,28 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
-import { useTranslations } from "next-intl";
+
+// Einfacher Fallback für Übersetzungen
+function useSafeTranslations(namespace: string) {
+  const [translations, setTranslations] = useState<Record<string, string>>({});
+  const [loaded, setLoaded] = useState(false);
+  
+  useEffect(() => {
+    // Versuche Übersetzungen aus dem Window-Objekt zu holen (wenn vom Server gerendert)
+    const win = window as any;
+    if (win.__NEXT_INTL_MESSAGES__ && win.__NEXT_INTL_MESSAGES__[namespace]) {
+      setTranslations(win.__NEXT_INTL_MESSAGES__[namespace]);
+      setLoaded(true);
+    } else {
+      // Fallback: Standardwerte
+      setLoaded(true);
+    }
+  }, [namespace]);
+  
+  const t = (key: string) => translations[key] || key;
+  
+  return { t, loaded };
+}
 
 type Task = {
   id: string;
@@ -27,20 +47,32 @@ export default function AgentsPage() {
   const [activeTab, setActiveTab] = useState("queue");
   const [orchestratorRunning, setOrchestratorRunning] = useState(false);
   const [agentRuns, setAgentRuns] = useState<any[]>([]);
-  const t = useTranslations("Agents");
-  const tc = useTranslations("Common");
+  const [fetchError, setFetchError] = useState("");
+  
+  const { t, loaded } = useSafeTranslations("Agents");
 
   useEffect(() => { fetchTasks(); }, []);
 
   async function fetchTasks() {
     try {
       const res = await fetch("/api/tasks");
-      if (res.ok) setTasks(await res.json());
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
+      if (res.ok) {
+        const data = await res.json();
+        setTasks(data);
+      } else if (res.status === 401) {
+        setFetchError("Nicht authentifiziert. Bitte einloggen.");
+      } else {
+        setFetchError(`API Error: ${res.status}`);
+      }
+    } catch (e) { 
+      setFetchError(String(e));
+    } finally { 
+      setLoading(false); 
+    }
   }
 
   async function runFullOrchestrator() {
+    setOrchestratorRunning(true);
     try {
       const mockRun = {
         id: `run-${Date.now()}`,
@@ -91,24 +123,30 @@ export default function AgentsPage() {
   const completed = tasks.filter(t => t.status === "completed");
   const failed = tasks.filter(t => t.status === "failed");
 
-  if (loading) return <div className="p-6">{tc("loading")}</div>;
+  if (loading) return <div className="p-6">Lade...</div>;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
-          <p className="text-muted-foreground mt-1">{t("subtitle")}</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title") || "Agent System"}</h1>
+          <p className="text-muted-foreground mt-1">{t("subtitle") || "Multi-Agent-Orchestrierung"}</p>
         </div>
       </div>
+
+      {fetchError && (
+        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-yellow-800">⚠️ {fetchError}</p>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4">
         {[
-          { label: t("queued"), value: queued.length, color: "text-gray-600" },
-          { label: t("running"), value: running.length, color: "text-blue-600" },
-          { label: t("completed"), value: completed.length, color: "text-green-600" },
-          { label: t("failed"), value: failed.length, color: "text-red-600" },
+          { label: t("queued") || "Queued", value: queued.length, color: "text-gray-600" },
+          { label: t("running") || "Running", value: running.length, color: "text-blue-600" },
+          { label: t("completed") || "Completed", value: completed.length, color: "text-green-600" },
+          { label: t("failed") || "Failed", value: failed.length, color: "text-red-600" },
         ].map(stat => (
           <div key={stat.label} className="rounded-lg border bg-card p-4 text-center">
             <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
@@ -121,9 +159,9 @@ export default function AgentsPage() {
       <div className="border-b">
         <nav className="flex gap-6">
           {[
-            { id: "queue", label: t("tabQueue") },
-            { id: "agents", label: t("tabAgents") },
-            { id: "orchestrator", label: t("tabOrchestrator") },
+            { id: "queue", label: t("tabQueue") || "Task Queue" },
+            { id: "agents", label: t("tabAgents") || "Agents" },
+            { id: "orchestrator", label: t("tabOrchestrator") || "Orchestrator" },
           ].map(tab => (
             <button
               key={tab.id}
@@ -146,13 +184,13 @@ export default function AgentsPage() {
             <table className="w-full text-sm">
               <thead className="bg-muted">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">{t("task")}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t("agent")}</th>
-                  <th className="px-4 py-3 text-left font-medium">{tc("status")}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t("priority")}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t("entity")}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t("attempts")}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t("created")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("task") || "Task"}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("agent") || "Agent"}</th>
+                  <th className="px-4 py-3 text-left font-medium">Status</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("priority") || "Priority"}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("entity") || "Entity"}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("attempts") || "Attempts"}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("created") || "Created"}</th>
                 </tr>
               </thead>
               <tbody>
@@ -174,7 +212,7 @@ export default function AgentsPage() {
               </tbody>
             </table>
             {tasks.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">{t("noTasks")}</div>
+              <div className="text-center py-8 text-muted-foreground">{t("noTasks") || "Keine Tasks in der Queue."}</div>
             )}
           </div>
         </div>
@@ -204,7 +242,7 @@ export default function AgentsPage() {
                 onClick={() => triggerTask("research", agent.name)}
                 className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90"
               >
-                {t("manualTrigger")}
+                {t("manualTrigger") || "Manuell triggern"}
               </button>
             </div>
           ))}
@@ -213,14 +251,11 @@ export default function AgentsPage() {
 
       {activeTab === "orchestrator" && (
         <div className="space-y-6">
-          {/* Orchestrator Start */}
           <div className="rounded-lg border border-blue-200 bg-blue-50 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-blue-900">{t("orchestratorTitle")}</h2>
-                <p className="text-sm text-blue-700 mt-1">
-                  {t("orchestratorDesc")}
-                </p>
+                <h2 className="text-lg font-semibold text-blue-900">{t("orchestratorTitle") || "Multi-Agent Orchestrator"}</h2>
+                <p className="text-sm text-blue-700 mt-1">{t("orchestratorDesc") || "Führt 5 Agenten aus"}</p>
               </div>
               <button
                 onClick={() => {
@@ -230,21 +265,20 @@ export default function AgentsPage() {
                 disabled={orchestratorRunning}
                 className="inline-flex h-10 items-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
-                {orchestratorRunning ? t("orchestratorRunning") : t("startOrchestrator")}
+                {orchestratorRunning ? (t("orchestratorRunning") || "Läuft...") : (t("startOrchestrator") || "Orchestrator starten")}
               </button>
             </div>
           </div>
 
-          {/* Orchestrator Rules */}
           <div className="rounded-lg border bg-card p-6 space-y-4">
-            <h2 className="text-lg font-semibold">{t("orchestratorFlow")}</h2>
+            <h2 className="text-lg font-semibold">{t("orchestratorFlow") || "Orchestrator Flow"}</h2>
             <div className="flex items-center gap-2 flex-wrap">
               {[
-                { label: t("discovery"), icon: "🔍", color: "bg-blue-100 text-blue-700", agent: "W1" },
-                { label: t("analysis"), icon: "⚔️", color: "bg-purple-100 text-purple-700", agent: "W2" },
-                { label: t("validation"), icon: "✅", color: "bg-green-100 text-green-700", agent: "W3" },
-                { label: t("review"), icon: "⚠️", color: "bg-yellow-100 text-yellow-700", agent: "W4" },
-                { label: t("strategy"), icon: "🎯", color: "bg-orange-100 text-orange-700", agent: "W5" },
+                { label: t("discovery") || "Discovery", icon: "🔍", color: "bg-blue-100 text-blue-700", agent: "W1" },
+                { label: t("analysis") || "Analysis", icon: "⚔️", color: "bg-purple-100 text-purple-700", agent: "W2" },
+                { label: t("validation") || "Validation", icon: "✅", color: "bg-green-100 text-green-700", agent: "W3" },
+                { label: t("review") || "Review", icon: "⚠️", color: "bg-yellow-100 text-yellow-700", agent: "W4" },
+                { label: t("strategy") || "Strategy", icon: "🎯", color: "bg-orange-100 text-orange-700", agent: "W5" },
               ].map((step, i) => (
                 <div key={step.label} className="flex items-center gap-2">
                   <div className={`flex items-center gap-2 rounded-lg px-3 py-2 ${step.color}`}>
@@ -260,12 +294,11 @@ export default function AgentsPage() {
             </div>          
           </div>
 
-          {/* Agent Runs History */}
           <div className="rounded-lg border bg-card p-6 space-y-4">
-            <h2 className="text-lg font-semibold">{t("recentRuns")}</h2>
+            <h2 className="text-lg font-semibold">{t("recentRuns") || "Recent Agent Runs"}</h2>
             <div className="space-y-3">
               {agentRuns.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">{t("noRuns")}</div>
+                <div className="text-center py-8 text-muted-foreground">{t("noRuns") || "Noch keine Agent-Runs."}</div>
               ) : (
                 agentRuns.map(run => (
                   <div key={run.id} className="rounded-lg border p-4">
