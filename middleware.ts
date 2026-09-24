@@ -17,6 +17,8 @@ const PROTECTED_ROUTES = [
   "/radar",
 ];
 
+const PUBLIC_ROUTES = ["/status", "/api/health"];
+
 function anonymizeIp(ip: string): string {
   if (!ip) return "";
   const trimmed = ip.trim();
@@ -164,6 +166,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|eot)$).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|status|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|eot)$).*)",
   ],
 };
