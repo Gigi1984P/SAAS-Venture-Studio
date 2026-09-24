@@ -50,3 +50,4 @@ npm run db:push
 Siehe Checkliste in `PROJECT-STATE.md`.
 # Redeploy trigger Thu Sep 24 10:25:51 UTC 2026
 # Vercel ENV fix Thu Sep 24 11:38:09 UTC 2026
+# Redeploy 1790250342
