@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import VenturePipeline from "@/components/venture-pipeline";
+import VentureModules from "@/components/venture-modules";
 
 type Venture = {
   id: string;
@@ -299,6 +300,9 @@ export default function VentureDetailPage() {
           if (res.ok) await fetchVenture();
         }}
       />
+
+      {/* Venture Modules */}
+      <VentureModules ventureId={id} />
     </div>
   );
 }

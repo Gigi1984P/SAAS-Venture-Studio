@@ -16,6 +16,8 @@ import {
   ChevronDown,
   Menu,
   X,
+  Rocket,
+  Cpu,
 } from "lucide-react";
 import { useState } from "react";
 import { clsx, type ClassValue } from "clsx";
@@ -48,6 +50,8 @@ export function SidebarNav({ roleName }: { roleName?: string }) {
     { href: "/dashboard", label: "Dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
     { href: "/opportunities", label: "Opportunities", icon: <Lightbulb className="w-4 h-4" /> },
     { href: "/ventures", label: "Ventures", icon: <Briefcase className="w-4 h-4" /> },
+    { href: "/templates", label: "Templates", icon: <Rocket className="w-4 h-4" /> },
+    { href: "/tech-stack", label: "Tech Stack", icon: <Cpu className="w-4 h-4" /> },
     { href: "/validation", label: "Validation", icon: <RadarIcon className="w-4 h-4" /> },
     { href: "/dashboard/intelligence", label: "Intelligence", icon: <Search className="w-4 h-4" /> },
     { href: "/dashboard/agents", label: "Agents", icon: <Bot className="w-4 h-4" /> },

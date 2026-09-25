@@ -188,6 +188,7 @@ model Venture {
   opportunity   Opportunity?     @relation(fields: [opportunityId], references: [id])
   events        VentureEvent[]
   handoffs      VentureHandoff[]
+  ventureModules VentureModule[]
 
   @@map("ventures")
 }
@@ -1354,4 +1355,89 @@ model LLMProvider {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("llm_providers")
+}
+
+// ============================================================
+// PHASE 3: RAPID BUILDER (Venture Templates, Tech Stacks, Shared Modules)
+// ============================================================
+
+model VentureTemplate {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  description   String?
+  category      String   // "saas", "marketplace", "ai-tool", "chrome-extension", "mobile-app"
+  tags          String?
+  repositoryUrl String?  @map("repository_url")
+  demoUrl       String?  @map("demo_url")
+  readmeContent String?  @map("readme_content") @db.Text
+  setupSteps    Json?    @map("setup_steps")
+  envVariables  Json?    @map("env_variables")
+  features      Json?    // [{ name, description, implemented }]
+  techStackIds  String?  @map("tech_stack_ids") // comma-separated tech stack IDs
+  isDefault     Boolean  @default(false) @map("is_default")
+  usageCount    Int      @default(0) @map("usage_count")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("venture_templates")
+}
+
+model TechStack {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  slug          String   @unique
+  category      String   // "frontend", "backend", "database", "auth", "payment", "deployment", "ai", "styling"
+  description   String?
+  officialUrl   String?  @map("official_url")
+  docsUrl       String?  @map("docs_url")
+  version       String?
+  whyUseIt      String?  @map("why_use_it") @db.Text
+  pros          String?  @db.Text
+  cons          String?  @db.Text
+  setupCommand  String?  @map("setup_command")
+  configExample String?  @map("config_example") @db.Text
+  isActive      Boolean  @default(true) @map("is_active")
+  usageCount    Int      @default(0) @map("usage_count")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("tech_stacks")
+}
+
+model SharedModule {
+  id            String          @id @default(cuid())
+  name          String          @unique
+  slug          String          @unique
+  description   String?
+  category      String          // "auth", "billing", "notifications", "analytics", "files", "search", "i18n"
+  codeSnippet   String?         @map("code_snippet") @db.Text
+  dependencies  Json?           // ["package-name@version"]
+  setupGuide    String?         @map("setup_guide") @db.Text
+  testCoverage  Float?          @map("test_coverage")
+  isActive      Boolean         @default(true) @map("is_active")
+  usageCount    Int             @default(0) @map("usage_count")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+  ventureModules VentureModule[]
+
+  @@map("shared_modules")
+}
+
+model VentureModule {
+  id             String       @id @default(cuid())
+  ventureId      String       @map("venture_id")
+  moduleId       String       @map("module_id")
+  config         Json?        // venture-specific config overrides
+  status         String       @default("planned") // "planned", "installed", "configured", "active", "deprecated"
+  installedAt    DateTime?    @map("installed_at")
+  configuredAt   DateTime?    @map("configured_at")
+  notes          String?
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  venture        Venture      @relation(fields: [ventureId], references: [id], onDelete: Cascade)
+  module         SharedModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([ventureId, moduleId])
+  @@map("venture_modules")
 }
