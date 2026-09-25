@@ -23,6 +23,7 @@ import {
   Users,
   Lightbulb,
 } from "lucide-react";
+import EvidenceFunnelWidget from "@/components/evidence-funnel-widget";
 
 // ─── Types ─────────────────────────────────────────────
 type PipelineStage = {
@@ -366,6 +367,9 @@ export default async function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Evidence Funnel Widget ───────────────────── */}
+      <EvidenceFunnelWidget />
 
       {/* ── Opportunity Radar Table ──────────────────── */}
       <div className="rounded-xl border bg-card shadow-sm overflow-hidden">

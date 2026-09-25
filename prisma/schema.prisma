@@ -1119,6 +1119,64 @@ model Competitor {
 }
 
 // ============================================================
+// MISSING TABLES FROM DOCS
+// ============================================================
+
+model CompetitorReview {
+  id            String      @id @default(cuid())
+  competitorId  String      @map("competitor_id")
+  source        String
+  sourceUrl     String?     @map("source_url")
+  rating        Float?
+  text          String?
+  pros          String?
+  cons          String?
+  verified      Boolean     @default(false)
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  @@map("competitor_reviews")
+}
+
+model PricingObservation {
+  id            String      @id @default(cuid())
+  competitorId  String      @map("competitor_id")
+  planName      String      @map("plan_name")
+  priceEur      Float?      @map("price_eur")
+  billingPeriod String      @map("billing_period")
+  features      String?
+  sourceUrl     String?     @map("source_url")
+  observedAt    DateTime    @default(now()) @map("observed_at")
+
+  @@map("pricing_observations")
+}
+
+model ExperimentResult {
+  id            String      @id @default(cuid())
+  experimentId  String      @map("experiment_id")
+  metric        String
+  value         String
+  confidence    Float       @default(0.5)
+  source        String?
+  notes         String?
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  @@map("experiment_results")
+}
+
+model EvidenceLink {
+  id            String      @id @default(cuid())
+  signalId      String      @map("signal_id")
+  opportunityId String      @map("opportunity_id")
+  linkType      String      @map("link_type")
+  targetId      String      @map("target_id")
+  targetType    String      @map("target_type")
+  strength      Float       @default(0.5)
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  @@map("evidence_links")
+}
+
+// ============================================================
 // SCORE COMPONENTS
 // ============================================================
 

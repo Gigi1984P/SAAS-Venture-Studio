@@ -35,6 +35,8 @@ type Opp = {
   confidence: number;
   evidenceLevel: number;
   biggestUncertainty: string | null;
+  buyerValidation: number | null;
+  pricingValidation: number | null;
   mrrEstimate: number | null;
   competition: string | null;
   marketSize: string | null;
@@ -340,6 +342,31 @@ export default function OpportunityDetailPage() {
           </span>
         )}
       </div>
+
+      {/* Biggest Unknown Prominente Box */}
+      {opp.biggestUncertainty && (
+        <div className="rounded-lg border bg-yellow-50 p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-yellow-800 uppercase tracking-wide">VALIDATION REQUIRED</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <div className="text-xs text-yellow-700">Biggest Unknown</div>
+              <div className="text-lg font-bold text-yellow-900">{opp.biggestUncertainty}</div>
+            </div>
+            <div>
+              <div className="text-xs text-yellow-700">Confidence</div>
+              <div className="text-lg font-bold text-yellow-900">{Math.round(opp.confidence * 100)}%</div>
+            </div>
+            <div>
+              <div className="text-xs text-yellow-700">Recommended Test</div>
+              <div className="text-sm font-medium text-yellow-900">
+                {(opp.pricingValidation || 0) < 0.5 ? "Paid Pilot" : (opp.buyerValidation || 0) < 0.5 ? "Interviews" : "Experiment"}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="border-b">
@@ -1394,6 +1421,7 @@ function EvidenceTab({ opp, id, fetchOpp }: { opp: Opp; id: string; fetchOpp: ()
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ claim: "", contradiction: "", source: "", confidence: 0.5 });
   const [saving, setSaving] = useState(false);
+  const [evidenceFilter, setEvidenceFilter] = useState<"all" | "verified" | "unverified">("all");
 
   useEffect(() => {
     fetchNegativeEvidence();
@@ -1430,7 +1458,13 @@ function EvidenceTab({ opp, id, fetchOpp }: { opp: Opp; id: string; fetchOpp: ()
     fetchOpp();
   }
 
-  const supporting = opp.signals?.filter(s => s.verified) || [];
+  const filteredSignals = opp.signals?.filter((s) => {
+    if (evidenceFilter === "verified") return s.verified;
+    if (evidenceFilter === "unverified") return !s.verified;
+    return true;
+  }) || [];
+
+  const supporting = opp.signals?.filter((s) => s.verified) || [];
   const contradicting = negativeEvidence;
   const total = supporting.length + contradicting.length;
   const netScore = supporting.length - contradicting.length;
@@ -1491,17 +1525,34 @@ function EvidenceTab({ opp, id, fetchOpp }: { opp: Opp; id: string; fetchOpp: ()
 
       {/* Supporting Evidence (Signals) */}
       <div className="space-y-3">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <div className="h-3 w-3 rounded-full bg-green-500" />
-          Unterstützende Evidence (Signals)
-        </h3>
-        {supporting.length === 0 ? (
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <div className="h-3 w-3 rounded-full bg-green-500" />
+            Unterstützende Evidence (Signals)
+          </h3>
+          <div className="flex items-center gap-1">
+            {(["all", "verified", "unverified"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setEvidenceFilter(f)}
+                className={`text-xs px-2 py-1 rounded-md border ${
+                  evidenceFilter === f
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {f === "all" ? "Alle" : f === "verified" ? "Verifiziert" : "Unverifiziert"}
+              </button>
+            ))}
+          </div>
+        </div>
+        {filteredSignals.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground rounded-lg border bg-card">
-            Keine bestätigten Signals. Markiere Signals als verified, um sie hier anzuzeigen.
+            Keine Signals für diesen Filter.
           </div>
         ) : (
           <div className="space-y-3">
-            {supporting.map(s => (
+            {filteredSignals.map((s) => (
               <div key={s.id} className="rounded-lg border bg-card p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">

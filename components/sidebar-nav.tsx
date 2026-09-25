@@ -56,6 +56,7 @@ export function SidebarNav({ roleName }: { roleName?: string }) {
     { href: "/dashboard/intelligence", label: "Intelligence", icon: <Search className="w-4 h-4" /> },
     { href: "/dashboard/agents", label: "Agents", icon: <Bot className="w-4 h-4" /> },
     { href: "/dashboard/radar", label: "Radar", icon: <RadarIcon className="w-4 h-4" /> },
+    { href: "/orchestrator", label: "Orchestrator", icon: <Bot className="w-4 h-4" /> },
     { href: "/settings", label: "Einstellungen", icon: <Settings className="w-4 h-4" /> },
     { href: "/admin/users", label: "Admin", icon: <ShieldAlert className="w-4 h-4" />, adminOnly: true },
   ];
