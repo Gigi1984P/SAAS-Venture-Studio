@@ -5,6 +5,14 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { OpportunityScoring } from "@/components/opportunity-scoring";
 import OpportunityEvaluate from "@/components/opportunity-evaluate";
+import ValidationEngineWidget from "@/components/validation-engine-widget";
+import StateMachinePipeline from "@/components/state-machine-pipeline";
+import TaskQueueWidget from "@/components/task-queue-widget";
+import InvestmentMemo from "@/components/investment-memo";
+import RedTeamReviewWidget from "@/components/red-team-review";
+import ScoreBreakdown from "@/components/score-breakdown";
+import UnitEconomicsWidget from "@/components/unit-economics-widget";
+import SignalDiscoveryWidget from "@/components/signal-discovery";
 
 type Opp = {
   id: string;
@@ -353,6 +361,14 @@ export default function OpportunityDetailPage() {
             { id: "dedup", label: "Signals" },
             { id: "artifacts", label: `${"Artifacts"} (${artifacts.length})` },
             { id: "evaluate", label: "Bewertung" },
+            { id: "pipeline", label: "Pipeline" },
+            { id: "validation", label: "Validation" },
+            { id: "tasks", label: "Tasks" },
+            { id: "memo", label: "Memo" },
+            { id: "redteam", label: "Red Team" },
+            { id: "score", label: "Score" },
+            { id: "economics", label: "Unit Econ" },
+            { id: "discovery", label: "Discovery" },
           ].map(tab => (
             <button
               key={tab.id}
@@ -1628,6 +1644,46 @@ function EvidenceTab({ opp, id, fetchOpp }: { opp: Opp; id: string; fetchOpp: ()
       {/* EVALUATE */}
       {activeTab === "evaluate" && (
         <OpportunityEvaluate opportunityId={id} />
+      )}
+
+      {/* PIPELINE */}
+      {activeTab === "pipeline" && (
+        <StateMachinePipeline currentStatus={opp.status} />
+      )}
+
+      {/* VALIDATION ENGINE */}
+      {activeTab === "validation" && (
+        <ValidationEngineWidget opportunityId={id} />
+      )}
+
+      {/* TASKS */}
+      {activeTab === "tasks" && (
+        <TaskQueueWidget />
+      )}
+
+      {/* INVESTMENT MEMO */}
+      {activeTab === "memo" && (
+        <InvestmentMemo opportunity={opp} />
+      )}
+
+      {/* RED TEAM */}
+      {activeTab === "redteam" && (
+        <RedTeamReviewWidget opportunityId={id} />
+      )}
+
+      {/* SCORE BREAKDOWN */}
+      {activeTab === "score" && (
+        <ScoreBreakdown opportunityId={id} />
+      )}
+
+      {/* UNIT ECONOMICS */}
+      {activeTab === "economics" && (
+        <UnitEconomicsWidget opportunityId={id} />
+      )}
+
+      {/* SIGNAL DISCOVERY */}
+      {activeTab === "discovery" && (
+        <SignalDiscoveryWidget opportunityId={id} />
       )}
     </div>
   );

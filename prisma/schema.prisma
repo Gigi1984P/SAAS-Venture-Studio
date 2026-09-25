@@ -1154,6 +1154,9 @@ model Task {
   error         String?
   estimatedCost Int?       @map("estimated_cost")
   actualCost    Int?       @map("actual_cost")
+  reviewNotes   String?    @map("review_notes")
+  reviewedBy    String?    @map("reviewed_by")
+  reviewedAt    DateTime?  @map("reviewed_at")
   startedAt     DateTime?  @map("started_at")
   completedAt   DateTime?  @map("completed_at")
   createdAt     DateTime   @default(now()) @map("created_at")
