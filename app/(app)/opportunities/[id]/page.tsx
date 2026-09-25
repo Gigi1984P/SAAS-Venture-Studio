@@ -84,6 +84,8 @@ export default function OpportunityDetailPage() {
   const [opp, setOpp] = useState<Opp | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("scoring");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState<Partial<Opp>>({});
 
   // Pain Signals & Clusters
   const [painSignals, setPainSignals] = useState<PainSignal[]>([]);
@@ -122,9 +124,35 @@ export default function OpportunityDetailPage() {
   async function fetchOpp() {
     try {
       const res = await fetch(`/api/opportunities/${id}`);
-      if (res.ok) setOpp(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        setOpp(data);
+        setEditData(data);
+      }
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
+  }
+
+  async function handleSave() {
+    try {
+      const res = await fetch(`/api/opportunities/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editData),
+      });
+      if (res.ok) {
+        await fetchOpp();
+        setIsEditing(false);
+      }
+    } catch (e) { console.error(e); }
+  }
+
+  async function handleDelete() {
+    if (!confirm("Opportunity wirklich löschen?")) return;
+    try {
+      const res = await fetch(`/api/opportunities/${id}`, { method: "DELETE" });
+      if (res.ok) router.push("/opportunities");
+    } catch (e) { console.error(e); }
   }
 
   async function fetchPainData() {
@@ -248,12 +276,32 @@ export default function OpportunityDetailPage() {
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
-        <div>
+        <div className="flex-1">
           <Link href="/opportunities" className="text-sm text-muted-foreground hover:text-foreground">{"← Zurück"}</Link>
-          <h1 className="text-3xl font-bold tracking-tight mt-2">{opp.title}</h1>
+          {isEditing ? (
+            <input
+              type="text"
+              value={editData.title || ""}
+              onChange={(e) => setEditData((prev) => ({ ...prev, title: e.target.value }))}
+              className="text-3xl font-bold tracking-tight mt-2 w-full border rounded px-2 py-1 bg-background"
+            />
+          ) : (
+            <h1 className="text-3xl font-bold tracking-tight mt-2">{opp.title}</h1>
+          )}
           {opp.description && <p className="text-muted-foreground mt-1">{opp.description}</p>}
         </div>
         <div className="flex items-center gap-4">
+          {isEditing ? (
+            <>
+              <button onClick={handleSave} className="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium bg-green-600 text-white hover:bg-green-700">Speichern</button>
+              <button onClick={() => { setIsEditing(false); setEditData(opp); }} className="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium bg-muted hover:bg-muted/80">Abbrechen</button>
+            </>
+          ) : (
+            <>
+              <button onClick={() => setIsEditing(true)} className="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90">Bearbeiten</button>
+              <button onClick={handleDelete} className="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium bg-red-600 text-white hover:bg-red-700">Löschen</button>
+            </>
+          )}
           {/* Two-Faktor Score Cards */}
           <div className="text-center">
             <div className="text-xs text-muted-foreground">{"Score A"}</div>
@@ -386,40 +434,94 @@ export default function OpportunityDetailPage() {
             <div className="rounded-lg border bg-card p-6 space-y-4">
               <h2 className="text-lg font-semibold">{"Details"}</h2>
               <div className="space-y-3">
-                {opp.pain && (
+                {(opp.problem || isEditing) && (
                   <div>
                     <label className="text-sm font-medium">{"Pain"}</label>
-                    <p className="text-sm text-muted-foreground">{opp.pain}</p>
+                    {isEditing ? (
+                      <textarea
+                        value={editData.problem || ""}
+                        onChange={(e) => setEditData((prev) => ({ ...prev, problem: e.target.value }))}
+                        rows={3}
+                        className="w-full text-sm border rounded px-2 py-1 bg-background mt-1"
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">{opp.problem}</p>
+                    )}
                   </div>
                 )}
-                {opp.workaround && (
+                {(opp.workaround || isEditing) && (
                   <div>
                     <label className="text-sm font-medium">{"Workaround"}</label>
-                    <p className="text-sm text-muted-foreground">{opp.workaround}</p>
+                    {isEditing ? (
+                      <textarea
+                        value={editData.workaround || ""}
+                        onChange={(e) => setEditData((prev) => ({ ...prev, workaround: e.target.value }))}
+                        rows={3}
+                        className="w-full text-sm border rounded px-2 py-1 bg-background mt-1"
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">{opp.workaround}</p>
+                    )}
                   </div>
                 )}
-                {opp.consequence && (
+                {(opp.consequence || isEditing) && (
                   <div>
                     <label className="text-sm font-medium">{"Konsequenz"}</label>
-                    <p className="text-sm text-muted-foreground">{opp.consequence}</p>
+                    {isEditing ? (
+                      <textarea
+                        value={editData.consequence || ""}
+                        onChange={(e) => setEditData((prev) => ({ ...prev, consequence: e.target.value }))}
+                        rows={3}
+                        className="w-full text-sm border rounded px-2 py-1 bg-background mt-1"
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">{opp.consequence}</p>
+                    )}
                   </div>
                 )}
-                {opp.solution && (
+                {(opp.solution || isEditing) && (
                   <div>
                     <label className="text-sm font-medium">{"Lösungsidee"}</label>
-                    <p className="text-sm text-muted-foreground">{opp.solution}</p>
+                    {isEditing ? (
+                      <textarea
+                        value={editData.solution || ""}
+                        onChange={(e) => setEditData((prev) => ({ ...prev, solution: e.target.value }))}
+                        rows={3}
+                        className="w-full text-sm border rounded px-2 py-1 bg-background mt-1"
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">{opp.solution}</p>
+                    )}
                   </div>
                 )}
-                {opp.targetGroup && (
+                {(opp.targetGroup || isEditing) && (
                   <div>
                     <label className="text-sm font-medium">{"Zielgruppe"}</label>
-                    <p className="text-sm text-muted-foreground">{opp.targetGroup}</p>
+                    {isEditing ? (
+                      <textarea
+                        value={editData.targetGroup || ""}
+                        onChange={(e) => setEditData((prev) => ({ ...prev, targetGroup: e.target.value }))}
+                        rows={2}
+                        className="w-full text-sm border rounded px-2 py-1 bg-background mt-1"
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">{opp.targetGroup}</p>
+                    )}
                   </div>
                 )}
-                {opp.businessModel && (
+                {(opp.businessModel || isEditing) && (
                   <div>
                     <label className="text-sm font-medium">{"Geschäftsmodell"}</label>
-                    <p className="text-sm text-muted-foreground">{opp.businessModel}</p>
+                    {isEditing ? (
+                      <textarea
+                        value={editData.businessModel || ""}
+                        onChange={(e) => setEditData((prev) => ({ ...prev, businessModel: e.target.value }))}
+                        rows={2}
+                        className="w-full text-sm border rounded px-2 py-1 bg-background mt-1"
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">{opp.businessModel}</p>
+                    )}
                   </div>
                 )}
               </div>
@@ -428,22 +530,53 @@ export default function OpportunityDetailPage() {
             <div className="rounded-lg border bg-card p-6 space-y-4">
               <h2 className="text-lg font-semibold">{"Marktdaten"}</h2>
               <div className="space-y-3">
-                {opp.marketSize && (
+                {(opp.marketSize || isEditing) && (
                   <div>
                     <label className="text-sm font-medium">{"Marktgröße"}</label>
-                    <p className="text-sm text-muted-foreground">{opp.marketSize}</p>
+                    {isEditing ? (
+                      <textarea
+                        value={editData.marketSize || ""}
+                        onChange={(e) => setEditData((prev) => ({ ...prev, marketSize: e.target.value }))}
+                        rows={2}
+                        className="w-full text-sm border rounded px-2 py-1 bg-background mt-1"
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">{opp.marketSize}</p>
+                    )}
                   </div>
                 )}
-                {opp.competition && (
+                {(opp.competition || isEditing) && (
                   <div>
                     <label className="text-sm font-medium">{"Wettbewerb"}</label>
-                    <p className="text-sm text-muted-foreground capitalize">{opp.competition}</p>
+                    {isEditing ? (
+                      <select
+                        value={editData.competition || ""}
+                        onChange={(e) => setEditData((prev) => ({ ...prev, competition: e.target.value }))}
+                        className="w-full text-sm border rounded px-2 py-1 bg-background mt-1"
+                      >
+                        <option value="">Bitte wählen</option>
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                      </select>
+                    ) : (
+                      <p className="text-sm text-muted-foreground capitalize">{opp.competition}</p>
+                    )}
                   </div>
                 )}
-                {opp.mrrEstimate && (
+                {(opp.mrrEstimate || isEditing) && (
                   <div>
                     <label className="text-sm font-medium">{"MRR-Schätzung"}</label>
-                    <p className="text-sm text-muted-foreground">€{opp.mrrEstimate.toLocaleString("de-DE")}</p>
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        value={editData.mrrEstimate ?? ""}
+                        onChange={(e) => setEditData((prev) => ({ ...prev, mrrEstimate: e.target.value ? Number(e.target.value) : null }))}
+                        className="w-full text-sm border rounded px-2 py-1 bg-background mt-1"
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">€{opp.mrrEstimate?.toLocaleString("de-DE")}</p>
+                    )}
                   </div>
                 )}
                 <div>
