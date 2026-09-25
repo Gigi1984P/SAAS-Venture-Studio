@@ -13,6 +13,8 @@ import RedTeamReviewWidget from "@/components/red-team-review";
 import ScoreBreakdown from "@/components/score-breakdown";
 import UnitEconomicsWidget from "@/components/unit-economics-widget";
 import SignalDiscoveryWidget from "@/components/signal-discovery";
+import SolutionsWidget from "@/components/solutions-widget";
+import ScoresWidget from "@/components/scores-widget";
 
 type Opp = {
   id: string;
@@ -396,6 +398,8 @@ export default function OpportunityDetailPage() {
             { id: "score", label: "Score" },
             { id: "economics", label: "Unit Econ" },
             { id: "discovery", label: "Discovery" },
+            { id: "solutions", label: `Lösungen` },
+            { id: "scores", label: "Scores" },
           ].map(tab => (
             <button
               key={tab.id}
@@ -1735,6 +1739,16 @@ function EvidenceTab({ opp, id, fetchOpp }: { opp: Opp; id: string; fetchOpp: ()
       {/* SIGNAL DISCOVERY */}
       {activeTab === "discovery" && (
         <SignalDiscoveryWidget opportunityId={id} />
+      )}
+
+      {/* SOLUTIONS */}
+      {activeTab === "solutions" && (
+        <SolutionsWidget opportunityId={id} />
+      )}
+
+      {/* SCORES */}
+      {activeTab === "scores" && (
+        <ScoresWidget opportunity={opp} />
       )}
     </div>
   );

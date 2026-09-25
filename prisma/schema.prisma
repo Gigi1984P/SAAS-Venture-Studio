@@ -316,6 +316,8 @@ model Opportunity {
   hypotheses                 Hypothesis[]
   hardGates                  HardGate[]
   ventureHandoffs            VentureHandoff[]
+  solutions                  Solution[]
+  scores                     Score[]
 
   @@map("opportunities")
 }
@@ -463,6 +465,50 @@ model Signal {
   researchSource   ResearchSource? @relation("SourceSignals", fields: [sourceId], references: [id])
 
   @@map("signals")
+}
+
+// ============================================================
+// SOLUTIONS (from database.md)
+// ============================================================
+
+model Solution {
+  id              String       @id @default(cuid())
+  opportunityId   String       @map("opportunity_id")
+  name            String
+  description     String?
+  type            String       @default("product")
+  status          String       @default("proposed")
+  mvpEffort       String?      @map("mvp_effort")
+  pricingModel    String?      @map("pricing_model")
+  priceEur        Float?       @map("price_eur")
+  keyFeatures     String?      @map("key_features")
+  integration     String?
+  targetPersona   String?      @map("target_persona")
+  confidence      Float        @default(0.0)
+  selectedAt      DateTime?    @map("selected_at")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  opportunity     Opportunity  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("solutions")
+}
+
+// ============================================================
+// SCORES (from database.md)
+// ============================================================
+
+model Score {
+  id              String       @id @default(cuid())
+  opportunityId   String       @map("opportunity_id")
+  scoreType       String       @map("score_type")
+  value           Int
+  maxValue        Int          @map("max_value")
+  version         Int          @default(1)
+  calculatedBy    String?      @map("calculated_by")
+  calculatedAt    DateTime     @default(now()) @map("calculated_at")
+  opportunity     Opportunity  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("scores")
 }
 
 // ============================================================

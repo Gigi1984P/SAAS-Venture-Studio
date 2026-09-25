@@ -9,20 +9,20 @@
 | 4 | Auth-Grundgerüst (Login / Register / Middleware) | ✅ Erledigt | Hoch |
 | 5 | Venture-CRUD (Model, API, UI) | ✅ Erledigt | Hoch |
 | 6 | Dashboard mit echten Daten | ✅ Erledigt | Hoch |
-| 7 | DSGVO/GDPR-Grundgerüst (Consent, AVVs, Privacy Policy) | 🔄 Teilweise | Mittel |
-| 8 | CI/CD Pipeline (Vercel Deploy) | Offen | Mittel |
+| 7 | DSGVO/GDPR-Grundgerüst (Consent, AVVs, Privacy Policy) | ✅ Erledigt | Mittel |
+| 8 | CI/CD Pipeline (Vercel Deploy) | ✅ Erledigt | Mittel |
 | 9 | GitHub-Push einrichten | ✅ Erledigt | Hoch |
-| 10 | Cookie-Consent-Banner | Offen | Hoch |
-| 11 | Datenschutzerklärung | Offen | Hoch |
-| 12 | Impressum | Offen | Mittel |
-| 13 | Venture Detail-Seite (Inline-Editing) | Offen | Mittel |
+| 10 | Cookie-Consent-Banner | ✅ Erledigt | Hoch |
+| 11 | Datenschutzerklärung | ✅ Erledigt | Hoch |
+| 12 | Impressum | ✅ Erledigt | Mittel |
+| 13 | Venture Detail-Seite (Inline-Editing) | ✅ Erledigt | Mittel |
 | 14 | Superadmin-RBAC-System | ✅ Erledigt | Hoch |
 | 15 | Settings-Seite (Profil, Passwort) | ✅ Erledigt | Niedrig |
-|| 16 | Opportunity Engine (Discovery + Scoring + Gates + Assumptions + Experiments + Pain Graph) | ✅ Erledigt | Hoch |
-| 17 | Venture Detail-Seite (Inline-Editing) | Offen | Mittel |
-| 18 | Cookie-Consent-Banner | Offen | Hoch |
-| 19 | Datenschutzerklärung | Offen | Hoch |
-| 20 | Impressum | Offen | Mittel |
+| 16 | Opportunity Engine (Discovery + Scoring + Gates + Assumptions + Experiments + Pain Graph) | ✅ Erledigt | Hoch |
+| 17 | Venture Detail-Seite (Inline-Editing) | ✅ Erledigt | Mittel |
+| 18 | Cookie-Consent-Banner | ✅ Erledigt | Hoch |
+| 19 | Datenschutzerklärung | ✅ Erledigt | Hoch |
+| 20 | Impressum | ✅ Erledigt | Mittel |
 
 ## Erledigt
 | # | Aufgabe | Datum |
