@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { Link } from "@/i18n/navigation";
+import Link from "next/link";
 import { OpportunityScoring } from "@/components/opportunity-scoring";
 
 type Opp = {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Link } from "@/i18n/navigation";
+import Link from "next/link";
 
 export default function ResetPasswordPage() {
   const searchParams = useSearchParams();

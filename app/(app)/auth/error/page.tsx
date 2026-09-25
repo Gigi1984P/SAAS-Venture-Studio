@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { Link } from "@/i18n/navigation";
+import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 
 export default function AuthErrorPage() {

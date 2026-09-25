@@ -2,8 +2,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { Link } from "@/i18n/navigation";
-import { getTranslations } from "next-intl/server";
+import Link from "next/link";
 import {
   TrendingUp,
   TrendingDown,
@@ -103,7 +102,6 @@ function scoreTrend(score: number) {
 
 // ─── Main Page ─────────────────────────────────────────
 export default async function DashboardPage() {
-  const t = await getTranslations("Dashboard");
   const session = await getServerSession(authOptions);
   if (!session) redirect("/auth/login");
 
@@ -156,7 +154,7 @@ export default async function DashboardPage() {
   // ── Stats Cards ─────────────────────────────────────
   const stats = [
     {
-      label: t("totalOpportunities"),
+      label: "Opportunities",
       value: totalOpportunities.toLocaleString("de-DE"),
       trend: totalOpportunities > 0 ? "+12%" : "—",
       trendUp: true,
@@ -170,14 +168,14 @@ export default async function DashboardPage() {
       icon: <Users className="w-5 h-5 text-blue-500" />,
     },
     {
-      label: t("avgConfidence"),
+      label: "Confidence",
       value: confidencePct(avgConfidence),
       trend: avgConfidence >= 0.6 ? "Strong" : avgConfidence >= 0.4 ? "Moderate" : "Weak",
       trendUp: avgConfidence >= 0.5,
       icon: <Target className="w-5 h-5 text-emerald-500" />,
     },
     {
-      label: t("totalEvidence"),
+      label: "Evidence",
       value: totalEvidence.toLocaleString("de-DE"),
       trend: totalEvidence > 0 ? `${Math.round((signalsVerified / totalEvidence) * 100)}% verified` : "—",
       trendUp: true,

@@ -1,6 +1,4 @@
-import createMiddleware from "next-intl/middleware";
 import { NextRequest, NextResponse } from "next/server";
-import { locales, defaultLocale } from "./i18n/config";
 
 const SESSION_ABSOLUTE_TIMEOUT = 24 * 60 * 60 * 1000;
 const SESSION_CREATED_AT_COOKIE = "session-created-at";
@@ -40,19 +38,10 @@ function generateCsrfToken(): string {
   return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-const intlMiddleware = createMiddleware({
-  locales,
-  defaultLocale,
-  localePrefix: "always",
-});
-
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const localePrefix = pathname.split("/")[1];
-  const isLocalePath = locales.includes(localePrefix as any);
-
-  // Strip locale prefix for route matching
-  const cleanPath = isLocalePath ? pathname.replace(/^\/[a-z]{2}/, "") : pathname;
+  const response = NextResponse.next();
+  const now = Date.now();
 
   // HTTPS Redirect (Production)
   if (
@@ -70,20 +59,16 @@ export async function middleware(request: NextRequest) {
     request.cookies.get("next-auth.session-token")?.value ||
     "";
   const isProtectedRoute = PROTECTED_ROUTES.some(
-    (route) => cleanPath === route || cleanPath.startsWith(route + "/")
+    (route) => pathname === route || pathname.startsWith(route + "/")
   );
-  const isAuthPage = cleanPath.startsWith("/auth/");
+  const isAuthPage = pathname.startsWith("/auth/");
 
   if (isProtectedRoute && !sessionToken && !isAuthPage) {
     const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = `${isLocalePath ? "/" + localePrefix : ""}/auth/login`;
+    loginUrl.pathname = "/auth/login";
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
   }
-
-  // Run i18n middleware (handles locale detection/redirect)
-  const response = intlMiddleware(request);
-  const now = Date.now();
 
   // IP-Anonymisierung (DSGVO)
   const forwardedFor = request.headers.get("x-forwarded-for");
@@ -107,7 +92,7 @@ export async function middleware(request: NextRequest) {
         sessionCreatedAt > 0 && now - sessionCreatedAt > SESSION_ABSOLUTE_TIMEOUT;
       if (absoluteExpired) {
         const loginUrl = request.nextUrl.clone();
-        loginUrl.pathname = `${isLocalePath ? "/" + localePrefix : ""}/auth/login`;
+        loginUrl.pathname = "/auth/login";
         loginUrl.searchParams.set("error", "SessionExpired");
         const redirect = NextResponse.redirect(loginUrl);
         redirect.cookies.delete(SESSION_CREATED_AT_COOKIE);

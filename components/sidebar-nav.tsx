@@ -1,7 +1,7 @@
 "use client";
 
-import { useLocale } from "next-intl";
-import { Link, usePathname } from "@/i18n/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Radar as RadarIcon,
@@ -25,55 +25,10 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const localesMeta = [
-  { code: "de", label: "DE", flag: "🇩🇪" },
-  { code: "en", label: "EN", flag: "🇬🇧" },
-  { code: "it", label: "IT", flag: "🇮🇹" },
-  { code: "fr", label: "FR", flag: "🇫🇷" },
-  { code: "nl", label: "NL", flag: "🇳🇱" },
-  { code: "es", label: "ES", flag: "🇪🇸" },
-];
-
 export function LanguageSwitcher() {
-  const locale = useLocale();
-  const pathname = usePathname();
-  const [open, setOpen] = useState(false);
-  const current = localesMeta.find((l) => l.code === locale) || localesMeta[0];
-
   return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className="inline-flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1.5 text-xs font-medium hover:bg-accent transition-colors"
-      >
-        <Globe className="w-3.5 h-3.5 text-muted-foreground" />
-        <span>{current.label}</span>
-        <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 z-50 mt-1 w-32 rounded-md border bg-popover p-1 shadow-md">
-            {localesMeta.map((l) => (
-              <Link
-                key={l.code}
-                href={pathname}
-                locale={l.code as any}
-                className={cn(
-                  "flex items-center gap-2 rounded px-2 py-1.5 text-sm transition-colors",
-                  locale === l.code
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "text-popover-foreground hover:bg-accent"
-                )}
-                onClick={() => setOpen(false)}
-              >
-                <span>{l.flag}</span>
-                <span>{l.label}</span>
-              </Link>
-            ))}
-          </div>
-        </>
-      )}
+    <div className="text-xs text-muted-foreground">
+      🇩🇪 DE
     </div>
   );
 }

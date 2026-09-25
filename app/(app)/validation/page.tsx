@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { Link } from "@/i18n/navigation";
-import { getTranslations } from "next-intl/server";
+import Link from "next/link";
 import {
   FlaskConical,
   TrendingUp,
@@ -36,7 +35,6 @@ function statusBadge(status: string) {
 }
 
 export default async function ValidationPage() {
-  const t = await getTranslations("Validation");
   const runs = await prisma.validationRun.findMany({
     orderBy: { createdAt: "desc" },
     include: {

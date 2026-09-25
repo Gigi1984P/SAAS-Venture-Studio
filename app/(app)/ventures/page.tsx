@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Link } from "@/i18n/navigation";
+import Link from "next/link";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { EmptyState } from "@/components/empty-state";
 

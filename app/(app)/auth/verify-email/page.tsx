@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Link } from "@/i18n/navigation";
+import Link from "next/link";
 
 export default function VerifyEmailPage() {
   const searchParams = useSearchParams();
