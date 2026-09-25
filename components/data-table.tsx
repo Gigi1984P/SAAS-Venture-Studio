@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight, Search, ArrowUpDown } from "lucide-react";
 
 export function DataTable<T extends Record<string, any>>({
@@ -29,7 +28,6 @@ export function DataTable<T extends Record<string, any>>({
   rowClassName?: (row: T) => string;
   onRowClick?: (row: T) => void;
 }) {
-  const t = useTranslations("DataTable");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [sortCol, setSortCol] = useState<string | null>(null);
@@ -82,7 +80,7 @@ export function DataTable<T extends Record<string, any>>({
           <Search className="w-4 h-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder={t("search")}
+            placeholder={"Suchen..."}
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="flex-1 rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
@@ -117,7 +115,7 @@ export function DataTable<T extends Record<string, any>>({
             {pageData.length === 0 && (
               <tr>
                 <td colSpan={columns.length} className="px-4 py-8 text-center text-muted-foreground">
-                  {emptyMessage || t("noResults")}
+                  {emptyMessage || "Keine Ergebnisse"}
                 </td>
               </tr>
             )}
@@ -141,7 +139,7 @@ export function DataTable<T extends Record<string, any>>({
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <div className="text-xs text-muted-foreground">
-            {t("page")} {currentPage} {t("of")} {totalPages}
+            {"Seite"} {currentPage} {"von"} {totalPages}
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -149,14 +147,14 @@ export function DataTable<T extends Record<string, any>>({
               disabled={currentPage <= 1}
               className="inline-flex items-center rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-30"
             >
-              <ChevronLeft className="w-3.5 h-3.5 mr-1" /> {t("previous")}
+              <ChevronLeft className="w-3.5 h-3.5 mr-1" /> {"Zurück"}
             </button>
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage >= totalPages}
               className="inline-flex items-center rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-30"
             >
-              {t("next")} <ChevronRight className="w-3.5 h-3.5 ml-1" />
+              {"Weiter"} <ChevronRight className="w-3.5 h-3.5 ml-1" />
             </button>
           </div>
         </div>

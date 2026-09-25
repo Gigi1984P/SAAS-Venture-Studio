@@ -1,6 +1,5 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import { Inbox } from "lucide-react";
 
 export function EmptyState({
@@ -14,12 +13,11 @@ export function EmptyState({
   action?: string;
   onAction?: () => void;
 }) {
-  const t = useTranslations("EmptyState");
   return (
     <div className="flex flex-col items-center justify-center rounded-xl border bg-card p-12 text-center">
       <Inbox className="w-12 h-12 text-muted-foreground/50 mb-4" />
-      <h3 className="text-lg font-semibold text-card-foreground mb-1">{title || t("title")}</h3>
-      <p className="text-sm text-muted-foreground mb-4">{description || t("description")}</p>
+      <h3 className="text-lg font-semibold text-card-foreground mb-1">{title || "Keine Daten"}</h3>
+      <p className="text-sm text-muted-foreground mb-4">{description || "Hier erscheinen bald Inhalte."}</p>
       {action && onAction && (
         <button
           onClick={onAction}

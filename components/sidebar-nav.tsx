@@ -1,6 +1,6 @@
 "use client";
 
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import {
   LayoutDashboard,
@@ -80,26 +80,25 @@ export function LanguageSwitcher() {
 
 type NavItem = {
   href: string;
-  labelKey: string;
+  label: string;
   icon: React.ReactNode;
   adminOnly?: boolean;
 };
 
 export function SidebarNav({ roleName }: { roleName?: string }) {
-  const t = useTranslations("Nav");
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const navItems: NavItem[] = [
-    { href: "/dashboard", labelKey: "dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
-    { href: "/opportunities", labelKey: "opportunities", icon: <Lightbulb className="w-4 h-4" /> },
-    { href: "/ventures", labelKey: "ventures", icon: <Briefcase className="w-4 h-4" /> },
-    { href: "/validation", labelKey: "validation", icon: <RadarIcon className="w-4 h-4" /> },
-    { href: "/dashboard/intelligence", labelKey: "intelligence", icon: <Search className="w-4 h-4" /> },
-    { href: "/dashboard/agents", labelKey: "agents", icon: <Bot className="w-4 h-4" /> },
-    { href: "/dashboard/radar", labelKey: "radar", icon: <RadarIcon className="w-4 h-4" /> },
-    { href: "/settings", labelKey: "settings", icon: <Settings className="w-4 h-4" /> },
-    { href: "/admin/users", labelKey: "admin", icon: <ShieldAlert className="w-4 h-4" />, adminOnly: true },
+    { href: "/dashboard", label: "Dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
+    { href: "/opportunities", label: "Opportunities", icon: <Lightbulb className="w-4 h-4" /> },
+    { href: "/ventures", label: "Ventures", icon: <Briefcase className="w-4 h-4" /> },
+    { href: "/validation", label: "Validation", icon: <RadarIcon className="w-4 h-4" /> },
+    { href: "/dashboard/intelligence", label: "Intelligence", icon: <Search className="w-4 h-4" /> },
+    { href: "/dashboard/agents", label: "Agents", icon: <Bot className="w-4 h-4" /> },
+    { href: "/dashboard/radar", label: "Radar", icon: <RadarIcon className="w-4 h-4" /> },
+    { href: "/settings", label: "Einstellungen", icon: <Settings className="w-4 h-4" /> },
+    { href: "/admin/users", label: "Admin", icon: <ShieldAlert className="w-4 h-4" />, adminOnly: true },
   ];
 
   const visibleItems = navItems.filter((item) => !item.adminOnly || roleName === "superadmin");
@@ -158,7 +157,7 @@ export function SidebarNav({ roleName }: { roleName?: string }) {
                 <span className={cn("shrink-0", active ? "text-primary" : "text-muted-foreground")}>
                   {item.icon}
                 </span>
-                {t(item.labelKey as any)}
+                {item.label}
               </Link>
             );
           })}
@@ -174,7 +173,7 @@ export function SidebarNav({ roleName }: { roleName?: string }) {
               className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
             >
               <LogOut className="w-4 h-4" />
-              {t("logout")}
+              Abmelden
             </button>
           </form>
         </div>

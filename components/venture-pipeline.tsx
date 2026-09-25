@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
 
 type VentureEvent = {
   id: string;
@@ -37,8 +36,6 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
 };
 
 export default function VenturePipeline({ ventureId, currentStatus, events, onStatusChange }: VenturePipelineProps) {
-  const t = useTranslations("VentureDetail");
-  const tc = useTranslations("Common");
   const [showTransitionModal, setShowTransitionModal] = useState(false);
   const [targetStatus, setTargetStatus] = useState("");
   const [transitionReason, setTransitionReason] = useState("");
@@ -161,7 +158,7 @@ export default function VenturePipeline({ ventureId, currentStatus, events, onSt
                 onClick={() => setShowTransitionModal(false)}
                 className="inline-flex h-9 items-center rounded-md border px-4 text-sm hover:bg-muted"
               >
-                {tc("cancel")}
+                {"Abbrechen"}
               </button>
               <button
                 onClick={executeTransition}
@@ -177,7 +174,7 @@ export default function VenturePipeline({ ventureId, currentStatus, events, onSt
 
       {/* Event Timeline */}
       <div className="rounded-lg border bg-card p-6 space-y-4">
-        <h2 className="text-lg font-semibold">{t("eventTimeline")}</h2>
+        <h2 className="text-lg font-semibold">{"Event Timeline"}</h2>
         
         {(!events || events.length === 0) ? (
           <div className="text-center py-8 text-muted-foreground">

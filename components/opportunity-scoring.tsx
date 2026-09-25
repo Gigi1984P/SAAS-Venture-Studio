@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
 
 type ScoreData = {
   id: string;
@@ -30,26 +29,26 @@ type ScoreData = {
 };
 
 const scoreAFields = [
-  { key: "painSeverity", labelKey: "painSeverity", weight: 15 },
-  { key: "frequency", labelKey: "frequency", weight: 10 },
-  { key: "economicImpact", labelKey: "economicImpact", weight: 15 },
-  { key: "existingSpend", labelKey: "existingSpend", weight: 10 },
-  { key: "buyerClarity", labelKey: "buyerClarity", weight: 10 },
-  { key: "reachability", labelKey: "reachability", weight: 10 },
-  { key: "competitionGap", labelKey: "competitionGap", weight: 10 },
-  { key: "switchingMotivation", labelKey: "switchingMotivation", weight: 10 },
-  { key: "recurringNature", labelKey: "recurringNature", weight: 5 },
-  { key: "evidenceQuality", labelKey: "evidenceQuality", weight: 5 },
+  { key: "painSeverity", label: "Pain Severity", weight: 15 },
+  { key: "frequency", label: "Frequency", weight: 10 },
+  { key: "economicImpact", label: "Economic Impact", weight: 15 },
+  { key: "existingSpend", label: "Existing Spend", weight: 10 },
+  { key: "buyerClarity", label: "Buyer Clarity", weight: 10 },
+  { key: "reachability", label: "Reachability", weight: 10 },
+  { key: "competitionGap", label: "Competition Gap", weight: 10 },
+  { key: "switchingMotivation", label: "Switching Motivation", weight: 10 },
+  { key: "recurringNature", label: "Recurring Nature", weight: 5 },
+  { key: "evidenceQuality", label: "Evidence Quality", weight: 5 },
 ];
 
 const scoreBFields = [
-  { key: "mvpSimplicity", labelKey: "mvpSimplicity", weight: 20 },
-  { key: "aiLeverage", labelKey: "aiLeverage", weight: 15 },
-  { key: "grossMargin", labelKey: "grossMargin", weight: 15 },
-  { key: "distributionAdvantage", labelKey: "distributionAdvantage", weight: 20 },
-  { key: "lowSupportBurden", labelKey: "lowSupportBurden", weight: 10 },
-  { key: "expansionPotential", labelKey: "expansionPotential", weight: 10 },
-  { key: "defensibility", labelKey: "defensibility", weight: 10 },
+  { key: "mvpSimplicity", label: "MVP Simplicity", weight: 20 },
+  { key: "aiLeverage", label: "AI Leverage", weight: 15 },
+  { key: "grossMargin", label: "Gross Margin", weight: 15 },
+  { key: "distributionAdvantage", label: "Distribution Advantage", weight: 20 },
+  { key: "lowSupportBurden", label: "Low Support Burden", weight: 10 },
+  { key: "expansionPotential", label: "Expansion Potential", weight: 10 },
+  { key: "defensibility", label: "Defensibility", weight: 10 },
 ];
 
 function ScoreBar({ value, max }: { value: number; max: number }) {
@@ -76,7 +75,6 @@ export function OpportunityScoring({
   onSave: () => void;
   saving: boolean;
 }) {
-  const t = useTranslations("Scoring");
   const [editMode, setEditMode] = useState(false);
 
   const renderField = (key: keyof ScoreData, label: string, weight: number) => {
@@ -109,13 +107,13 @@ export function OpportunityScoring({
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-card-foreground">{t("scoringTitle")}</h2>
+        <h2 className="text-lg font-semibold text-card-foreground">{"Scoring"}</h2>
         <div className="flex gap-2">
           <button
             onClick={() => setEditMode(!editMode)}
             className="rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-accent transition-colors"
           >
-            {editMode ? t("done") : t("edit")}
+            {editMode ? "Fertig" : "Bearbeiten"}
           </button>
           {editMode && (
             <button
@@ -123,7 +121,7 @@ export function OpportunityScoring({
               disabled={saving}
               className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
-              {saving ? t("saving") : t("save")}
+              {saving ? "Speichern..." : "Speichern"}
             </button>
           )}
         </div>
@@ -134,8 +132,8 @@ export function OpportunityScoring({
         <div className="rounded-xl border bg-card p-5 shadow-sm space-y-5">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold text-card-foreground">{t("scoreATitle")}</h3>
-              <p className="text-xs text-muted-foreground">{t("scoreASubtitle")}</p>
+              <h3 className="font-semibold text-card-foreground">{"Score A"}</h3>
+              <p className="text-xs text-muted-foreground">{"Pain × Market Fit"}</p>
             </div>
             <div className="text-right">
               <div className="text-2xl font-bold text-primary">{data.scoreA}</div>
@@ -143,7 +141,7 @@ export function OpportunityScoring({
             </div>
           </div>
           <div className="space-y-4">
-            {scoreAFields.map((f) => renderField(f.key as keyof ScoreData, t(f.labelKey as any), f.weight))}
+            {scoreAFields.map((f) => renderField(f.key as keyof ScoreData, f.label, f.weight))}
           </div>
         </div>
 
@@ -151,8 +149,8 @@ export function OpportunityScoring({
         <div className="rounded-xl border bg-card p-5 shadow-sm space-y-5">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold text-card-foreground">{t("scoreBTitle")}</h3>
-              <p className="text-xs text-muted-foreground">{t("scoreBSubtitle")}</p>
+              <h3 className="font-semibold text-card-foreground">{"Score B"}</h3>
+              <p className="text-xs text-muted-foreground">{"Execution Leverage"}</p>
             </div>
             <div className="text-right">
               <div className="text-2xl font-bold text-primary">{data.scoreB}</div>
@@ -160,17 +158,17 @@ export function OpportunityScoring({
             </div>
           </div>
           <div className="space-y-4">
-            {scoreBFields.map((f) => renderField(f.key as keyof ScoreData, t(f.labelKey as any), f.weight))}
+            {scoreBFields.map((f) => renderField(f.key as keyof ScoreData, f.label, f.weight))}
           </div>
         </div>
       </div>
 
       {/* Confidence & Evidence Level */}
       <div className="rounded-xl border bg-card p-5 shadow-sm">
-        <h3 className="font-semibold text-card-foreground mb-4">{t("metaTitle")}</h3>
+        <h3 className="font-semibold text-card-foreground mb-4">{"Meta"}</h3>
         <div className="grid gap-6 sm:grid-cols-3">
           <div className="space-y-1">
-            <label className="text-sm font-medium">{t("confidence")}</label>
+            <label className="text-sm font-medium">{"Confidence"}</label>
             {editMode ? (
               <input
                 type="number"
@@ -186,7 +184,7 @@ export function OpportunityScoring({
             )}
           </div>
           <div className="space-y-1">
-            <label className="text-sm font-medium">{t("evidenceLevel")}</label>
+            <label className="text-sm font-medium">{"Evidence Level"}</label>
             {editMode ? (
               <input
                 type="number"
@@ -201,7 +199,7 @@ export function OpportunityScoring({
             )}
           </div>
           <div className="space-y-1">
-            <label className="text-sm font-medium">{t("biggestUncertainty")}</label>
+            <label className="text-sm font-medium">{"Größte Unsicherheit"}</label>
             {editMode ? (
               <input
                 type="text"
