@@ -189,6 +189,8 @@ model Venture {
   events        VentureEvent[]
   handoffs      VentureHandoff[]
   ventureModules VentureModule[]
+  notes         VentureNote[]
+  todos         VentureTodo[]
 
   @@map("ventures")
 }
@@ -1440,4 +1442,57 @@ model VentureModule {
 
   @@unique([ventureId, moduleId])
   @@map("venture_modules")
+}
+
+// ============================================================
+// ORCHESTRATOR RULES (Auto-Task-Enqueue on Status Change)
+// ============================================================
+
+model OrchestratorRule {
+  id              String   @id @default(cuid())
+  name            String
+  triggerStatus   String   @map("trigger_status")
+  minEvidence     Int      @default(0) @map("min_evidence")
+  agentType       String   @map("agent_type")
+  taskType        String   @map("task_type")
+  priority        Int      @default(5)
+  payload         Json?
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("orchestrator_rules")
+}
+
+// ============================================================
+// VENTURE NOTES & TODOS
+// ============================================================
+
+model VentureNote {
+  id        String   @id @default(cuid())
+  ventureId String   @map("venture_id")
+  title     String
+  content   String   @db.Text
+  category  String   @default("general") // "general", "milestone", "decision", "research"
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  venture   Venture  @relation(fields: [ventureId], references: [id], onDelete: Cascade)
+
+  @@map("venture_notes")
+}
+
+model VentureTodo {
+  id          String    @id @default(cuid())
+  ventureId   String    @map("venture_id")
+  title       String
+  description String?
+  status      String    @default("todo") // "todo", "in_progress", "done", "cancelled"
+  priority    String    @default("medium") // "low", "medium", "high", "urgent"
+  dueDate     DateTime? @map("due_date")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  venture     Venture   @relation(fields: [ventureId], references: [id], onDelete: Cascade)
+
+  @@map("venture_todos")
 }

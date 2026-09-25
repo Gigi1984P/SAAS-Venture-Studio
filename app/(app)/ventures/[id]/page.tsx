@@ -5,6 +5,8 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import VenturePipeline from "@/components/venture-pipeline";
 import VentureModules from "@/components/venture-modules";
+import VentureNotes from "@/components/venture-notes";
+import VentureTodos from "@/components/venture-todos";
 
 type Venture = {
   id: string;
@@ -303,6 +305,10 @@ export default function VentureDetailPage() {
 
       {/* Venture Modules */}
       <VentureModules ventureId={id} />
+
+      {/* Venture Notes & ToDos */}
+      <VentureNotes ventureId={id} />
+      <VentureTodos ventureId={id} />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { OpportunityScoring } from "@/components/opportunity-scoring";
+import OpportunityEvaluate from "@/components/opportunity-evaluate";
 
 type Opp = {
   id: string;
@@ -319,11 +320,16 @@ export default function OpportunityDetailPage() {
       </div>
 
       {/* State Badge + Priority */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <span className="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-blue-100 text-blue-700">{opp.status}</span>
         <span className="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-gray-100 text-gray-600">Priority: {opp.priority}</span>
         {opp.biggestUncertainty && (
           <span className="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-yellow-100 text-yellow-700">⚠ {opp.biggestUncertainty}</span>
+        )}
+        {opp.scoreA >= 70 && opp.confidence < 0.5 && (
+          <span className="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-red-100 text-red-700 border border-red-200">
+            ⚠ LOW CONFIDENCE
+          </span>
         )}
       </div>
 
@@ -346,6 +352,7 @@ export default function OpportunityDetailPage() {
             { id: "stop", label: `${"Stop-Bedingungen"} (${stopConditions.filter(c => c.triggered).length}/${stopConditions.length})` },
             { id: "dedup", label: "Signals" },
             { id: "artifacts", label: `${"Artifacts"} (${artifacts.length})` },
+            { id: "evaluate", label: "Bewertung" },
           ].map(tab => (
             <button
               key={tab.id}
@@ -1617,6 +1624,11 @@ function EvidenceTab({ opp, id, fetchOpp }: { opp: Opp; id: string; fetchOpp: ()
           </div>
         )}
       </div>
+
+      {/* EVALUATE */}
+      {activeTab === "evaluate" && (
+        <OpportunityEvaluate opportunityId={id} />
+      )}
     </div>
   );
 }
