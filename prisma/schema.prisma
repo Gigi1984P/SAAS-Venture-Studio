@@ -318,6 +318,20 @@ model Opportunity {
   ventureHandoffs            VentureHandoff[]
   solutions                  Solution[]
   scores                     Score[]
+  // 15 NEW FEATURES
+  marketSizes                MarketSize[]
+  competitorMatrices         CompetitorMatrix[]
+  gtmPlans                   GtmPlan[]
+  financialModels            FinancialModel[]
+  pitchDecks                 PitchDeck[]
+  mvpChecklists              MvpChecklist[]
+  saasMetrics                SaaSMetric[]
+  customerJourneyStages      CustomerJourneyStage[]
+  techStackRecommendations   TechStackRecommendation[]
+  pricingTests               PricingTest[]
+  personaDetails             PersonaDetail[]
+  interviewGuides            InterviewGuide[]
+  techStackConfigs           TechStackConfig[]
 
   @@map("opportunities")
 }
@@ -1611,4 +1625,249 @@ model VentureTodo {
   venture     Venture   @relation(fields: [ventureId], references: [id], onDelete: Cascade)
 
   @@map("venture_todos")
+}
+
+// ============================================================
+// 15 NEW FEATURES
+// ============================================================
+
+model Idea {
+  id            String    @id @default(cuid())
+  title         String
+  description   String?
+  problem       String?
+  solution      String?
+  targetMarket  String?   @map("target_market")
+  mrrEstimate   Float?    @map("mrr_estimate")
+  status        String    @default("draft")
+  source        String?   @default("manual")
+  tags          String[]
+  convertedToOpportunityId String? @map("converted_to_opportunity_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@map("ideas")
+}
+
+model MarketSize {
+  id            String    @id @default(cuid())
+  opportunityId String    @map("opportunity_id")
+  tam           Float     @default(0)
+  sam           Float     @default(0)
+  som           Float     @default(0)
+  tamUnit       String    @default("EUR") @map("tam_unit")
+  growthRate    Float?    @map("growth_rate")
+  source        String?
+  notes         String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("market_sizes")
+}
+
+model CompetitorMatrix {
+  id            String    @id @default(cuid())
+  opportunityId String    @map("opportunity_id")
+  competitorName String  @map("competitor_name")
+  featureScore  Int       @map("feature_score")
+  priceScore    Int       @map("price_score")
+  uxScore       Int       @map("ux_score")
+  marketShare   Float?    @map("market_share")
+  ourAdvantage  String?   @map("our_advantage")
+  gapOpportunity String? @map("gap_opportunity")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("competitor_matrices")
+}
+
+model GtmPlan {
+  id            String    @id @default(cuid())
+  opportunityId String    @map("opportunity_id")
+  channel       String
+  strategy      String?
+  budgetEur     Float?    @map("budget_eur")
+  timelineWeeks Int?      @map("timeline_weeks")
+  kpis          String?
+  status        String    @default("planned")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("gtm_plans")
+}
+
+model FinancialModel {
+  id            String    @id @default(cuid())
+  opportunityId String    @map("opportunity_id")
+  name          String
+  month         Int
+  revenue       Float     @default(0)
+  costs         Float     @default(0)
+  cac           Float     @default(0)
+  customers     Int       @default(0)
+  churnRate     Float?    @map("churn_rate")
+  runwayMonths  Float?    @map("runway_months")
+  breakEvenMonth Int?     @map("break_even_month")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("financial_models")
+}
+
+model PitchDeck {
+  id            String    @id @default(cuid())
+  opportunityId String    @map("opportunity_id")
+  title         String
+  slideOrder    Int       @map("slide_order")
+  content       String
+  type          String    @default("text")
+  status        String    @default("draft")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("pitch_decks")
+}
+
+model MvpChecklist {
+  id            String    @id @default(cuid())
+  opportunityId String    @map("opportunity_id")
+  category      String
+  task          String
+  required      Boolean   @default(true)
+  completed     Boolean   @default(false)
+  completedAt   DateTime? @map("completed_at")
+  notes         String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("mvp_checklists")
+}
+
+model SaaSMetric {
+  id            String    @id @default(cuid())
+  opportunityId String    @map("opportunity_id")
+  metricType    String    @map("metric_type")
+  value         Float     @default(0)
+  target        Float?
+  period        String    @default("monthly")
+  recordedAt    DateTime  @default(now()) @map("recorded_at")
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("saas_metrics")
+}
+
+model CustomerJourneyStage {
+  id            String    @id @default(cuid())
+  opportunityId String    @map("opportunity_id")
+  stage         String
+  touchpoints   String[]
+  painPoints    String[]  @map("pain_points")
+  actions       String[]
+  metrics       String?
+  completed     Boolean   @default(false)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("customer_journey_stages")
+}
+
+model TechStackRecommendation {
+  id            String    @id @default(cuid())
+  opportunityId String    @map("opportunity_id")
+  category      String
+  recommendation String
+  rationale     String?
+  priority      String    @default("recommended")
+  selected      Boolean   @default(false)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("tech_stack_recommendations")
+}
+
+model PricingTest {
+  id            String    @id @default(cuid())
+  opportunityId String    @map("opportunity_id")
+  variantName   String    @map("variant_name")
+  priceEur      Float     @map("price_eur")
+  visitors      Int       @default(0)
+  conversions   Int       @default(0)
+  conversionRate Float?   @map("conversion_rate")
+  status        String    @default("draft")
+  winner        Boolean   @default(false)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("pricing_tests")
+}
+
+model PersonaDetail {
+  id            String    @id @default(cuid())
+  opportunityId String    @map("opportunity_id")
+  name          String
+  role          String
+  industry      String?
+  companySize   String?   @map("company_size")
+  painPoints    String[]  @map("pain_points")
+  goals         String[]
+  behaviors     String[]
+  quote         String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("persona_details")
+}
+
+model InterviewGuide {
+  id            String    @id @default(cuid())
+  opportunityId String    @map("opportunity_id")
+  section       String
+  question      String
+  goal          String?
+  order         Int       @default(0)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("interview_guides")
+}
+
+model TemplateGallery {
+  id            String    @id @default(cuid())
+  name          String
+  description   String?
+  category      String
+  content       String
+  tags          String[]
+  usageCount    Int       @default(0) @map("usage_count")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@map("template_galleries")
+}
+
+model TechStackConfig {
+  id            String    @id @default(cuid())
+  opportunityId String    @map("opportunity_id")
+  layer         String
+  chosenStack   String      @map("chosen_stack")
+  alternatives  String[]
+  rationale     String?
+  setupEffort   String?     @map("setup_effort")
+  monthlyCost   Float?      @map("monthly_cost")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("tech_stack_configs")
 }

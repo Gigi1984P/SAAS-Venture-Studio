@@ -17,7 +17,8 @@ import {
   Menu,
   X,
   Rocket,
-  Cpu,
+  Target,
+  Layers,
 } from "lucide-react";
 import { useState } from "react";
 import { clsx, type ClassValue } from "clsx";
@@ -48,15 +49,11 @@ export function SidebarNav({ roleName }: { roleName?: string }) {
 
   const navItems: NavItem[] = [
     { href: "/dashboard", label: "Dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
-    { href: "/opportunities", label: "Opportunities", icon: <Lightbulb className="w-4 h-4" /> },
+    { href: "/ideas", label: "Ideen", icon: <Lightbulb className="w-4 h-4" /> },
+    { href: "/opportunities", label: "Opportunities", icon: <Target className="w-4 h-4" /> },
     { href: "/ventures", label: "Ventures", icon: <Briefcase className="w-4 h-4" /> },
     { href: "/templates", label: "Templates", icon: <Rocket className="w-4 h-4" /> },
-    { href: "/tech-stack", label: "Tech Stack", icon: <Cpu className="w-4 h-4" /> },
-    { href: "/validation", label: "Validation", icon: <RadarIcon className="w-4 h-4" /> },
-    { href: "/dashboard/intelligence", label: "Intelligence", icon: <Search className="w-4 h-4" /> },
-    { href: "/dashboard/agents", label: "Agents", icon: <Bot className="w-4 h-4" /> },
-    { href: "/dashboard/radar", label: "Radar", icon: <RadarIcon className="w-4 h-4" /> },
-    { href: "/orchestrator", label: "Orchestrator", icon: <Bot className="w-4 h-4" /> },
+    { href: "/template-gallery", label: "Galerie", icon: <Layers className="w-4 h-4" /> },
     { href: "/settings", label: "Einstellungen", icon: <Settings className="w-4 h-4" /> },
     { href: "/admin/users", label: "Admin", icon: <ShieldAlert className="w-4 h-4" />, adminOnly: true },
   ];

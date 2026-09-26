@@ -20,6 +20,19 @@ import ExperimentAutoLoop from "@/components/experiment-auto-loop";
 import ValidationStageGating from "@/components/validation-stage-gating";
 import AgentRunsTab from "@/components/agent-runs-tab";
 import ValidationDimensions from "@/components/validation-dimensions";
+import MarketSizeWidget from "@/components/market-size-widget";
+import CompetitorMatrixWidget from "@/components/competitor-matrix-widget";
+import GtmPlanWidget from "@/components/gtm-plan-widget";
+import FinancialModelWidget from "@/components/financial-model-widget";
+import PitchDeckWidget from "@/components/pitch-deck-widget";
+import MvpChecklistWidget from "@/components/mvp-checklist-widget";
+import SaasMetricsDashboard from "@/components/saas-metrics-dashboard";
+import CustomerJourneyMap from "@/components/customer-journey-map";
+import TechStackRecommendationWidget from "@/components/tech-stack-recommendation";
+import PricingTestWidget from "@/components/pricing-test-widget";
+import PersonaBuilderWidget from "@/components/persona-builder-widget";
+import InterviewGuideWidget from "@/components/interview-guide-widget";
+import TechStackConfigWidget from "@/components/tech-stack-config-widget";
 
 type Opp = {
   id: string;
@@ -410,6 +423,19 @@ export default function OpportunityDetailPage() {
             { id: "stage-gate", label: "Stages" },
             { id: "agent-runs", label: "Agent Runs" },
             { id: "valid-dims", label: "Valid. Dim" },
+            { id: "market-size", label: "Markt" },
+            { id: "comp-matrix", label: "Wettbewerb" },
+            { id: "gtm", label: "GTM" },
+            { id: "financials", label: "Financials" },
+            { id: "pitch", label: "Pitch" },
+            { id: "mvp", label: "MVP" },
+            { id: "metrics", label: "Metrics" },
+            { id: "journey", label: "Journey" },
+            { id: "tech-rec", label: "Tech Rec" },
+            { id: "pricing-ab", label: "Pricing" },
+            { id: "personas", label: "Personas" },
+            { id: "interview", label: "Interview" },
+            { id: "tech-config", label: "Stack" },
           ].map(tab => (
             <button
               key={tab.id}
@@ -1784,6 +1810,71 @@ function EvidenceTab({ opp, id, fetchOpp }: { opp: Opp; id: string; fetchOpp: ()
       {/* VALIDATION DIMENSIONS */}
       {activeTab === "valid-dims" && (
         <ValidationDimensions opportunity={opp} />
+      )}
+
+      {/* MARKET SIZE */}
+      {activeTab === "market-size" && (
+        <MarketSizeWidget opportunityId={id} />
+      )}
+
+      {/* COMPETITOR MATRIX */}
+      {activeTab === "comp-matrix" && (
+        <CompetitorMatrixWidget opportunityId={id} />
+      )}
+
+      {/* GTM PLAN */}
+      {activeTab === "gtm" && (
+        <GtmPlanWidget opportunityId={id} />
+      )}
+
+      {/* FINANCIAL MODEL */}
+      {activeTab === "financials" && (
+        <FinancialModelWidget opportunityId={id} />
+      )}
+
+      {/* PITCH DECK */}
+      {activeTab === "pitch" && (
+        <PitchDeckWidget opportunityId={id} />
+      )}
+
+      {/* MVP CHECKLIST */}
+      {activeTab === "mvp" && (
+        <MvpChecklistWidget opportunityId={id} />
+      )}
+
+      {/* SAAS METRICS */}
+      {activeTab === "metrics" && (
+        <SaasMetricsDashboard opportunityId={id} />
+      )}
+
+      {/* CUSTOMER JOURNEY */}
+      {activeTab === "journey" && (
+        <CustomerJourneyMap opportunityId={id} />
+      )}
+
+      {/* TECH STACK RECOMMENDATION */}
+      {activeTab === "tech-rec" && (
+        <TechStackRecommendationWidget opportunityId={id} />
+      )}
+
+      {/* PRICING TESTS */}
+      {activeTab === "pricing-ab" && (
+        <PricingTestWidget opportunityId={id} />
+      )}
+
+      {/* PERSONA BUILDER */}
+      {activeTab === "personas" && (
+        <PersonaBuilderWidget opportunityId={id} />
+      )}
+
+      {/* INTERVIEW GUIDE */}
+      {activeTab === "interview" && (
+        <InterviewGuideWidget opportunityId={id} />
+      )}
+
+      {/* TECH STACK CONFIG */}
+      {activeTab === "tech-config" && (
+        <TechStackConfigWidget opportunityId={id} />
       )}
     </div>
   );
