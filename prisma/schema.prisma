@@ -677,7 +677,6 @@ model Interview {
   extractedQuotes       String?          @map("extracted_quotes")
   buyingSignals         String?          @map("buying_signals")
   contradictoryEvidence String?          @map("contradictory_evidence")
-  evidenceObjects       EvidenceObject[]
   createdAt             DateTime         @default(now()) @map("created_at")
   updatedAt             DateTime         @updatedAt @map("updated_at")
   validationRun         ValidationRun    @relation(fields: [validationRunId], references: [id], onDelete: Cascade)
@@ -886,7 +885,6 @@ model EvidenceObject {
   id              String        @id @default(cuid())
   validationRunId String        @map("validation_run_id")
   hypothesisId    String?       @map("hypothesis_id")
-  interviewId     String?       @map("interview_id")
   evidenceId      String        @unique @map("evidence_id")
   source          String
   sourceType      String        @map("source_type")
@@ -894,17 +892,28 @@ model EvidenceObject {
   date            DateTime
   persona         String?
   company         String?
+  actorRole       String?       @map("actor_role")
+  actorIndustry   String?       @map("actor_industry")
+  actorCompanySize String?      @map("actor_company_size")
+  job             String?
   observation     String
+  pain            String?
+  workaround      String?
   direction       String
   strength        String
   reliability     Float?
   recency         DateTime?
   independence    Boolean       @default(true)
+  impactTime      String?       @map("impact_time")
+  impactMoney     Float?        @map("impact_money")
+  impactErrors    Boolean       @default(false) @map("impact_errors")
+  impactRevenueLoss Float?      @map("impact_revenue_loss")
+  intent          String?
+  verified        Boolean       @default(false)
   rawReference    String?       @map("raw_reference")
   createdAt       DateTime      @default(now()) @map("created_at")
   validationRun   ValidationRun @relation(fields: [validationRunId], references: [id], onDelete: Cascade)
   hypothesis      Hypothesis?   @relation(fields: [hypothesisId], references: [id])
-  interview       Interview?    @relation(fields: [interviewId], references: [id])
 
   @@map("evidence_objects")
 }

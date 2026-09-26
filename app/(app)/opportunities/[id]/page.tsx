@@ -15,6 +15,11 @@ import UnitEconomicsWidget from "@/components/unit-economics-widget";
 import SignalDiscoveryWidget from "@/components/signal-discovery";
 import SolutionsWidget from "@/components/solutions-widget";
 import ScoresWidget from "@/components/scores-widget";
+import BudgetEnforcement from "@/components/budget-enforcement";
+import ExperimentAutoLoop from "@/components/experiment-auto-loop";
+import ValidationStageGating from "@/components/validation-stage-gating";
+import AgentRunsTab from "@/components/agent-runs-tab";
+import ValidationDimensions from "@/components/validation-dimensions";
 
 type Opp = {
   id: string;
@@ -400,6 +405,11 @@ export default function OpportunityDetailPage() {
             { id: "discovery", label: "Discovery" },
             { id: "solutions", label: `Lösungen` },
             { id: "scores", label: "Scores" },
+            { id: "budget-enf", label: "Budget" },
+            { id: "auto-loop", label: "Auto Loop" },
+            { id: "stage-gate", label: "Stages" },
+            { id: "agent-runs", label: "Agent Runs" },
+            { id: "valid-dims", label: "Valid. Dim" },
           ].map(tab => (
             <button
               key={tab.id}
@@ -1749,6 +1759,31 @@ function EvidenceTab({ opp, id, fetchOpp }: { opp: Opp; id: string; fetchOpp: ()
       {/* SCORES */}
       {activeTab === "scores" && (
         <ScoresWidget opportunity={opp} />
+      )}
+
+      {/* BUDGET ENFORCEMENT */}
+      {activeTab === "budget-enf" && (
+        <BudgetEnforcement opportunityId={id} />
+      )}
+
+      {/* EXPERIMENT AUTO LOOP */}
+      {activeTab === "auto-loop" && (
+        <ExperimentAutoLoop opportunityId={id} />
+      )}
+
+      {/* VALIDATION STAGE GATING */}
+      {activeTab === "stage-gate" && (
+        <ValidationStageGating opportunityId={id} />
+      )}
+
+      {/* AGENT RUNS */}
+      {activeTab === "agent-runs" && (
+        <AgentRunsTab opportunityId={id} />
+      )}
+
+      {/* VALIDATION DIMENSIONS */}
+      {activeTab === "valid-dims" && (
+        <ValidationDimensions opportunity={opp} />
       )}
     </div>
   );
