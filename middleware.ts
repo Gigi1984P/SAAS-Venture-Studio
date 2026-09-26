@@ -4,16 +4,33 @@ const SESSION_ABSOLUTE_TIMEOUT = 24 * 60 * 60 * 1000;
 const SESSION_CREATED_AT_COOKIE = "session-created-at";
 const CSRF_COOKIE_NAME = "csrf-token";
 
-const PROTECTED_ROUTES = [
-  "/dashboard",
-  "/ventures",
-  "/settings",
-  "/opportunities",
-  "/validation",
-  "/intelligence",
-  "/agents",
-  "/radar",
+const PUBLIC_ROUTES = [
+  "/auth/login",
+  "/auth/register",
+  "/auth/error",
+  "/auth/verify",
+  "/auth/forgot-password",
+  "/auth/reset-password",
 ];
+
+const STATIC_ASSET_EXTENSIONS = [
+  ".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico",
+  ".css", ".js", ".woff", ".woff2", ".ttf", ".eot", ".html",
+];
+
+function isPublicRoute(pathname: string): boolean {
+  if (pathname === "/") return true;
+  for (const r of PUBLIC_ROUTES) {
+    if (pathname === r || pathname.startsWith(r + "/")) return true;
+  }
+  if (pathname.startsWith("/api/auth/")) return true;
+  if (pathname.startsWith("/_next/")) return true;
+  if (pathname.startsWith("/public/")) return true;
+  for (const ext of STATIC_ASSET_EXTENSIONS) {
+    if (pathname.endsWith(ext)) return true;
+  }
+  return false;
+}
 
 function anonymizeIp(ip: string): string {
   if (!ip) return "";
@@ -22,7 +39,7 @@ function anonymizeIp(ip: string): string {
     return trimmed.replace(/\.\d{1,3}$/, ".0");
   }
   if (trimmed.includes(":")) {
-    const segments = trimmed.split(":").filter((s) => s !== "");
+    const segments = trimmed.split(":").filter(function(s) { return s !== ""; });
     if (segments.length >= 4) {
       segments.pop();
       return segments.join(":") + ":0";
@@ -35,7 +52,7 @@ function anonymizeIp(ip: string): string {
 function generateCsrfToken(): string {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
-  return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return Array.from(array, function(byte) { return byte.toString(16).padStart(2, "0"); }).join("");
 }
 
 export async function middleware(request: NextRequest) {
@@ -53,17 +70,15 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(httpsUrl, 308);
   }
 
-  // Auth Guard: Geschützte Routen erfordern Session
+  // Auth Guard: Alles außer Public Routes erfordert Session
   const sessionToken =
     request.cookies.get("__Secure-next-auth.session-token")?.value ||
     request.cookies.get("next-auth.session-token")?.value ||
     "";
-  const isProtectedRoute = PROTECTED_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(route + "/")
-  );
+  const isPublic = isPublicRoute(pathname);
   const isAuthPage = pathname.startsWith("/auth/");
 
-  if (isProtectedRoute && !sessionToken && !isAuthPage) {
+  if (!isPublic && !sessionToken && !isAuthPage) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/auth/login";
     loginUrl.searchParams.set("callbackUrl", pathname);
@@ -75,7 +90,7 @@ export async function middleware(request: NextRequest) {
   if (forwardedFor) {
     const anonymizedIps = forwardedFor
       .split(",")
-      .map((ip) => anonymizeIp(ip.trim()))
+      .map(function(ip) { return anonymizeIp(ip.trim()); })
       .join(", ");
     response.headers.set("X-Forwarded-For-Anonymized", anonymizedIps);
   }
