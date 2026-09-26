@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./(app)/globals.css";
+import ClientProviders from "@/components/client-providers";
 
 export const metadata: Metadata = {
   title: "SAAS Venture Studio",
@@ -15,7 +16,9 @@ export default function RootLayout({
     <html lang="de">
       <head />
       <body className="min-h-screen bg-background font-sans antialiased">
-        {children}
+        <ClientProviders>
+          {children}
+        </ClientProviders>
       </body>
     </html>
   );
