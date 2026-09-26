@@ -27,6 +27,8 @@ import EvidenceFunnelWidget from "@/components/evidence-funnel-widget";
 import DashboardWidgets from "@/components/dashboard-widgets";
 import CsvImporter from "@/components/csv-importer";
 import NotificationCenter from "@/components/notification-center";
+import WeeklyDigestWidget from "@/components/weekly-digest-widget";
+import AutomationCenter from "@/components/automation-center";
 
 // ─── Types ─────────────────────────────────────────────
 type PipelineStage = {
@@ -381,6 +383,9 @@ export default async function DashboardPage() {
         <CsvImporter />
         <NotificationCenter />
       </div>
+
+      <WeeklyDigestWidget />
+      <AutomationCenter />
 
       {/* ── Opportunity Radar Table ──────────────────── */}
       <div className="rounded-xl border bg-card shadow-sm overflow-hidden">

@@ -1998,3 +1998,56 @@ model Webhook {
 
   @@map("webhooks")
 }
+
+// ============================================================
+// AUTOMATION LOG (Audit trail for all automated actions)
+// ============================================================
+
+model AutomationLog {
+  id            String   @id @default(cuid())
+  automationId  String   @map("automation_id")
+  name          String
+  entityType    String   @map("entity_type") // "opportunity", "venture", "competitor"
+  entityId      String   @map("entity_id")
+  action        String   // "auto_score", "stage_complete", "task_create", "alert", "memo_generate"
+  status        String   // "success", "failed", "skipped"
+  details       Json?
+  triggeredAt   DateTime @default(now()) @map("triggered_at")
+
+  @@index([entityType, entityId])
+  @@map("automation_logs")
+}
+
+// ============================================================
+// COMPETITOR PRICE SNAPSHOTS (for price monitoring)
+// ============================================================
+
+model CompetitorPriceSnapshot {
+  id          String   @id @default(cuid())
+  competitorId String  @map("competitor_id")
+  price       Float?
+  currency    String   @default("EUR")
+  planName    String?  @map("plan_name")
+  fetchedAt   DateTime @default(now()) @map("fetched_at")
+  sourceUrl   String?  @map("source_url")
+
+  @@map("competitor_price_snapshots")
+}
+
+// ============================================================
+// AUTOMATION RULES (configurable triggers)
+// ============================================================
+
+model AutomationRule {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  name        String
+  trigger     String    // "evidence_added", "stage_changed", "score_dropped", "experiment_completed", "status_changed"
+  condition   Json?     // { field: "scoreA", operator: "lt", value: 50 }
+  action      String    // "recalculate_score", "create_task", "send_notification", "generate_memo", "fire_webhook"
+  payload     Json?     // action-specific config
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@map("automation_rules")
+}
