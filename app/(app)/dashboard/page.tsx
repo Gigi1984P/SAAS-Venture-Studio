@@ -24,6 +24,9 @@ import {
   Lightbulb,
 } from "lucide-react";
 import EvidenceFunnelWidget from "@/components/evidence-funnel-widget";
+import DashboardWidgets from "@/components/dashboard-widgets";
+import CsvImporter from "@/components/csv-importer";
+import NotificationCenter from "@/components/notification-center";
 
 // ─── Types ─────────────────────────────────────────────
 type PipelineStage = {
@@ -370,6 +373,14 @@ export default async function DashboardPage() {
 
       {/* ── Evidence Funnel Widget ───────────────────── */}
       <EvidenceFunnelWidget />
+
+      {/* ── New Dashboard Widgets ────────────────────── */}
+      <DashboardWidgets />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <CsvImporter />
+        <NotificationCenter />
+      </div>
 
       {/* ── Opportunity Radar Table ──────────────────── */}
       <div className="rounded-xl border bg-card shadow-sm overflow-hidden">

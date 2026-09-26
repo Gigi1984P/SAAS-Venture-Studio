@@ -2,6 +2,7 @@ import { SidebarNav } from "@/components/sidebar-nav";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import ClientProviders from "@/components/client-providers";
+import Header from "@/components/header";
 
 export default async function AppLayout({
   children,
@@ -16,11 +17,14 @@ export default async function AppLayout({
       {session?.user ? (
         <SidebarNav roleName={(session.user as any)?.role || undefined} />
       ) : null}
-      <main className={`flex-1 ${session?.user ? 'lg:ml-64' : ''}`}>
+      <div className={`flex-1 flex flex-col ${session?.user ? 'lg:ml-64' : ''}`}>
+        <Header />
         <ClientProviders>
-        {children}
-      </ClientProviders>
-      </main>
+          <main className="flex-1 p-4">
+            {children}
+          </main>
+        </ClientProviders>
+      </div>
     </div>
   );
 }
