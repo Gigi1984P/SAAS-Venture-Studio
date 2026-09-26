@@ -18,7 +18,7 @@ export default async function AppLayout({
         <SidebarNav roleName={(session.user as any)?.role || undefined} />
       ) : null}
       <div className={`flex-1 flex flex-col ${session?.user ? 'lg:ml-64' : ''}`}>
-        <Header />
+        {session?.user && <Header />}
         <ClientProviders>
           <main className="flex-1 p-4">
             {children}
