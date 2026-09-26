@@ -1871,3 +1871,76 @@ model TechStackConfig {
 
   @@map("tech_stack_configs")
 }
+
+// ============================================================
+// EMAIL NOTIFICATIONS
+// ============================================================
+
+model EmailNotification {
+  id            String    @id @default(cuid())
+  userId        String    @map("user_id")
+  opportunityId String?   @map("opportunity_id")
+  type          String    // "status_change", "task_review", "validation_complete", "budget_alert"
+  subject       String
+  body          String
+  sent          Boolean   @default(false)
+  sentAt        DateTime? @map("sent_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@map("email_notifications")
+}
+
+// ============================================================
+// FILE UPLOADS
+// ============================================================
+
+model FileUpload {
+  id            String    @id @default(cuid())
+  opportunityId String?   @map("opportunity_id")
+  entityType    String    @map("entity_type") // "competitor", "persona", "pitch_deck"
+  entityId      String?   @map("entity_id")
+  fileName      String    @map("file_name")
+  fileUrl       String    @map("file_url")
+  fileSize      Int?      @map("file_size")
+  mimeType      String?   @map("mime_type")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@map("file_uploads")
+}
+
+// ============================================================
+// GANTT TASKS
+// ============================================================
+
+model GanttTask {
+  id            String    @id @default(cuid())
+  opportunityId String    @map("opportunity_id")
+  name          String
+  startDate     DateTime  @map("start_date")
+  endDate       DateTime  @map("end_date")
+  progress      Float     @default(0)
+  dependencies  String[]  // IDs of dependent tasks
+  category      String    // "mvp", "gtm", "research", "development"
+  completed     Boolean   @default(false)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@map("gantt_tasks")
+}
+
+// ============================================================
+// EXTERNAL DATA SOURCES
+// ============================================================
+
+model ExternalDataSource {
+  id            String    @id @default(cuid())
+  opportunityId String    @map("opportunity_id")
+  sourceName    String    @map("source_name") // "crunchbase", "g2", "appsumo", "trustpilot"
+  sourceUrl     String    @map("source_url")
+  dataType      String    @map("data_type") // "competitor", "review", "pricing", "market"
+  rawData       Json?     @map("raw_data")
+  fetchedAt     DateTime  @default(now()) @map("fetched_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@map("external_data_sources")
+}

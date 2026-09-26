@@ -33,6 +33,12 @@ import PricingTestWidget from "@/components/pricing-test-widget";
 import PersonaBuilderWidget from "@/components/persona-builder-widget";
 import InterviewGuideWidget from "@/components/interview-guide-widget";
 import TechStackConfigWidget from "@/components/tech-stack-config-widget";
+import AutoScoreButton from "@/components/auto-score-button";
+import PdfExportButton from "@/components/pdf-export-button";
+import AiRecommendations from "@/components/ai-recommendations";
+import FileUploader from "@/components/file-uploader";
+import GanttChart from "@/components/gantt-chart";
+import ExternalDataSources from "@/components/external-data-sources";
 
 type Opp = {
   id: string;
@@ -436,6 +442,10 @@ export default function OpportunityDetailPage() {
             { id: "personas", label: "Personas" },
             { id: "interview", label: "Interview" },
             { id: "tech-config", label: "Stack" },
+            { id: "auto-score", label: "Auto Score" },
+            { id: "ai-rec", label: "AI Rec" },
+            { id: "gantt", label: "Gantt" },
+            { id: "external", label: "Extern" },
           ].map(tab => (
             <button
               key={tab.id}
@@ -1876,6 +1886,32 @@ function EvidenceTab({ opp, id, fetchOpp }: { opp: Opp; id: string; fetchOpp: ()
       {activeTab === "tech-config" && (
         <TechStackConfigWidget opportunityId={id} />
       )}
+
+      {/* AUTO SCORE */}
+      {activeTab === "auto-score" && (
+        <AutoScoreButton opportunityId={id} />
+      )}
+
+      {/* AI RECOMMENDATIONS */}
+      {activeTab === "ai-rec" && (
+        <AiRecommendations opportunity={opp} />
+      )}
+
+      {/* GANTT CHART */}
+      {activeTab === "gantt" && (
+        <GanttChart opportunityId={id} />
+      )}
+
+      {/* EXTERNAL DATA SOURCES */}
+      {activeTab === "external" && (
+        <ExternalDataSources opportunityId={id} />
+      )}
+
+      {/* PDF EXPORTS */}
+      <div className="mt-6 flex gap-2 border-t pt-4">
+        <PdfExportButton opportunityId={id} type="pitch" />
+        <PdfExportButton opportunityId={id} type="memo" />
+      </div>
     </div>
   );
 }
