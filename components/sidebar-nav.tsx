@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   LayoutDashboard,
   Radar as RadarIcon,
@@ -46,6 +47,12 @@ type NavItem = {
 export function SidebarNav({ roleName }: { roleName?: string }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { status } = useSession();
+
+  // WENN NICHT EINGELOGGT: NIX RENDERN
+  if (status === "unauthenticated" || status === "loading") {
+    return null;
+  }
 
   const navItems: NavItem[] = [
     { href: "/dashboard", label: "Dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
