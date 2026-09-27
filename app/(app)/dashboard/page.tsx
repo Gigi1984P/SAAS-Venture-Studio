@@ -29,6 +29,9 @@ import CsvImporter from "@/components/csv-importer";
 import NotificationCenter from "@/components/notification-center";
 import WeeklyDigestWidget from "@/components/weekly-digest-widget";
 import AutomationCenter from "@/components/automation-center";
+import AutoDedupeWidget from "@/components/auto-dedupe-widget";
+import VentureReadinessWidget from "@/components/venture-readiness-widget";
+import StagnationAlertsWidget from "@/components/stagnation-alerts-widget";
 
 // ─── Types ─────────────────────────────────────────────
 type PipelineStage = {
@@ -386,6 +389,11 @@ export default async function DashboardPage() {
 
       <WeeklyDigestWidget />
       <AutomationCenter />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <AutoDedupeWidget />
+        <VentureReadinessWidget />
+        <StagnationAlertsWidget />
+      </div>
 
       {/* ── Opportunity Radar Table ──────────────────── */}
       <div className="rounded-xl border bg-card shadow-sm overflow-hidden">

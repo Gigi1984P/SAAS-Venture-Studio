@@ -2051,3 +2051,149 @@ model AutomationRule {
 
   @@map("automation_rules")
 }
+
+// ============================================================
+// BATCH 2: 10 MORE AUTOMATION MODELS
+// ============================================================
+
+// 11. Auto-Deduplication: Similarity check suggestions
+model DeduplicationSuggestion {
+  id            String   @id @default(cuid())
+  opportunityId String   @map("opportunity_id")
+  duplicateId   String   @map("duplicate_id")
+  similarity    Float    // 0.0 - 1.0
+  matchedFields Json?    // Which fields matched
+  status        String   @default("pending") // pending, accepted, rejected
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("deduplication_suggestions")
+}
+
+// 12. Auto-Pain-Signal Discovery: Daily crawled pain signals
+model PainSignalDiscovery {
+  id            String   @id @default(cuid())
+  opportunityId String   @map("opportunity_id")
+  source        String   // e.g. "reddit", "twitter", "forum"
+  content       String   @db.Text
+  url           String?
+  sentiment     String   // "positive", "negative", "neutral"
+  relevance     Float    // 0.0 - 1.0
+  discoveredAt  DateTime @default(now()) @map("discovered_at")
+  reviewed      Boolean  @default(false)
+
+  @@map("pain_signal_discoveries")
+}
+
+// 13. Auto-Validation-Reminder: Stale stages
+model ValidationReminder {
+  id            String   @id @default(cuid())
+  opportunityId String   @map("opportunity_id")
+  stageId       String   @map("stage_id")
+  stageName     String   @map("stage_name")
+  daysOpen      Int      @map("days_open")
+  reminderSent  Boolean  @default(false) @map("reminder_sent")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("validation_reminders")
+}
+
+// 14. Auto-Budget-Alert: 80% threshold tracking
+model BudgetAlert {
+  id            String   @id @default(cuid())
+  opportunityId String   @map("opportunity_id")
+  budgetType    String   @map("budget_type") // "quick_scan", "deep_research"
+  spent         Float
+  limit         Float
+  percentUsed   Float    @map("percent_used")
+  status        String   @default("warning") // warning, critical, exceeded
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("budget_alerts")
+}
+
+// 15. Auto-Score-Trend: Track score stagnation
+model ScoreTrend {
+  id            String   @id @default(cuid())
+  opportunityId String   @map("opportunity_id")
+  scoreA        Int      @map("score_a")
+  scoreB        Int      @map("score_b")
+  previousScoreA Int?    @map("previous_score_a")
+  previousScoreB Int?     @map("previous_score_b")
+  changeA       Int?     @map("change_a")
+  changeB       Int?     @map("change_b")
+  daysSinceChange Int    @default(0) @map("days_since_change")
+  alertSent     Boolean  @default(false) @map("alert_sent")
+  recordedAt    DateTime @default(now()) @map("recorded_at")
+
+  @@map("score_trends")
+}
+
+// 16. Auto-MVP-Deadline: Overdue tracking
+model MvpDeadline {
+  id            String   @id @default(cuid())
+  opportunityId String   @map("opportunity_id")
+  taskId        String   @map("task_id")
+  taskName      String   @map("task_name")
+  dueDate       DateTime @map("due_date")
+  daysOverdue   Int      @default(0) @map("days_overdue")
+  escalationLevel Int    @default(0) @map("escalation_level") // 0, 1, 2
+  notifiedAt    DateTime? @map("notified_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("mvp_deadlines")
+}
+
+// 17. Auto-Pitch-Deck-Update: Version tracking
+model PitchDeckVersion {
+  id            String   @id @default(cuid())
+  opportunityId String   @map("opportunity_id")
+  version       Int
+  scoreA        Int      @map("score_a")
+  scoreB        Int      @map("score_b")
+  content       Json     // Full deck content snapshot
+  triggeredBy   String   @map("triggered_by") // "score_change", "manual"
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("pitch_deck_versions")
+}
+
+// 18. Auto-Weekly-Backup: Export tracking
+model WeeklyBackup {
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  fileName      String   @map("file_name")
+  recordCount   Int      @map("record_count")
+  fileSize      Int      @map("file_size") // bytes
+  sentAt        DateTime @default(now()) @map("sent_at")
+  status        String   @default("success") // success, failed
+
+  @@map("weekly_backups")
+}
+
+// 19. Auto-Competitor-Entry: New competitor alerts
+model CompetitorAlert {
+  id            String   @id @default(cuid())
+  opportunityId String   @map("opportunity_id")
+  competitorName String @map("competitor_name")
+  website       String?
+  source        String   // "crunchbase", "g2", "manual"
+  status        String   @default("pending") // pending, reviewed, dismissed
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("competitor_alerts")
+}
+
+// 20. Auto-Venture-Readiness: Readiness tracking
+model VentureReadiness {
+  id            String   @id @default(cuid())
+  opportunityId String   @map("opportunity_id")
+  scoreA        Int      @map("score_a")
+  scoreB        Int      @map("score_b")
+  meetsThreshold Boolean @default(false) @map("meets_threshold")
+  missingItems  Json?    @map("missing_items") // What's still needed
+  memoGenerated Boolean  @default(false) @map("memo_generated")
+  badgeShown    Boolean  @default(false) @map("badge_shown")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("venture_readiness")
+}
