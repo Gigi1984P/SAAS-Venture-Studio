@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import PageContainer from "@/components/page-container";
 
 type Template = {
   id: string;
@@ -61,27 +62,24 @@ export default function TemplatesPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-muted-foreground">Lade Templates...</div>
-      </div>
+      <PageContainer title="Venture Templates">
+        <div className="text-muted-foreground py-12">Lade Templates...</div>
+      </PageContainer>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Venture Templates</h1>
-          <p className="text-muted-foreground">Wiederverwendbare Starter für neue Ventures</p>
-        </div>
+    <PageContainer
+      title="Venture Templates"
+      actions={
         <Link
           href="/templates/new"
           className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
           + Neues Template
         </Link>
-      </div>
-
+      }
+    >
       {/* Filter */}
       <div className="flex gap-3">
         <input
@@ -186,6 +184,6 @@ export default function TemplatesPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }
