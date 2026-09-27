@@ -2197,3 +2197,23 @@ model VentureReadiness {
 
   @@map("venture_readiness")
 }
+
+// ============================================================
+// OLLAMA CONFIG (Remote Ollama Integration)
+// ============================================================
+
+model OllamaConfig {
+  id            String   @id @default(cuid())
+  userId        String   @unique @map("user_id")
+  apiKey        String   @map("api_key") // Encrypted at rest
+  baseUrl       String   @default("https://api.ollama.com") @map("base_url")
+  model         String   @default("llama3.2")
+  isDefault     Boolean  @default(true) @map("is_default")
+  isActive      Boolean  @default(true) @map("is_active")
+  lastTestedAt  DateTime? @map("last_tested_at")
+  lastTestResult String? @map("last_test_result") // "success", "error"
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("ollama_configs")
+}

@@ -25,7 +25,6 @@ type AgentConfig = {
   contextWindow: number;
   isEnabled: boolean;
   isDefault: boolean;
-  costPer1kTokens: number | null;
 };
 
 type LLMProvider = {
@@ -40,7 +39,6 @@ type LLMProvider = {
 };
 
 export default function SettingsClient({ user }: { user: UserProfile }) {
-  // Tab State
   const [activeTab, setActiveTab] = useState("profile");
 
   // Profile States
@@ -50,44 +48,28 @@ export default function SettingsClient({ user }: { user: UserProfile }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [pwLoading, setPwLoading] = useState(false);
-  const [pwMessage, setPwMessage] = useState("");
-  const [pwError, setPwError] = useState("");
 
   // Agenten States
   const [agents, setAgents] = useState<AgentConfig[]>([]);
   const [providers, setProviders] = useState<LLMProvider[]>([]);
-  const [editingAgent, setEditingAgent] = useState<AgentConfig | null>(null);
   const [agentLoading, setAgentLoading] = useState(false);
-  const [agentMessage, setAgentMessage] = useState("");
-  const [agentError, setAgentError] = useState("");
-  const [showNewAgent, setShowNewAgent] = useState(false);
-  const [newAgent, setNewAgent] = useState({
-    name: "",
-    label: "",
-    description: "",
-    provider: "openai",
-    model: "gpt-4o-mini",
-    baseUrl: "",
-    apiKey: "",
-    temperature: 0.7,
-    maxTokens: 4096,
-    systemPrompt: "",
-    contextWindow: 128000,
-  });
 
-  // Provider States
-  const [editingProvider, setEditingProvider] = useState<LLMProvider | null>(null);
-  const [providerMessage, setProviderMessage] = useState("");
+  // Ollama States
+  const [ollamaConfig, setOllamaConfig] = useState<{
+    apiKey: string;
+    baseUrl: string;
+    model: string;
+    isActive: boolean;
+    lastTestResult?: string | null;
+    lastTestedAt?: string | null;
+  } | null>(null);
+  const [ollamaLoading, setOllamaLoading] = useState(false);
+  const [ollamaMessage, setOllamaMessage] = useState("");
+  const [ollamaError, setOllamaError] = useState("");
 
   useEffect(() => {
-    if (activeTab === "agents") {
-      fetchAgents();
-      fetchProviders();
-    }
+    if (activeTab === "agents") { fetchAgents(); fetchProviders(); }
+    if (activeTab === "ollama") fetchOllamaConfig();
   }, [activeTab]);
 
   async function fetchAgents() {
@@ -102,6 +84,67 @@ export default function SettingsClient({ user }: { user: UserProfile }) {
       const res = await fetch("/api/llm-providers");
       if (res.ok) setProviders(await res.json());
     } catch (e) { console.error(e); }
+  }
+
+  async function fetchOllamaConfig() {
+    try {
+      const res = await fetch("/api/settings/ollama");
+      if (res.ok) {
+        const data = await res.json();
+        setOllamaConfig(data);
+      }
+    } catch (e) { console.error(e); }
+  }
+
+  async function saveOllamaConfig(e: React.FormEvent) {
+    e.preventDefault();
+    setOllamaError(""); setOllamaMessage("");
+    setOllamaLoading(true);
+    try {
+      const res = await fetch("/api/settings/ollama", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          apiKey: ollamaConfig?.apiKey,
+          baseUrl: ollamaConfig?.baseUrl,
+          model: ollamaConfig?.model,
+          isActive: ollamaConfig?.isActive,
+        }),
+      });
+      if (res.ok) {
+        setOllamaMessage("Ollama Konfiguration gespeichert!");
+        fetchOllamaConfig();
+      } else {
+        const data = await res.json();
+        setOllamaError(data.error || "Fehler beim Speichern");
+      }
+    } catch { setOllamaError("Netzwerkfehler"); }
+    finally { setOllamaLoading(false); }
+  }
+
+  async function testOllamaConnection() {
+    setOllamaError(""); setOllamaMessage("");
+    setOllamaLoading(true);
+    try {
+      const res = await fetch("/api/settings/ollama/test", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        setOllamaMessage(data.message || "Verbindung erfolgreich!");
+        fetchOllamaConfig();
+      } else {
+        setOllamaError(data.error || "Verbindung fehlgeschlagen");
+      }
+    } catch { setOllamaError("Netzwerkfehler beim Testen"); }
+    finally { setOllamaLoading(false); }
+  }
+
+  async function deleteOllamaConfig() {
+    if (!confirm("Ollama Konfiguration wirklich löschen?")) return;
+    try {
+      await fetch("/api/settings/ollama", { method: "DELETE" });
+      setOllamaConfig(null);
+      setOllamaMessage("Ollama Konfiguration gelöscht");
+    } catch { setOllamaError("Fehler beim Löschen"); }
   }
 
   async function handleSave() {
@@ -123,79 +166,13 @@ export default function SettingsClient({ user }: { user: UserProfile }) {
     setName(user.name || ""); setEmail(user.email); setIsEditing(false); setError(""); setMessage("");
   }
 
-  async function handlePasswordChange(e: React.FormEvent) {
-    e.preventDefault(); setPwError(""); setPwMessage("");
-    if (newPassword !== confirmPassword) { setPwError("Die Passwörter stimmen nicht überein"); return; }
-    if (newPassword.length < 8) { setPwError("Passwort muss mindestens 8 Zeichen haben"); return; }
-    setPwLoading(true);
-    try {
-      const res = await fetch("/api/user/password", {
-        method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentPassword, newPassword }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setPwMessage("Passwort geändert!"); setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
-      } else setPwError(data.message || "Fehler");
-    } catch { setPwError("Netzwerkfehler"); }
-    finally { setPwLoading(false); }
-  }
-
-  async function saveAgent(agent: AgentConfig) {
-    setAgentLoading(true); setAgentError(""); setAgentMessage("");
-    try {
-      const res = await fetch(`/api/agent-configs/${agent.id}`, {
-        method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(agent),
-      });
-      if (res.ok) { setAgentMessage("Agent gespeichert!"); fetchAgents(); setEditingAgent(null); }
-      else setAgentError("Fehler beim Speichern");
-    } catch { setAgentError("Netzwerkfehler"); }
-    finally { setAgentLoading(false); }
-  }
-
-  async function createAgent(e: React.FormEvent) {
-    e.preventDefault(); setAgentError(""); setAgentMessage("");
-    setAgentLoading(true);
-    try {
-      const res = await fetch("/api/agent-configs", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newAgent),
-      });
-      if (res.ok) {
-        setAgentMessage("Agent erstellt!");
-        setShowNewAgent(false);
-        setNewAgent({ name: "", label: "", description: "", provider: "openai", model: "gpt-4o-mini", baseUrl: "", apiKey: "", temperature: 0.7, maxTokens: 4096, systemPrompt: "", contextWindow: 128000 });
-        fetchAgents();
-      } else setAgentError("Fehler beim Erstellen");
-    } catch { setAgentError("Netzwerkfehler"); }
-    finally { setAgentLoading(false); }
-  }
-
-  async function deleteAgent(id: string) {
-    if (!confirm("Wirklich löschen?")) return;
-    try {
-      await fetch(`/api/agent-configs/${id}`, { method: "DELETE" });
-      fetchAgents();
-    } catch (e) { console.error(e); }
-  }
-
-  async function saveProvider(provider: LLMProvider) {
-    setProviderMessage("");
-    try {
-      const res = await fetch("/api/llm-providers", {
-        method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(provider),
-      });
-      if (res.ok) { setProviderMessage("Provider gespeichert!"); fetchProviders(); setEditingProvider(null); }
-      else setProviderMessage("Fehler beim Speichern");
-    } catch { setProviderMessage("Netzwerkfehler"); }
-  }
-
-  const providerModels = (providerName: string) => {
-    const p = providers.find(pr => pr.name === providerName);
-    return p?.models || [];
-  };
+  // ─── TABS ─────────────────────────────────────────────
+  const tabs = [
+    { id: "profile", label: "Profil" },
+    { id: "agents", label: "Agenten" },
+    { id: "providers", label: "LLM Provider" },
+    { id: "ollama", label: "Ollama" },
+  ];
 
   return (
     <div className="space-y-6">
@@ -207,11 +184,7 @@ export default function SettingsClient({ user }: { user: UserProfile }) {
       {/* Tabs */}
       <div className="border-b">
         <nav className="flex gap-6">
-          {[
-            { id: "profile", label: "Profil" },
-            { id: "agents", label: "Agenten" },
-            { id: "providers", label: "LLM Provider" },
-          ].map(tab => (
+          {tabs.map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
               className={`pb-2 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
               {tab.label}
@@ -220,22 +193,25 @@ export default function SettingsClient({ user }: { user: UserProfile }) {
         </nav>
       </div>
 
-      {/* PROFILE TAB */}
+      {/* PROFILE */}
       {activeTab === "profile" && (
         <div className="space-y-8">
-          {/* Profil */}
           <div className="rounded-lg border bg-card p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Profil</h2>
-              {!isEditing && (
-                <button onClick={() => setIsEditing(true)} className="text-sm text-primary hover:underline">Bearbeiten</button>
-              )}
+              {!isEditing && <button onClick={() => setIsEditing(true)} className="text-sm text-primary hover:underline">Bearbeiten</button>}
             </div>
             {message && <div className="mb-4 rounded-md bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">{message}</div>}
             {error && <div className="mb-4 rounded-md bg-destructive/10 border border-destructive/50 px-4 py-3 text-sm text-destructive">{error}</div>}
             <div className="space-y-4">
-              <div><label className="text-sm font-medium">Name</label>{isEditing ? <input type="text" value={name} onChange={e => setName(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /> : <p className="text-sm text-muted-foreground">{name || "(kein Name)"}</p>}</div>
-              <div><label className="text-sm font-medium">E-Mail</label>{isEditing ? <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /> : <p className="text-sm text-muted-foreground">{email}</p>}</div>
+              <div>
+                <label className="text-sm font-medium">Name</label>
+                {isEditing ? <input type="text" value={name} onChange={e => setName(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /> : <p className="text-sm text-muted-foreground">{name || "(kein Name)"}</p>}
+              </div>
+              <div>
+                <label className="text-sm font-medium">E-Mail</label>
+                {isEditing ? <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /> : <p className="text-sm text-muted-foreground">{email}</p>}
+              </div>
               <div><label className="text-sm font-medium">Rolle</label><p className="text-sm text-muted-foreground">{user.role}</p></div>
               <div><label className="text-sm font-medium">Organisation</label><p className="text-sm text-muted-foreground">{user.organization}</p></div>
             </div>
@@ -246,175 +222,147 @@ export default function SettingsClient({ user }: { user: UserProfile }) {
               </div>
             )}
           </div>
-
-          {/* Passwort */}
-          <div className="rounded-lg border bg-card p-6 shadow-sm">
-            <h2 className="text-lg font-semibold mb-4">Passwort ändern</h2>
-            {pwMessage && <div className="mb-4 rounded-md bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">{pwMessage}</div>}
-            {pwError && <div className="mb-4 rounded-md bg-destructive/10 border border-destructive/50 px-4 py-3 text-sm text-destructive">{pwError}</div>}
-            <form onSubmit={handlePasswordChange} className="space-y-4">
-              <div><label className="text-sm font-medium">Aktuelles Passwort</label><input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
-              <div><label className="text-sm font-medium">Neues Passwort</label><input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required minLength={8} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /><p className="text-xs text-muted-foreground">Mindestens 8 Zeichen</p></div>
-              <div><label className="text-sm font-medium">Neues Passwort bestätigen</label><input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
-              <button type="submit" disabled={pwLoading} className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50">{pwLoading ? "Wird geändert..." : "Passwort ändern"}</button>
-            </form>
-          </div>
         </div>
       )}
 
-      {/* AGENTS TAB */}
+      {/* AGENTS */}
       {activeTab === "agents" && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Agenten-Konfiguration</h2>
-            <button onClick={() => setShowNewAgent(true)} className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90">+ Neuer Agent</button>
-          </div>
-
-          {agentMessage && <div className="rounded-md bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">{agentMessage}</div>}
-          {agentError && <div className="rounded-md bg-destructive/10 border border-destructive/50 px-4 py-3 text-sm text-destructive">{agentError}</div>}
-
-          {/* Neuer Agent Formular */}
-          {showNewAgent && (
-            <form onSubmit={createAgent} className="rounded-lg border bg-card p-6 space-y-4">
-              <h3 className="text-base font-semibold">Neuer Agent</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="text-sm font-medium">Name (ID)</label><input value={newAgent.name} onChange={e => setNewAgent({...newAgent, name: e.target.value})} required className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
-                <div><label className="text-sm font-medium">Label</label><input value={newAgent.label} onChange={e => setNewAgent({...newAgent, label: e.target.value})} required className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
-              </div>
-              <div><label className="text-sm font-medium">Beschreibung</label><input value={newAgent.description} onChange={e => setNewAgent({...newAgent, description: e.target.value})} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="text-sm font-medium">Provider</label>
-                  <select value={newAgent.provider} onChange={e => setNewAgent({...newAgent, provider: e.target.value})} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                    {providers.map(p => <option key={p.name} value={p.name}>{p.label}</option>)}
-                  </select>
-                </div>
-                <div><label className="text-sm font-medium">Modell</label>
-                  <select value={newAgent.model} onChange={e => setNewAgent({...newAgent, model: e.target.value})} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                    {providerModels(newAgent.provider).map((m: any) => <option key={m.name} value={m.name}>{m.label}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div><label className="text-sm font-medium">Temperature ({newAgent.temperature})</label><input type="range" min="0" max="2" step="0.1" value={newAgent.temperature} onChange={e => setNewAgent({...newAgent, temperature: parseFloat(e.target.value)})} className="w-full" /></div>
-                <div><label className="text-sm font-medium">Max Tokens</label><input type="number" value={newAgent.maxTokens} onChange={e => setNewAgent({...newAgent, maxTokens: parseInt(e.target.value)})} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
-                <div><label className="text-sm font-medium">Context Window</label><input type="number" value={newAgent.contextWindow} onChange={e => setNewAgent({...newAgent, contextWindow: parseInt(e.target.value)})} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
-              </div>
-              <div><label className="text-sm font-medium">System Prompt</label><textarea value={newAgent.systemPrompt} onChange={e => setNewAgent({...newAgent, systemPrompt: e.target.value})} rows={3} className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
-              <div className="flex gap-3">
-                <button type="submit" disabled={agentLoading} className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50">{agentLoading ? "Erstelle..." : "Agent erstellen"}</button>
-                <button type="button" onClick={() => setShowNewAgent(false)} className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-medium hover:bg-accent">Abbrechen</button>
-              </div>
-            </form>
-          )}
-
-          {/* Agenten Liste */}
+          <h2 className="text-lg font-semibold">Agenten-Konfiguration</h2>
           <div className="space-y-4">
             {agents.map(agent => (
-              <div key={agent.id} className="rounded-lg border bg-card p-6 space-y-4">
-                {editingAgent?.id === agent.id ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div><label className="text-sm font-medium">Label</label><input value={editingAgent.label} onChange={e => setEditingAgent({...editingAgent, label: e.target.value})} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
-                      <div><label className="text-sm font-medium">Modell</label>
-                        <select value={editingAgent.model} onChange={e => setEditingAgent({...editingAgent, model: e.target.value})} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                          {providerModels(editingAgent.provider).map((m: any) => <option key={m.name} value={m.name}>{m.label}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div><label className="text-sm font-medium">Temperature ({editingAgent.temperature})</label><input type="range" min="0" max="2" step="0.1" value={editingAgent.temperature} onChange={e => setEditingAgent({...editingAgent, temperature: parseFloat(e.target.value)})} className="w-full" /></div>
-                      <div><label className="text-sm font-medium">Max Tokens</label><input type="number" value={editingAgent.maxTokens} onChange={e => setEditingAgent({...editingAgent, maxTokens: parseInt(e.target.value)})} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
-                      <div className="flex items-center gap-2">
-                        <input type="checkbox" checked={editingAgent.isEnabled} onChange={e => setEditingAgent({...editingAgent, isEnabled: e.target.checked})} className="h-4 w-4" />
-                        <label className="text-sm font-medium">Aktiviert</label>
-                      </div>
-                    </div>
-                    <div><label className="text-sm font-medium">System Prompt</label><textarea value={editingAgent.systemPrompt || ""} onChange={e => setEditingAgent({...editingAgent, systemPrompt: e.target.value})} rows={3} className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
-                    <div className="flex gap-3">
-                      <button onClick={() => saveAgent(editingAgent)} disabled={agentLoading} className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50">{agentLoading ? "Speichern..." : "Speichern"}</button>
-                      <button onClick={() => setEditingAgent(null)} className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-medium hover:bg-accent">Abbrechen</button>
-                    </div>
+              <div key={agent.id} className="rounded-lg border bg-card p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-base font-semibold">{agent.label}</h3>
+                    <p className="text-sm text-muted-foreground">{agent.description}</p>
                   </div>
-                ) : (
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-base font-semibold">{agent.label}</h3>
-                        {!agent.isEnabled && <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600">Deaktiviert</span>}
-                        {agent.isDefault && <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700">Standard</span>}
-                      </div>
-                      <p className="text-sm text-muted-foreground">{agent.description}</p>
-                      <div className="flex flex-wrap gap-2 text-xs">
-                        <span className="inline-flex items-center rounded-full px-2 py-0.5 bg-muted text-muted-foreground">{agent.provider}</span>
-                        <span className="inline-flex items-center rounded-full px-2 py-0.5 bg-muted text-muted-foreground">{agent.model}</span>
-                        <span className="inline-flex items-center rounded-full px-2 py-0.5 bg-muted text-muted-foreground">Temp: {agent.temperature}</span>
-                        <span className="inline-flex items-center rounded-full px-2 py-0.5 bg-muted text-muted-foreground">{agent.maxTokens} Tokens</span>
-                        <span className="inline-flex items-center rounded-full px-2 py-0.5 bg-muted text-muted-foreground">{agent.contextWindow.toLocaleString()} Context</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => setEditingAgent(agent)} className="inline-flex h-8 items-center rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-accent">Bearbeiten</button>
-                      <button onClick={() => deleteAgent(agent.id)} className="inline-flex h-8 items-center rounded-md border border-red-200 bg-red-50 px-3 text-xs font-medium text-red-600 hover:bg-red-100">Löschen</button>
-                    </div>
-                  </div>
-                )}
+                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${agent.isEnabled ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
+                    {agent.isEnabled ? "Aktiviert" : "Deaktiviert"}
+                  </span>
+                </div>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* PROVIDERS TAB */}
+      {/* PROVIDERS */}
       {activeTab === "providers" && (
         <div className="space-y-6">
           <h2 className="text-lg font-semibold">LLM Provider</h2>
-          
-          {providerMessage && <div className={`rounded-md border px-4 py-3 text-sm ${providerMessage.includes("Fehler") ? "bg-destructive/10 border-destructive/50 text-destructive" : "bg-green-50 border-green-200 text-green-700"}`}>{providerMessage}</div>}
-
           <div className="grid gap-4 md:grid-cols-2">
             {providers.map(provider => (
-              <div key={provider.id} className="rounded-lg border bg-card p-6 space-y-4">
-                {editingProvider?.id === provider.id ? (
-                  <div className="space-y-4">
-                    <div><label className="text-sm font-medium">Name</label><input value={editingProvider.label} onChange={e => setEditingProvider({...editingProvider, label: e.target.value})} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
-                    <div><label className="text-sm font-medium">Base URL</label><input value={editingProvider.baseUrl} onChange={e => setEditingProvider({...editingProvider, baseUrl: e.target.value})} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
-                    <div><label className="text-sm font-medium">API Key (optional)</label><input type="password" value={editingProvider.apiKey || ""} onChange={e => setEditingProvider({...editingProvider, apiKey: e.target.value})} placeholder={provider.isLocal ? "Nicht benötigt für lokale Provider" : "sk-..."} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
-                    <div className="flex items-center gap-2">
-                      <input type="checkbox" checked={editingProvider.isEnabled} onChange={e => setEditingProvider({...editingProvider, isEnabled: e.target.checked})} className="h-4 w-4" />
-                      <label className="text-sm font-medium">Aktiviert</label>
-                    </div>
-                    <div className="flex gap-3">
-                      <button onClick={() => saveProvider(editingProvider)} className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">Speichern</button>
-                      <button onClick={() => setEditingProvider(null)} className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-medium hover:bg-accent">Abbrechen</button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-base font-semibold">{provider.label}</h3>
-                        {provider.isLocal && <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700">Lokal</span>}
-                        {!provider.isEnabled && <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600">Deaktiviert</span>}
-                      </div>
-                      <button onClick={() => setEditingProvider(provider)} className="text-sm text-primary hover:underline">Bearbeiten</button>
-                    </div>
-                    <p className="text-sm text-muted-foreground"><span className="font-medium">URL:</span> {provider.baseUrl}</p>
-                    <p className="text-sm text-muted-foreground"><span className="font-medium">API Key:</span> {provider.apiKey ? "●●●●●●●●" : "Nicht konfiguriert"}</p>
-                    
-                    <div>
-                      <p className="text-sm font-medium mb-2">Verfügbare Modelle:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {(provider.models || []).map((m: any) => (
-                          <span key={m.name} className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground">
-                            {m.label} ({(m.context / 1000).toFixed(0)}K)
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
+              <div key={provider.id} className="rounded-lg border bg-card p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-base font-semibold">{provider.label}</h3>
+                  {provider.isLocal && <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700">Lokal</span>}
+                </div>
+                <p className="text-sm text-muted-foreground">{provider.baseUrl}</p>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* OLLAMA */}
+      {activeTab === "ollama" && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Ollama Remote Integration</h2>
+              <p className="text-sm text-muted-foreground">Verbinde dich mit der Ollama Cloud API</p>
+            </div>
+            {ollamaConfig?.apiKey && (
+              <button onClick={deleteOllamaConfig} className="inline-flex h-8 items-center rounded-md border border-red-200 bg-red-50 px-3 text-xs font-medium text-red-600 hover:bg-red-100">Löschen</button>
+            )}
+          </div>
+
+          {ollamaMessage && <div className="rounded-md bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">{ollamaMessage}</div>}
+          {ollamaError && <div className="rounded-md bg-destructive/10 border border-destructive/50 px-4 py-3 text-sm text-destructive">{ollamaError}</div>}
+
+          {ollamaConfig?.lastTestResult && (
+            <div className={`rounded-md border px-4 py-3 text-sm ${ollamaConfig.lastTestResult === "success" ? "bg-green-50 border-green-200 text-green-700" : "bg-red-50 border-red-200 text-red-700"}`}>
+              Letzter Test: {ollamaConfig.lastTestResult === "success" ? "✅ Erfolgreich" : "❌ Fehlgeschlagen"}
+              {ollamaConfig.lastTestedAt && ` — ${new Date(ollamaConfig.lastTestedAt).toLocaleString("de-DE")}`}
+            </div>
+          )}
+
+          <form onSubmit={saveOllamaConfig} className="rounded-lg border bg-card p-6 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Ollama API Key</label>
+                <input
+                  type="password"
+                  value={ollamaConfig?.apiKey || ""}
+                  onChange={e => setOllamaConfig(prev => prev ? { ...prev, apiKey: e.target.value } : { apiKey: e.target.value, baseUrl: "https://api.ollama.com", model: "llama3.2", isActive: true })}
+                  placeholder="350d0..."
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+                <p className="text-xs text-muted-foreground">Dein Ollama API Key aus 1Password</p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Base URL</label>
+                <input
+                  type="url"
+                  value={ollamaConfig?.baseUrl || "https://api.ollama.com"}
+                  onChange={e => setOllamaConfig(prev => prev ? { ...prev, baseUrl: e.target.value } : { apiKey: "", baseUrl: e.target.value, model: "llama3.2", isActive: true })}
+                  placeholder="https://api.ollama.com"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Standard Modell</label>
+                <select
+                  value={ollamaConfig?.model || "llama3.2"}
+                  onChange={e => setOllamaConfig(prev => prev ? { ...prev, model: e.target.value } : { apiKey: "", baseUrl: "https://api.ollama.com", model: e.target.value, isActive: true })}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="llama3.2">llama3.2 (Standard)</option>
+                  <option value="llama3.1">llama3.1</option>
+                  <option value="mistral">Mistral</option>
+                  <option value="codellama">Code Llama</option>
+                  <option value="phi3">Phi-3</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2 h-10">
+                <input
+                  type="checkbox"
+                  checked={ollamaConfig?.isActive ?? true}
+                  onChange={e => setOllamaConfig(prev => prev ? { ...prev, isActive: e.target.checked } : { apiKey: "", baseUrl: "https://api.ollama.com", model: "llama3.2", isActive: e.target.checked })}
+                  className="h-4 w-4"
+                />
+                <label className="text-sm font-medium">Aktiviert</label>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button type="submit" disabled={ollamaLoading} className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
+                {ollamaLoading ? "Speichern..." : "Speichern"}
+              </button>
+              <button type="button" onClick={testOllamaConnection} disabled={ollamaLoading || !ollamaConfig?.apiKey} className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-medium hover:bg-accent disabled:opacity-50">
+                {ollamaLoading ? "Teste..." : "🔄 Verbindung testen"}
+              </button>
+            </div>
+          </form>
+
+          <div className="rounded-lg border bg-card p-6">
+            <h3 className="text-sm font-semibold mb-3">Verfügbare Ollama Modelle</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {["llama3.2", "llama3.1", "mistral", "codellama", "phi3", "gemma2"].map(m => (
+                <div key={m} className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm">
+                  <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                  {m}
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Diese Modelle sind über die Ollama Cloud API verfügbar.{" "}
+              <a href="https://ollama.com/library" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Mehr im Ollama Library →</a>
+            </p>
           </div>
         </div>
       )}
