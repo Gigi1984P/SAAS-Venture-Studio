@@ -1,23 +1,16 @@
 import { SidebarNav } from "@/components/sidebar-nav";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
 import Header from "@/components/header";
 
-export default async function AppLayout({
+export default function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
-
   return (
     <div className="flex min-h-screen">
-      {/* Sidebar nur wenn eingeloggt */}
-      {session?.user ? (
-        <SidebarNav roleName={(session.user as any)?.role || undefined} />
-      ) : null}
-      <div className={`flex-1 flex flex-col ${session?.user ? 'lg:ml-64' : ''}`}>
-        {session?.user && <Header />}
+      <SidebarNav />
+      <div className="flex-1 flex flex-col">
+        <Header />
         <main className="flex-1 p-6 max-w-7xl w-full">
           {children}
         </main>
