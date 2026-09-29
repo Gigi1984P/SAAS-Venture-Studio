@@ -12,7 +12,6 @@ function LoginFormInner() {
   const [callbackUrl, setCallbackUrl] = useState("/dashboard");
 
   useEffect(() => {
-    // Safe client-side URL parsing
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const cb = params.get("callbackUrl");
@@ -28,19 +27,20 @@ function LoginFormInner() {
     const result = await signIn("credentials", {
       email,
       password,
-      redirect: true,
+      redirect: false,
       callbackUrl,
     });
 
-    // redirect: true → NextAuth handled redirect, this won't execute
-    // But if redirect fails:
-    if (result?.error) {
+    if (result?.ok) {
+      // Hard redirect — verlässlicher als router.push
+      window.location.href = callbackUrl;
+    } else if (result?.error) {
       const errorMap: Record<string, string> = {
-        "CredentialsSignin": "Ungültige E-Mail oder Passwort",
-        "SessionRequired": "Sitzung erforderlich. Bitte erneut anmelden.",
-        "Default": "Ein Fehler ist aufgetreten. Bitte versuche es erneut.",
+        CredentialsSignin: "Ungültige E-Mail oder Passwort",
+        SessionRequired: "Sitzung erforderlich",
+        Default: "Ein Fehler ist aufgetreten",
       };
-      setError(errorMap[result.error] || `Auth-Fehler: ${result.error}`);
+      setError(errorMap[result.error] || `Fehler: ${result.error}`);
       setLoading(false);
     }
   }
@@ -49,68 +49,53 @@ function LoginFormInner() {
     <div className="w-full max-w-md space-y-6 rounded-lg border bg-card p-8 shadow-sm">
       <div className="space-y-2 text-center">
         <h1 className="text-2xl font-bold tracking-tight">Anmelden</h1>
-        <p className="text-sm text-muted-foreground">
-          Willkommen beim SAAS Venture Studio
-        </p>
+        <p className="text-sm text-muted-foreground">Willkommen beim SAAS Venture Studio</p>
       </div>
 
       {error && (
-        <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
-        </div>
+        <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <label htmlFor="email" className="text-sm font-medium">
-            E-Mail
-          </label>
+          <label htmlFor="email" className="text-sm font-medium">E-Mail</label>
           <input
             id="email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             placeholder="name@unternehmen.de"
           />
         </div>
-
         <div className="space-y-2">
-          <label htmlFor="password" className="text-sm font-medium">
-            Passwort
-          </label>
+          <label htmlFor="password" className="text-sm font-medium">Passwort</label>
           <input
             id="password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             placeholder="••••••••"
           />
         </div>
-
         <button
           type="submit"
           disabled={loading}
-          className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+          className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
           {loading ? "Wird angemeldet..." : "Anmelden"}
         </button>
-
         <div className="text-right">
-          <Link href="/auth/forgot-password" className="text-xs text-muted-foreground hover:text-primary">
-            Passwort vergessen?
-          </Link>
+          <Link href="/auth/forgot-password" className="text-xs text-muted-foreground hover:text-primary">Passwort vergessen?</Link>
         </div>
       </form>
 
       <p className="text-center text-sm text-muted-foreground">
         Noch kein Konto?{" "}
-        <Link href="/auth/register" className="font-medium text-primary hover:underline">
-          Registrieren
-        </Link>
+        <Link href="/auth/register" className="font-medium text-primary hover:underline">Registrieren</Link>
       </p>
     </div>
   );
