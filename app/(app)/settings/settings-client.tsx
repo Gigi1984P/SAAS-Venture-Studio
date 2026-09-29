@@ -55,6 +55,10 @@ export default function SettingsClient({ user }: { user: UserProfile }) {
   const [agentLoading, setAgentLoading] = useState(false);
 
   // Ollama States
+  const [ollamaModels, setOllamaModels] = useState<any[]>([]);
+  const [ollamaModelsLoading, setOllamaModelsLoading] = useState(false);
+
+  // Ollama States
   const [ollamaConfig, setOllamaConfig] = useState<{
     apiKey: string;
     baseUrl: string;
@@ -69,7 +73,7 @@ export default function SettingsClient({ user }: { user: UserProfile }) {
 
   useEffect(() => {
     if (activeTab === "agents") { fetchAgents(); fetchProviders(); }
-    if (activeTab === "ollama") fetchOllamaConfig();
+    if (activeTab === "ollama") { fetchOllamaConfig(); fetchOllamaModels(); }
   }, [activeTab]);
 
   async function fetchAgents() {
@@ -84,6 +88,22 @@ export default function SettingsClient({ user }: { user: UserProfile }) {
       const res = await fetch("/api/llm-providers");
       if (res.ok) setProviders(await res.json());
     } catch (e) { console.error(e); }
+  }
+
+  async function fetchOllamaModels() {
+    setOllamaModelsLoading(true);
+    try {
+      const res = await fetch("/api/settings/ollama/models");
+      if (res.ok) {
+        const data = await res.json();
+        setOllamaModels(data.models || []);
+      }
+    } catch (e) {
+      console.error(e);
+      setOllamaModels([]);
+    } finally {
+      setOllamaModelsLoading(false);
+    }
   }
 
   async function fetchOllamaConfig() {
@@ -136,6 +156,66 @@ export default function SettingsClient({ user }: { user: UserProfile }) {
       }
     } catch { setOllamaError("Netzwerkfehler beim Testen"); }
     finally { setOllamaLoading(false); }
+  }
+
+  async function assignOllamaModelToAgent(agentId: string, modelName: string) {
+    setAgentMessage("");
+    try {
+      const agent = agents.find(a => a.id === agentId);
+      if (!agent) return;
+      const res = await fetch(`/api/agent-configs/${agentId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          label: agent.label,
+          description: agent.description,
+          provider: "ollama",
+          model: modelName,
+          baseUrl: ollamaConfig?.baseUrl,
+          apiKey: ollamaConfig?.apiKey,
+          temperature: agent.temperature,
+          maxTokens: agent.maxTokens,
+          systemPrompt: agent.systemPrompt,
+          contextWindow: agent.contextWindow,
+          isEnabled: agent.isEnabled,
+          isDefault: agent.isDefault,
+        }),
+      });
+      if (res.ok) {
+        setAgentMessage(`Agent ${agent.label} auf Ollama ${modelName} gesetzt!`);
+        fetchAgents();
+      }
+    } catch (e) { console.error(e); }
+  }
+
+  async function resetAgentToDefault(agentId: string) {
+    setAgentMessage("");
+    try {
+      const agent = agents.find(a => a.id === agentId);
+      if (!agent) return;
+      const res = await fetch(`/api/agent-configs/${agentId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          label: agent.label,
+          description: agent.description,
+          provider: "openai",
+          model: "gpt-4",
+          baseUrl: null,
+          apiKey: null,
+          temperature: agent.temperature,
+          maxTokens: agent.maxTokens,
+          systemPrompt: agent.systemPrompt,
+          contextWindow: agent.contextWindow,
+          isEnabled: agent.isEnabled,
+          isDefault: agent.isDefault,
+        }),
+      });
+      if (res.ok) {
+        setAgentMessage(`Agent ${agent.label} auf Standard zurückgesetzt!`);
+        fetchAgents();
+      }
+    } catch (e) { console.error(e); }
   }
 
   async function deleteOllamaConfig() {
@@ -350,19 +430,73 @@ export default function SettingsClient({ user }: { user: UserProfile }) {
           </form>
 
           <div className="rounded-lg border bg-card p-6">
-            <h3 className="text-sm font-semibold mb-3">Verfügbare Ollama Modelle</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {["llama3.2", "llama3.1", "mistral", "codellama", "phi3", "gemma2"].map(m => (
-                <div key={m} className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm">
-                  <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                  {m}
-                </div>
-              ))}
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold">Verfügbare Ollama Modelle</h3>
+              <button onClick={fetchOllamaModels} disabled={ollamaModelsLoading} className="text-xs text-primary hover:underline">
+                {ollamaModelsLoading ? "Lade..." : "Aktualisieren"}
+              </button>
             </div>
-            <p className="text-xs text-muted-foreground mt-3">
-              Diese Modelle sind über die Ollama Cloud API verfügbar.{" "}
-              <a href="https://ollama.com/library" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Mehr im Ollama Library →</a>
-            </p>
+            {ollamaModels.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {ollamaModelsLoading ? "Lade Modelle..." : "Keine Modelle geladen. API Key eintragen und 'Verbindung testen' klicken."}
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {ollamaModels.map((m: any) => (
+                  <div key={m.name} className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm">
+                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                    <span className="font-medium">{m.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Agent LLM Zuordnung */}
+          <div className="rounded-lg border bg-card">
+            <div className="px-6 py-4 border-b">
+              <h3 className="text-sm font-semibold">Agent LLM Zuordnung</h3>
+              <p className="text-xs text-muted-foreground">Wähle für jeden Agent ein Ollama Modell</p>
+            </div>
+            <div className="divide-y">
+              {agents.length === 0 ? (
+                <div className="px-6 py-8 text-center text-muted-foreground">Keine Agents konfiguriert</div>
+              ) : (
+                agents.map((agent: AgentConfig) => (
+                  <div key={agent.id} className="px-6 py-4 flex items-center justify-between hover:bg-muted/30">
+                    <div className="space-y-1">
+                      <div className="text-sm font-medium">{agent.label}</div>
+                      <div className="text-xs text-muted-foreground">Aktuell: {agent.provider} · {agent.model}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={agent.provider === "ollama" ? agent.model : ""}
+                        onChange={e => {
+                          if (e.target.value) {
+                            assignOllamaModelToAgent(agent.id, e.target.value);
+                          }
+                        }}
+                        disabled={!ollamaConfig?.apiKey || ollamaModels.length === 0}
+                        className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                      >
+                        <option value="">Ollama Modell wählen...</option>
+                        {ollamaModels.map((m: any) => (
+                          <option key={m.name} value={m.name}>{m.name}</option>
+                        ))}
+                      </select>
+                      {agent.provider === "ollama" && (
+                        <button
+                          onClick={() => resetAgentToDefault(agent.id)}
+                          className="h-9 px-3 rounded-md border border-input bg-background text-xs font-medium hover:bg-accent"
+                        >
+                          Zurück zu Standard
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}
