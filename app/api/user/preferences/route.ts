@@ -1,52 +1,56 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+
+const DEFAULT_PREFS = { darkMode: "system", sidebarCollapsed: false, locale: "de-DE" };
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const prefs = await prisma.userPreference.findUnique({
-      where: { userId: session.user.id },
+    // Solo-Betrieb: Keine Auth-Prüfung nötig
+    // Erste Preference zurückgeben oder Default
+    const prefs = await prisma.userPreference.findFirst({
+      orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json(prefs || { darkMode: "system", sidebarCollapsed: false, locale: "de-DE" });
+    return NextResponse.json(prefs || DEFAULT_PREFS);
   } catch (error) {
     console.error("User preferences GET error:", error);
-    return NextResponse.json({ darkMode: "system", sidebarCollapsed: false, locale: "de-DE" }, { status: 200 });
+    return NextResponse.json(DEFAULT_PREFS);
   }
 }
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const body = await req.json();
+
+    // Upsert: Erste Preference aktualisieren oder neue erstellen
+    const existing = await prisma.userPreference.findFirst({
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (existing) {
+      const prefs = await prisma.userPreference.update({
+        where: { id: existing.id },
+        data: {
+          darkMode: body.darkMode ?? existing.darkMode,
+          sidebarCollapsed: body.sidebarCollapsed ?? existing.sidebarCollapsed,
+          locale: body.locale ?? existing.locale,
+        },
+      });
+      return NextResponse.json(prefs);
     }
 
-    const body = await req.json();
-    const prefs = await prisma.userPreference.upsert({
-      where: { userId: session.user.id },
-      create: {
-        userId: session.user.id,
-        darkMode: body.darkMode,
+    const prefs = await prisma.userPreference.create({
+      data: {
+        userId: "solo-user",
+        darkMode: body.darkMode ?? "system",
         sidebarCollapsed: body.sidebarCollapsed ?? false,
-        locale: body.locale,
-      },
-      update: {
-        darkMode: body.darkMode,
-        sidebarCollapsed: body.sidebarCollapsed,
-        locale: body.locale,
+        locale: body.locale ?? "de-DE",
       },
     });
 
     return NextResponse.json(prefs);
   } catch (error) {
     console.error("User preferences POST error:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return NextResponse.json(DEFAULT_PREFS);
   }
 }
