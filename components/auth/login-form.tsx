@@ -1,18 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-export default function LoginForm() {
+function LoginFormInner() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const [callbackUrl, setCallbackUrl] = useState("/dashboard");
+
+  useEffect(() => {
+    // Safe client-side URL parsing
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const cb = params.get("callbackUrl");
+      if (cb) setCallbackUrl(cb);
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -22,12 +28,13 @@ export default function LoginForm() {
     const result = await signIn("credentials", {
       email,
       password,
-      redirect: false,
+      redirect: true,
       callbackUrl,
     });
 
+    // redirect: true → NextAuth handled redirect, this won't execute
+    // But if redirect fails:
     if (result?.error) {
-      // NextAuth gibt verschiedene Fehlercodes zurück
       const errorMap: Record<string, string> = {
         "CredentialsSignin": "Ungültige E-Mail oder Passwort",
         "SessionRequired": "Sitzung erforderlich. Bitte erneut anmelden.",
@@ -35,9 +42,6 @@ export default function LoginForm() {
       };
       setError(errorMap[result.error] || `Auth-Fehler: ${result.error}`);
       setLoading(false);
-    } else {
-      router.push(callbackUrl);
-      router.refresh();
     }
   }
 
@@ -109,5 +113,20 @@ export default function LoginForm() {
         </Link>
       </p>
     </div>
+  );
+}
+
+export default function LoginForm() {
+  return (
+    <Suspense fallback={
+      <div className="w-full max-w-md rounded-lg border bg-card p-8 shadow-sm">
+        <div className="space-y-2 text-center">
+          <div className="h-8 w-32 mx-auto bg-muted rounded animate-pulse"></div>
+          <div className="h-4 w-48 mx-auto bg-muted rounded animate-pulse"></div>
+        </div>
+      </div>
+    }>
+      <LoginFormInner />
+    </Suspense>
   );
 }
