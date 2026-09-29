@@ -1,13 +1,14 @@
 // ============================================================
 // SAAS VENTURE STUDIO — VERSION CONTROL
+// Sicher: Kein process.env zur Build-Zeit
 // ============================================================
 
 export const CURRENT_VERSION = {
   version: "2.0.0",
   codename: "Studio OS",
-  buildDate: new Date().toISOString(),
-  gitCommit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || "dev",
-  environment: process.env.NODE_ENV === "production" ? "production" : "development",
+  buildDate: "2026-09-29",
+  gitCommit: "unknown",
+  environment: "production",
 };
 
 export const RELEASE_NOTES = [
