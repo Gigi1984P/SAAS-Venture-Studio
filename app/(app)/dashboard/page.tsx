@@ -32,6 +32,8 @@ import AutomationCenter from "@/components/automation-center";
 import AutoDedupeWidget from "@/components/auto-dedupe-widget";
 import VentureReadinessWidget from "@/components/venture-readiness-widget";
 import StagnationAlertsWidget from "@/components/stagnation-alerts-widget";
+import ActivityLogWidget from "@/components/activity-log-widget";
+import RevenueCalculator from "@/components/revenue-calculator";
 
 // ─── Types ─────────────────────────────────────────────
 type PipelineStage = {
@@ -393,6 +395,11 @@ export default async function DashboardPage() {
         <AutoDedupeWidget />
         <VentureReadinessWidget />
         <StagnationAlertsWidget />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ActivityLogWidget />
+        <RevenueCalculator />
       </div>
 
       {/* ── Opportunity Radar Table ──────────────────── */}

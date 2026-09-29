@@ -1,6 +1,7 @@
 "use client";
 
 import GlobalSearch from "./global-search";
+import DarkModeToggle from "./dark-mode-toggle";
 
 export default function Header() {
   return (
@@ -8,6 +9,7 @@ export default function Header() {
       <div className="flex-1">
         <GlobalSearch />
       </div>
+      <DarkModeToggle />
     </header>
   );
 }

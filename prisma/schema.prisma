@@ -2217,3 +2217,105 @@ model OllamaConfig {
 
   @@map("ollama_configs")
 }
+
+// ============================================================
+// BATCH 3: 10 NEW FEATURES
+// ============================================================
+
+// 1. Activity Log: Audit trail for all user actions
+model ActivityLog {
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  action        String   // e.g. "create", "update", "delete", "view"
+  entityType    String   @map("entity_type") // e.g. "opportunity", "venture", "comment"
+  entityId      String?  @map("entity_id")
+  entityName    String?  @map("entity_name") // human-readable name
+  changes       Json?    // { field: "title", from: "A", to: "B" }
+  ipAddress     String?  @map("ip_address")
+  userAgent     String?  @map("user_agent")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@index([entityType, entityId])
+  @@map("activity_logs")
+}
+
+// 5. Opportunity Comments: Threaded discussions
+model OpportunityComment {
+  id            String   @id @default(cuid())
+  opportunityId String   @map("opportunity_id")
+  userId        String   @map("user_id")
+  content       String   @db.Text
+  parentId      String?  @map("parent_id") // threaded replies
+  isPinned      Boolean  @default(false) @map("is_pinned")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([opportunityId, createdAt])
+  @@map("opportunity_comments")
+}
+
+// 7. Timeline Events: Roadmap visualization
+model TimelineEvent {
+  id            String   @id @default(cuid())
+  opportunityId String?  @map("opportunity_id")
+  ventureId     String?  @map("venture_id")
+  title         String
+  description   String?  @db.Text
+  eventType     String   @map("event_type") // "milestone", "deadline", "launch", "review"
+  status        String   @default("planned") // "planned", "in_progress", "completed", "overdue"
+  startDate     DateTime @map("start_date")
+  endDate       DateTime? @map("end_date")
+  color         String?  // hex color for UI
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([opportunityId, startDate])
+  @@index([ventureId, startDate])
+  @@map("timeline_events")
+}
+
+// 8. Onboarding Progress: Track user onboarding state
+model OnboardingProgress {
+  id            String   @id @default(cuid())
+  userId        String   @unique @map("user_id")
+  steps         Json     // { "welcome": true, "first_opportunity": false, ... }
+  currentStep   String   @default("welcome") @map("current_step")
+  isCompleted   Boolean  @default(false) @map("is_completed")
+  completedAt   DateTime? @map("completed_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("onboarding_progress")
+}
+
+// 10. AI Chat Messages: Conversational history
+model AIChatMessage {
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  opportunityId String?  @map("opportunity_id")
+  role          String   // "user", "assistant", "system"
+  content       String   @db.Text
+  model         String?  // which model was used
+  tokensUsed    Int?     @map("tokens_used")
+  responseTime  Int?     @map("response_time") // ms
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@index([opportunityId])
+  @@map("ai_chat_messages")
+}
+
+// 3. Dark Mode: User preference
+model UserPreference {
+  id            String   @id @default(cuid())
+  userId        String   @unique @map("user_id")
+  darkMode      String   @default("system") @map("dark_mode") // "light", "dark", "system"
+  sidebarCollapsed Boolean @default(false) @map("sidebar_collapsed")
+  locale        String   @default("de-DE")
+  timezone      String   @default("Europe/Berlin")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("user_preferences")
+}
