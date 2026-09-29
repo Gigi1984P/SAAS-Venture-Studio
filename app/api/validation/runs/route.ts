@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 
 // GET /api/validation/runs — Alle Validation Runs
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
+  try {
+    const { searchParams } = new URL(req.url);
   const opportunityId = searchParams.get("opportunityId");
   const status = searchParams.get("status");
 
@@ -28,6 +29,10 @@ export async function GET(req: NextRequest) {
   });
 
   return Response.json(runs);
+  } catch (error) {
+    console.error("[VALIDATION-RUNS GET]", error);
+    return NextResponse.json([]);
+  }
 }
 
 // POST /api/validation/runs — Neuen Validation Run erstellen

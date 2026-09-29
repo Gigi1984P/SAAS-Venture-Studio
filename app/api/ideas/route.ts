@@ -4,10 +4,15 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  try {
+    const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const ideas = await prisma.idea.findMany({ orderBy: { createdAt: "desc" } });
   return NextResponse.json(ideas);
+  } catch (error) {
+    console.error("[IDEAS GET]", error);
+    return NextResponse.json([]);
+  }
 }
 
 export async function POST(req: Request) {

@@ -4,7 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
+  try {
+    const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
@@ -22,6 +23,10 @@ export async function GET(req: Request) {
   });
 
   return NextResponse.json(profiles);
+  } catch (error) {
+    console.error("[FOUNDER-PROFILES GET]", error);
+    return NextResponse.json([]);
+  }
 }
 
 export async function POST(req: Request) {

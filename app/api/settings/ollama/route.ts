@@ -4,7 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
+  try {
+    const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const config = await prisma.ollamaConfig.findUnique({
@@ -32,6 +33,10 @@ export async function GET(req: Request) {
     apiKey: maskedKey,
     apiKeyMasked: true,
   });
+  } catch (error) {
+    console.error("[SETTINGS-OLLAMA GET]", error);
+    return NextResponse.json([]);
+  }
 }
 
 export async function POST(req: Request) {

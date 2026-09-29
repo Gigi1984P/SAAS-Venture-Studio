@@ -4,7 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  try {
+    const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const services = await prisma.sharedService.findMany({
@@ -20,6 +21,10 @@ export async function GET() {
   });
 
   return NextResponse.json(services);
+  } catch (error) {
+    console.error("[SHARED-SERVICES GET]", error);
+    return NextResponse.json([]);
+  }
 }
 
 export async function POST(req: Request) {
