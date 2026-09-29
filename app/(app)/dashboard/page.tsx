@@ -34,6 +34,7 @@ import VentureReadinessWidget from "@/components/venture-readiness-widget";
 import StagnationAlertsWidget from "@/components/stagnation-alerts-widget";
 import ActivityLogWidget from "@/components/activity-log-widget";
 import RevenueCalculator from "@/components/revenue-calculator";
+import VersionWidget from "@/components/version-widget";
 
 // ─── Types ─────────────────────────────────────────────
 type PipelineStage = {
@@ -401,6 +402,8 @@ export default async function DashboardPage() {
         <ActivityLogWidget />
         <RevenueCalculator />
       </div>
+
+      <VersionWidget />
 
       {/* ── Opportunity Radar Table ──────────────────── */}
       <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
