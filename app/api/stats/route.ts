@@ -16,12 +16,7 @@ export async function GET() {
       totalSprints,
     });
   } catch (error) {
-    console.error("Stats error:", error);
-    return NextResponse.json({
-      totalIdeas: 0,
-      totalOpportunities: 0,
-      scoreA: 0,
-      totalSprints: 0,
-    });
+    console.error("[STATS]", error);
+    return NextResponse.json({ totalIdeas: 0, totalOpportunities: 0, scoreA: 0, totalSprints: 0 });
   }
 }

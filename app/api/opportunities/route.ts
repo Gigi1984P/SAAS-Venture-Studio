@@ -7,9 +7,7 @@ import { prisma } from "@/lib/prisma";
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json([], { status: 200 });
-    }
+    if (!session?.user?.id) return NextResponse.json([]);
 
     const { searchParams } = new URL(req.url);
     const limit = parseInt(searchParams.get("limit") || "100");
@@ -45,7 +43,6 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     
-    // Score berechnen
     const painScore = Math.min(10, Math.max(0, body.painScore || 0));
     const marketScore = Math.min(10, Math.max(0, body.marketScore || 0));
     const feasScore = Math.min(10, Math.max(0, body.feasScore || 0));
@@ -77,7 +74,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Default Gates erstellen
     const defaultGates = [
       { gateType: "problem_validated", requirement: "Mindestens 5 potenzielle Kunden bestätigen das Problem" },
       { gateType: "market_confirmed", requirement: "TAM/SAM/SOM geschätzt" },
