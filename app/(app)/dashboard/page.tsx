@@ -1,6 +1,3 @@
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import {
@@ -114,8 +111,7 @@ function scoreTrend(score: number) {
 
 // ─── Main Page ─────────────────────────────────────────
 export default async function DashboardPage() {
-  const session = await getServerSession(authOptions);
-  if (!session) redirect("/auth/login");
+  // Middleware handled Auth — kein getServerSession nötig
 
   // ── Parallel Data Fetch ─────────────────────────────
   const [
@@ -263,7 +259,7 @@ export default async function DashboardPage() {
           </p>
         </div>
         <div className="text-xs text-muted-foreground">
-          Angemeldet als {session.user?.email || ""}
+          Dashboard
         </div>
       </div>
 
