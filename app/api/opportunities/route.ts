@@ -4,14 +4,18 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 // GET /api/opportunities
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ message: "Nicht authentifiziert" }, { status: 401 });
+      return NextResponse.json([], { status: 200 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const limit = parseInt(searchParams.get("limit") || "100");
+
     const opportunities = await prisma.opportunity.findMany({
+      take: limit,
       include: {
         _count: {
           select: { signals: true, ventures: true, gates: true },
@@ -27,7 +31,7 @@ export async function GET() {
     return NextResponse.json(opportunities);
   } catch (error) {
     console.error("[OPPORTUNITIES GET]", error);
-    return NextResponse.json({ message: "Interner Fehler" }, { status: 500 });
+    return NextResponse.json([]);
   }
 }
 

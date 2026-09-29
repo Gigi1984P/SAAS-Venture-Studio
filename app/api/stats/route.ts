@@ -17,9 +17,11 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Stats error:", error);
-    return NextResponse.json(
-      { totalIdeas: 0, totalOpportunities: 0, scoreA: 0, totalSprints: 0 },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      totalIdeas: 0,
+      totalOpportunities: 0,
+      scoreA: 0,
+      totalSprints: 0,
+    });
   }
 }
