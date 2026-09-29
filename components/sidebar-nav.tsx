@@ -20,6 +20,7 @@ import {
   Rocket,
   Target,
   Layers,
+  Building2,
 } from "lucide-react";
 import { useState } from "react";
 import { clsx, type ClassValue } from "clsx";
@@ -56,6 +57,7 @@ export function SidebarNav({ roleName }: { roleName?: string }) {
 
   const navItems: NavItem[] = [
     { href: "/dashboard", label: "Dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
+    { href: "/studio", label: "Studio OS", icon: <Building2 className="w-4 h-4" /> },
     { href: "/ideas", label: "Ideen", icon: <Lightbulb className="w-4 h-4" /> },
     { href: "/opportunities", label: "Opportunities", icon: <Target className="w-4 h-4" /> },
     { href: "/ventures", label: "Ventures", icon: <Briefcase className="w-4 h-4" /> },

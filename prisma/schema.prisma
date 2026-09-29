@@ -2319,3 +2319,260 @@ model UserPreference {
 
   @@map("user_preferences")
 }
+
+// ============================================================
+// VENTURE STUDIO OPERATING SYSTEM
+// ============================================================
+
+// 1. VENTURE ENTITY MANAGEMENT
+model VentureEntity {
+  id              String    @id @default(cuid())
+  opportunityId   String?   @unique @map("opportunity_id")
+  name            String
+  legalForm       String    @map("legal_form") // "UG", "GmbH", "LLC", "C-Corp"
+  jurisdiction    String    @default("DE") // "DE", "US", "CH", "AT"
+  status          String    @default("incorporating") // "incorporating", "active", "paused", "winddown", "liquidated"
+  incorporationDate DateTime? @map("incorporation_date")
+  taxId           String?   @map("tax_id")
+  commercialRegister String?  @map("commercial_register")
+  shareCapital    Decimal?  @map("share_capital")
+  shareCurrency   String    @default("EUR") @map("share_currency")
+  website         String?
+  description     String?   @db.Text
+  logoUrl         String?   @map("logo_url")
+  
+  // Relations
+  founders        Founder[]
+  capTable        CapTableEntry[]
+  legalDocs       LegalDocument[]
+  services        ServiceAllocation[]
+  financials      FinancialRecord[]
+  investments     InvestmentRound[]
+  pitchDecks      VenturePitchDeck[]
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@map("venture_entities")
+}
+
+model Founder {
+  id              String   @id @default(cuid())
+  ventureId       String   @map("venture_id")
+  userId          String?  @map("user_id")
+  name            String
+  email           String
+  role            String   // "CEO", "CTO", "CPO", "Advisor"
+  joinDate        DateTime @map("join_date")
+  exitDate        DateTime? @map("exit_date")
+  equityPercent   Decimal  @map("equity_percent") @db.Decimal(5, 2)
+  vestingYears    Int      @default(4) @map("vesting_years")
+  cliffMonths     Int      @default(12) @map("cliff_months")
+  isActive        Boolean  @default(true) @map("is_active")
+  
+  venture         VentureEntity @relation(fields: [ventureId], references: [id])
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([ventureId])
+  @@map("founders")
+}
+
+model CapTableEntry {
+  id              String   @id @default(cuid())
+  ventureId       String   @map("venture_id")
+  venture         VentureEntity @relation(fields: [ventureId], references: [id])
+  stakeholderType String   @map("stakeholder_type") // "founder", "investor", "option_pool", "studio"
+  stakeholderName String @map("stakeholder_name")
+  shares          Int
+  shareClass      String   @default("common") @map("share_class") // "common", "preferred_a", "preferred_b"
+  investmentAmount Decimal? @map("investment_amount")
+  investmentCurrency String? @map("investment_currency")
+  pricePerShare   Decimal? @map("price_per_share")
+  dilutionPercent Decimal? @map("dilution_percent") @db.Decimal(5, 2)
+  date            DateTime
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([ventureId])
+  @@map("cap_table_entries")
+}
+
+model LegalDocument {
+  id              String   @id @default(cuid())
+  ventureId       String   @map("venture_id")
+  venture         VentureEntity @relation(fields: [ventureId], references: [id])
+  docType         String   @map("doc_type") // "articles", "founder_agreement", "share_purchase", "nda", "employment", "ip_assignment"
+  title           String
+  fileUrl         String?  @map("file_url")
+  status          String   @default("draft") // "draft", "review", "signed", "archived"
+  signedAt        DateTime? @map("signed_at")
+  signedBy        String?  @map("signed_by")
+  notes           String?  @db.Text
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([ventureId, docType])
+  @@map("legal_documents")
+}
+
+// 2. SHARED SERVICES
+model SharedService {
+  id              String   @id @default(cuid())
+  name            String
+  category        String   // "devops", "marketing", "legal", "finance", "hr", "design"
+  description     String?  @db.Text
+  costPerMonth    Decimal  @map("cost_per_month")
+  costCurrency    String   @default("EUR") @map("cost_currency")
+  isActive        Boolean  @default(true) @map("is_active")
+  providerName    String?  @map("provider_name")
+  
+  allocations     ServiceAllocation[]
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("shared_services")
+}
+
+model ServiceAllocation {
+  id              String   @id @default(cuid())
+  serviceId       String   @map("service_id")
+  ventureId       String   @map("venture_id")
+  service         SharedService @relation(fields: [serviceId], references: [id])
+  venture         VentureEntity @relation(fields: [ventureId], references: [id])
+  allocationPercent Decimal @default(100) @map("allocation_percent") @db.Decimal(5, 2)
+  startDate       DateTime @map("start_date")
+  endDate         DateTime? @map("end_date")
+  monthlyCost     Decimal? @map("monthly_cost") // override
+  notes           String?  @db.Text
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@unique([serviceId, ventureId])
+  @@map("service_allocations")
+}
+
+// 3. FINANCIAL RECORDS (Burn / Runway)
+model FinancialRecord {
+  id              String   @id @default(cuid())
+  ventureId       String   @map("venture_id")
+  venture         VentureEntity @relation(fields: [ventureId], references: [id])
+  recordType      String   @map("record_type") // "expense", "revenue", "investment", "salary", "service_cost"
+  category        String   // "marketing", "development", "infrastructure", "legal", "hr", "other"
+  amount          Decimal  @db.Decimal(12, 2)
+  currency        String   @default("EUR")
+  description     String?
+  date            DateTime
+  isRecurring     Boolean  @default(false) @map("is_recurring")
+  recurringInterval String? @map("recurring_interval") // "monthly", "quarterly", "yearly"
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([ventureId, date])
+  @@index([ventureId, recordType])
+  @@map("financial_records")
+}
+
+// 4. FOUNDER MARKETPLACE / TALENT POOL
+model FounderProfile {
+  id              String   @id @default(cuid())
+  userId          String?  @unique @map("user_id")
+  name            String
+  email           String   @unique
+  headline        String?  // e.g. "Full-Stack Developer | 10 years SaaS"
+  bio             String?  @db.Text
+  skills          String[] // e.g. ["react", "node", "postgres", "kubernetes"]
+  availability    String   @default("open") // "open", "limited", "unavailable"
+  preferredRoles  String[] @map("preferred_roles") // ["CTO", "CPO", "Lead Dev"]
+  hourlyRate      Decimal? @map("hourly_rate")
+  rateCurrency    String   @default("EUR") @map("rate_currency")
+  location        String?
+  isRemote        Boolean  @default(true) @map("is_remote")
+  linkedinUrl     String?  @map("linkedin_url")
+  githubUrl       String?  @map("github_url")
+  portfolioUrl    String?  @map("portfolio_url")
+  isActive        Boolean  @default(true) @map("is_active")
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([availability, isActive])
+  @@map("founder_profiles")
+}
+
+// 5. INVESTOR CRM
+model Investor {
+  id              String   @id @default(cuid())
+  name            String
+  type            String   // "angel", "vc", "corporate", "family_office", "accelerator"
+  contactPerson   String?  @map("contact_person")
+  email           String?
+  phone           String?
+  website         String?
+  linkedinUrl     String?  @map("linkedin_url")
+  ticketSizeMin   Decimal? @map("ticket_size_min")
+  ticketSizeMax   Decimal? @map("ticket_size_max")
+  ticketCurrency  String   @default("EUR") @map("ticket_currency")
+  focusAreas      String[] @map("focus_areas") // ["saas", "fintech", "healthcare"]
+  stagePreference String[] @map("stage_preference") // ["pre_seed", "seed", "series_a"]
+  geoPreference   String[] @map("geo_preference") // ["DACH", "EU", "US"]
+  relationship    String   @default("cold") // "cold", "warm", "hot", "portfolio", "rejected"
+  notes           String?  @db.Text
+  isActive        Boolean  @default(true) @map("is_active")
+  
+  rounds          InvestmentRound[]
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([type, relationship])
+  @@map("investors")
+}
+
+model InvestmentRound {
+  id              String   @id @default(cuid())
+  ventureId       String   @map("venture_id")
+  investorId      String?  @map("investor_id")
+  venture         VentureEntity @relation(fields: [ventureId], references: [id])
+  investor        Investor? @relation(fields: [investorId], references: [id])
+  roundType       String   @map("round_type") // "pre_seed", "seed", "series_a", "series_b", "bridge"
+  status          String   @default("targeting") // "targeting", "negotiating", "term_sheet", "due_diligence", "closed", "declined"
+  targetAmount    Decimal  @map("target_amount")
+  raisedAmount    Decimal  @default(0) @map("raised_amount")
+  currency        String   @default("EUR")
+  valuationPre    Decimal? @map("valuation_pre")
+  valuationPost   Decimal? @map("valuation_post")
+  sharePrice      Decimal? @map("share_price")
+  sharesIssued    Int?     @map("shares_issued")
+  closedAt        DateTime? @map("closed_at")
+  notes           String?  @db.Text
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([ventureId, status])
+  @@map("investment_rounds")
+}
+
+model VenturePitchDeck {
+  id              String   @id @default(cuid())
+  ventureId       String   @map("venture_id")
+  venture         VentureEntity @relation(fields: [ventureId], references: [id])
+  title           String
+  version         String   @default("1.0")
+  fileUrl         String   @map("file_url")
+  slideCount      Int      @map("slide_count")
+  isActive        Boolean  @default(true) @map("is_active")
+  lastSentAt      DateTime? @map("last_sent_at")
+  notes           String?  @db.Text
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([ventureId, isActive])
+  @@map("venture_pitch_decks")
+}
