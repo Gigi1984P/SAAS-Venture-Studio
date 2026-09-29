@@ -18,7 +18,7 @@ export default async function AppLayout({
       ) : null}
       <div className={`flex-1 flex flex-col ${session?.user ? 'lg:ml-64' : ''}`}>
         {session?.user && <Header />}
-        <main className="flex-1 p-6 max-w-7xl mx-auto w-full">
+        <main className="flex-1 p-6 max-w-7xl w-full">
           {children}
         </main>
       </div>
