@@ -195,12 +195,10 @@ export default function SettingsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: editForm.model || "llama3.1",
-          prompt: `${editForm.systemPrompt}\n\nBenutzer: ${testQuery}\n\nAssistent:`,
-          stream: false,
-          options: {
-            temperature: editForm.temperature || 0.7,
-          },
+          systemPrompt: editForm.systemPrompt,
+          query: testQuery,
+          model: editForm.model,
+          temperature: editForm.temperature,
         }),
       });
 
