@@ -1,3 +1,4 @@
+import { OPENROUTER_API_KEY } from "./config";
 import { NextRequest, NextResponse } from "next/server";
 
 const OLLAMA_URL = "http://187.124.0.184:32846";
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
     // Route to different providers
     switch (prov) {
       case "openrouter": {
-        const apiKey = process.env.OPENROUTER_API_KEY;
+        const apiKey = OPENROUTER_API_KEY || "";
         if (!apiKey) {
           return NextResponse.json({
             error: "OPENROUTER_API_KEY nicht konfiguriert",
@@ -169,7 +170,7 @@ export async function POST(req: NextRequest) {
           if (fetchError.name === "AbortError") {
             // Fallback to OpenRouter automatically
             console.log("[OLLAMA] Timeout — Fallback zu OpenRouter");
-            const apiKey = process.env.OPENROUTER_API_KEY;
+            const apiKey = OPENROUTER_API_KEY || "";
             if (!apiKey) {
               return NextResponse.json(
                 { error: "Ollama Server Timeout und kein OpenRouter Key konfiguriert" },
