@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
-  let modelName = "meta-llama/llama-3.1-8b-instruct";
+  let modelName = "anthropic/claude-haiku-4.5";
 
   try {
     const body = await req.json();
     const { systemPrompt, query, model, temperature, apiKey } = body;
 
-    modelName = model || "meta-llama/llama-3.1-8b-instruct";
+    modelName = model || "anthropic/claude-haiku-4.5";
 
     if (!systemPrompt || !query) {
       return NextResponse.json(
@@ -16,22 +16,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Use provided API key or fall back to ENV
     const effectiveApiKey = apiKey || process.env.OPENROUTER_API_KEY;
 
     if (!effectiveApiKey) {
       return NextResponse.json({
-        response: "❌ KEIN OPENROUTER API KEY KONFIGURIERT\\n\\nBitte gib deinen OpenRouter API Key ein oder setze OPENROUTER_API_KEY als ENV Variable.",
+        response: "❌ KEIN OPENROUTER API KEY KONFIGURIERT\\n\\nBitte gib deinen OpenRouter API Key ein.",
         model: modelName,
         simulated: true,
         error: "NO_API_KEY",
       });
     }
 
-    console.log("[OPENROUTER REQUEST] Model:", modelName);
+    console.log("[OPENROUTER] Model:", modelName);
 
+    // Use shorter timeout to avoid Vercel 504
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 25000);
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
     try {
       const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -58,9 +58,9 @@ export async function POST(req: NextRequest) {
 
       if (!res.ok) {
         const errorText = await res.text();
-        console.error("[OPENROUTER ERROR]", res.status, errorText.slice(0, 500));
+        console.error("[OPENROUTER ERROR]", res.status, errorText.slice(0, 300));
         return NextResponse.json(
-          { error: "OpenRouter Fehler: " + res.status + " — " + errorText.slice(0, 200) },
+          { error: `OpenRouter Fehler: ${res.status}` },
           { status: 502 }
         );
       }
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
 
       if (!response) {
         return NextResponse.json(
-          { error: "Leere Antwort von OpenRouter", raw: JSON.stringify(data).slice(0, 500) },
+          { error: "Leere Antwort" },
           { status: 502 }
         );
       }
@@ -89,7 +89,10 @@ export async function POST(req: NextRequest) {
       
       if (fetchError.name === "AbortError") {
         return NextResponse.json(
-          { error: "OpenRouter-Anfrage hat zu lange gedauert (>25s). Bitte versuche es erneut." },
+          { 
+            error: "Anfrage zu langsam. Bitte wähle ein schnelleres Modell (z.B. ⚡ Claude Haiku 4.5) oder versuche es erneut.",
+            timeout: true
+          },
           { status: 504 }
         );
       }
