@@ -46,10 +46,15 @@ export default function SettingsPage() {
   // Test panel
   const [testQuery, setTestQuery] = useState("");
   const [testLoading, setTestLoading] = useState(false);
-  const [testResult, setTestResult] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<any>(null);
 
   // Session stats
   const [testHistory, setTestHistory] = useState<TestResult[]>([]);
+
+  // Chain
+  const [chainTarget, setChainTarget] = useState<string>("");
+  const [chainResult, setChainResult] = useState<any>(null);
+  const [chainLoading, setChainLoading] = useState(false);
 
   useEffect(() => {
     fetchAgents();
@@ -75,6 +80,7 @@ export default function SettingsPage() {
     setSelectedTemplate("");
     setMessage("");
     setTestResult(null);
+    setChainResult(null);
   }
 
   function startCreate() {
@@ -95,6 +101,7 @@ export default function SettingsPage() {
     setSelectedTemplate("");
     setMessage("");
     setTestResult(null);
+    setChainResult(null);
   }
 
   function cancelModal() {
@@ -104,6 +111,7 @@ export default function SettingsPage() {
     setSelectedRole("");
     setSelectedTemplate("");
     setTestResult(null);
+    setChainResult(null);
   }
 
   function applyRole(roleId: string) {
@@ -194,7 +202,7 @@ export default function SettingsPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        setTestResult(data.response);
+        setTestResult(data);
         setTestHistory((prev) => [
           {
             agentLabel: editForm.label || "Unbekannt",
@@ -209,6 +217,29 @@ export default function SettingsPage() {
       }
     } catch { setMessage("Netzwerkfehler beim Testen"); }
     finally { setTestLoading(false); }
+  }
+
+  async function runChain() {
+    if (!editingAgent || !chainTarget) return;
+    setChainLoading(true); setMessage("");
+    try {
+      const res = await fetch("/api/agent-configs/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agentId: editingAgent.id,
+          query: testQuery,
+          chainTo: [chainTarget],
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setChainResult(data);
+      } else {
+        setMessage(data.error || "Chain fehlgeschlagen");
+      }
+    } catch { setMessage("Netzwerkfehler bei Chain"); }
+    finally { setChainLoading(false); }
   }
 
   const tabs = [
@@ -320,6 +351,9 @@ export default function SettingsPage() {
                         >
                           {agent.isEnabled ? "Aktiv" : "Inaktiv"}
                         </span>
+                        {agent.provider === "openai" && (
+                          <span className="text-xs text-blue-600">🤖 AI</span>
+                        )}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {agent.provider} · {agent.model}
@@ -368,7 +402,7 @@ export default function SettingsPage() {
       }
       {(isCreating || editingAgent) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-5xl max-h-[95vh] overflow-y-auto rounded-lg border bg-card p-6 shadow-lg">
+          <div className="w-full max-w-6xl max-h-[95vh] overflow-y-auto rounded-lg border bg-card p-6 shadow-lg">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-semibold">
                 {isCreating ? "Neuen Agent erstellen" : `Agent bearbeiten: ${editingAgent?.label}`}
@@ -376,11 +410,11 @@ export default function SettingsPage() {
               <button onClick={cancelModal} className="text-muted-foreground hover:text-foreground">✕</button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {
                 /* LEFT COLUMN — Config */
               }
-              <div className="space-y-5">
+              <div className="space-y-5 lg:col-span-2">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">🎭 Agenten-Rolle</label>
                   <div className="grid grid-cols-2 gap-2">
@@ -459,9 +493,9 @@ export default function SettingsPage() {
                         onChange={(e) => setEditForm({ ...editForm, provider: e.target.value })}
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       >
-                        <option value="openai">OpenAI</option>
-                        <option value="ollama">Ollama</option>
-                        <option value="anthropic">Anthropic</option>
+                        <option value="openai">OpenAI (eigener API Key)</option>
+                        <option value="ollama">Ollama (lokal)</option>
+                        <option value="anthropic">Anthropic (Claude)</option>
                       </select>
                     </div>
                     <div className="space-y-1.5">
@@ -489,8 +523,8 @@ export default function SettingsPage() {
                         className="w-full"
                       />
                       <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>Präzise</span>
-                        <span>Kreativ</span>
+                        <span>Präzise (0)</span>
+                        <span>Kreativ (2)</span>
                       </div>
                     </div>
                     <div className="space-y-1.5">
@@ -529,7 +563,7 @@ export default function SettingsPage() {
               </div>
 
               {
-                /* RIGHT COLUMN — Test & Preview */
+                /* RIGHT COLUMN — Test & Chain */
               }
               <div className="space-y-5 border-l lg:pl-6">
                 <div className="space-y-3">
@@ -557,11 +591,72 @@ export default function SettingsPage() {
 
                   {testResult && (
                     <div className="rounded-md border bg-muted/50 p-4 space-y-2">
-                      <div className="text-xs font-medium text-muted-foreground uppercase">Antwort</div>
-                      <div className="text-sm whitespace-pre-wrap">{testResult}</div>
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs font-medium text-muted-foreground uppercase">Antwort</div>
+                        {testResult.tokensUsed && (
+                          <div className="text-xs text-muted-foreground">{testResult.tokensUsed} Tokens</div>
+                        )}
+                      </div>
+                      <div className="text-sm whitespace-pre-wrap">{testResult.response}</div>
+                      {testResult.simulated && (
+                        <div className="text-xs text-orange-600 bg-orange-50 p-2 rounded">
+                          ⚠️ Simuliert — Kein API Key vorhanden
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
+
+                {
+                  /* Chain */
+                }
+                {editingAgent && (
+                  <div className="space-y-3 border-t pt-4">
+                    <h3 className="text-sm font-semibold">🔗 Agent Chain</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Weiterleiten an anderen Agent
+                    </p>
+                    <div className="space-y-2">
+                      <select
+                        value={chainTarget}
+                        onChange={(e) => setChainTarget(e.target.value)}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="">Ziel-Agent wählen...</option>
+                        {agents
+                          .filter((a) => a.id !== editingAgent.id)
+                          .map((a) => (
+                            <option key={a.id} value={a.id}>
+                              {a.label} ({a.name})
+                            </option>
+                          ))}
+                      </select>
+                      <button
+                        onClick={runChain}
+                        disabled={chainLoading || !chainTarget || !testQuery}
+                        className="w-full inline-flex h-9 items-center justify-center rounded-md bg-primary/80 px-4 text-sm font-medium text-primary-foreground hover:bg-primary/70 disabled:opacity-50"
+                      >
+                        {chainLoading ? "Chain läuft..." : "🔗 Chain ausführen"}
+                      </button>
+                    </div>
+
+                    {chainResult && (
+                      <div className="rounded-md border bg-muted/50 p-4 space-y-2">
+                        <div className="text-xs font-medium text-muted-foreground uppercase">Chain Ergebnis</div>
+                        <div className="text-sm">
+                          <div className="font-medium">Schritt 1: {chainResult.agent}</div>
+                          <pre className="text-xs mt-1 whitespace-pre-wrap">{chainResult.result}</pre>
+                          {chainResult.chain?.map((step: any, i: number) => (
+                            <div key={i} className="mt-2 pt-2 border-t">
+                              <div className="font-medium">Schritt {i + 2}: {step.agent}</div>
+                              <pre className="text-xs mt-1 whitespace-pre-wrap">{step.result}</pre>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <h3 className="text-sm font-semibold">👁️ System Prompt Vorschau</h3>
@@ -583,7 +678,7 @@ export default function SettingsPage() {
                             <span className="text-muted-foreground">{new Date(t.timestamp).toLocaleTimeString("de-DE")}</span>
                           </div>
                           <div className="text-muted-foreground truncate">Q: {t.testQuery}</div>
-                          <div className="text-muted-foreground line-clamp-2">A: {t.response}</div>
+                          <div className="text-muted-foreground line-clamp-2">A: {t.response.slice(0, 100)}...</div>
                         </div>
                       ))}
                     </div>
