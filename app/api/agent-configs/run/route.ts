@@ -65,39 +65,25 @@ export async function POST(req: NextRequest) {
 }
 
 async function executeAgent(agent: any, query: string): Promise<string> {
-  const apiKey = process.env.OPENROUTER_API_KEY || process.env.OLLAMA_API_KEY;
+  const apiKey = process.env.OLLAMA_API_KEY || process.env.OPENROUTER_API_KEY;
 
-  // If no API key, return error message instead of simulation
   if (!apiKey) {
-    return `❌ FEHLER: Kein API Key konfiguriert.
+    return `❌ FEHLER: Kein API Key konfiguiert.
 
-Bitte setze eine der folgenden ENV Variablen:
-- OPENROUTER_API_KEY
-- OLLAMA_API_KEY
-
-Dein aktueller Status:
-- API Key: Nicht konfiguriert ❌
-- Modell: ${agent.model || "gpt-4"}
-- Provider: ${agent.provider || "openrouter"}
-
-So richtest du es ein:
-1. Besuche https://openrouter.ai/keys
-2. Erstelle einen API Key
-3. Setze OPENROUTER_API_KEY als ENV Variable in Vercel`;
+Bitte setze OLLAMA_API_KEY als ENV Variable in Vercel.`;
   }
 
-  try {
-    const modelName = agent.model || "meta-llama/llama-3.1-8b-instruct:free";
-    
-    console.log(`[LLM RUN] Agent: ${agent.label}, Model: ${modelName}`);
+  const modelName = agent.model || "llama3.1";
+  const baseUrl = process.env.OLLAMA_BASE_URL || "https://api.ollama.com/v1";
 
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  try {
+    console.log(`[LLM RUN] Ollama Cloud | Agent: ${agent.label}, Model: ${modelName}`);
+
+    const res = await fetch(`${baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
-        "HTTP-Referer": "https://saas-venture-studio.vercel.app",
-        "X-Title": "SAAS Venture Studio",
       },
       body: JSON.stringify({
         model: modelName,
@@ -107,17 +93,18 @@ So richtest du es ein:
         ],
         temperature: agent.temperature || 0.7,
         max_tokens: agent.maxTokens || 2048,
+        stream: false,
       }),
     });
 
     if (!res.ok) {
       const errorText = await res.text();
-      console.error("[OPENROUTER RUN ERROR]", errorText);
-      return `❌ LLM API Fehler (${res.status}): ${errorText.slice(0, 200)}\n\nBitte prüfe deinen API Key und das Modell.`;
+      console.error("[OLLAMA RUN ERROR]", res.status, errorText.slice(0, 500));
+      return `❌ Ollama API Fehler (${res.status}): ${errorText.slice(0, 200)}\n\nBitte prüfe deinen API Key und das Modell.`;
     }
 
     const data = await res.json();
-    return data.choices?.[0]?.message?.content || "Leere Antwort von LLM API.";
+    return data.choices?.[0]?.message?.content || "Leere Antwort von Ollama API.";
 
   } catch (error: any) {
     console.error("[AGENT RUN ERROR]", error);

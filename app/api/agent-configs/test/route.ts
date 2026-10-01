@@ -12,67 +12,88 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const apiKey = process.env.OPENROUTER_API_KEY || process.env.OLLAMA_API_KEY;
+    const apiKey = process.env.OLLAMA_API_KEY || process.env.OPENROUTER_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: "Kein API Key konfiguriert. Bitte OPENROUTER_API_KEY oder OLLAMA_API_KEY als ENV Variable setzen." },
+        { error: "Kein API Key konfiguriert. Bitte OLLAMA_API_KEY als ENV Variable setzen." },
         { status: 500 }
       );
     }
 
-    // Use OpenRouter API (supports many models including free ones)
-    const modelName = model || "meta-llama/llama-3.1-8b-instruct:free";
+    // Ollama Cloud API (OpenAI-kompatibel)
+    const modelName = model || "llama3.1";
+    const baseUrl = process.env.OLLAMA_BASE_URL || "https://api.ollama.com/v1";
     
-    console.log(`[LLM REQUEST] Model: ${modelName}, Provider: ${provider || "openrouter"}`);
+    console.log(`[LLM REQUEST] Ollama Cloud | Model: ${modelName}`);
 
-    const openRouterRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-        "HTTP-Referer": "https://saas-venture-studio.vercel.app",
-        "X-Title": "SAAS Venture Studio",
-      },
-      body: JSON.stringify({
-        model: modelName,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: query },
-        ],
-        temperature: temperature || 0.7,
-        max_tokens: 2048,
-      }),
-    });
+    // AbortController with 15s timeout (Vercel has 10s limit for hobby)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 9000);
 
-    if (!openRouterRes.ok) {
-      const errorText = await openRouterRes.text();
-      console.error("[OPENROUTER ERROR]", errorText);
-      return NextResponse.json(
-        { error: `LLM API Fehler: ${openRouterRes.status} — ${errorText.slice(0, 200)}` },
-        { status: 502 }
-      );
+    try {
+      const res = await fetch(`${baseUrl}/chat/completions`, {
+        method: "POST",
+        signal: controller.signal,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: modelName,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: query },
+          ],
+          temperature: temperature || 0.7,
+          max_tokens: 1024,
+          stream: false,
+        }),
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("[OLLAMA ERROR]", res.status, errorText.slice(0, 500));
+        return NextResponse.json(
+          { error: `Ollama API Fehler: ${res.status} — ${errorText.slice(0, 200)}` },
+          { status: 502 }
+        );
+      }
+
+      const data = await res.json();
+      const response = data.choices?.[0]?.message?.content;
+      const tokensUsed = data.usage?.total_tokens;
+
+      if (!response) {
+        return NextResponse.json(
+          { error: "Leere Antwort von Ollama API", raw: JSON.stringify(data).slice(0, 500) },
+          { status: 502 }
+        );
+      }
+
+      return NextResponse.json({
+        response,
+        provider: "ollama",
+        model: data.model || modelName,
+        tokensUsed,
+        simulated: false,
+      });
+
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+      
+      if (fetchError.name === "AbortError") {
+        console.error("[LLM TIMEOUT] Anfrage dauerte zu lange");
+        return NextResponse.json(
+          { error: "Ollama-Anfrage hat zu lange gedauert (>9s). Bitte versuche es erneut." },
+          { status: 504 }
+        );
+      }
+      
+      throw fetchError;
     }
-
-    const data = await openRouterRes.json();
-    const response = data.choices?.[0]?.message?.content;
-    const tokensUsed = data.usage?.total_tokens;
-    const modelUsed = data.model;
-
-    if (!response) {
-      return NextResponse.json(
-        { error: "Leere Antwort von LLM API" },
-        { status: 502 }
-      );
-    }
-
-    return NextResponse.json({
-      response,
-      provider: "openrouter",
-      model: modelUsed || modelName,
-      tokensUsed,
-      simulated: false,
-    });
 
   } catch (error: any) {
     console.error("[AGENT TEST]", error);
