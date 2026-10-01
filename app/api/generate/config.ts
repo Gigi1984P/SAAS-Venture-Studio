@@ -1,2 +1,2 @@
 // Auto-generated config - DO NOT COMMIT
-export const OPENROUTER_API_KEY = "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";
+export const OLLAMA_CLOUD_API_KEY = "3385e1b3499c440a8e8599b16ac29ca7.en_uH-FahQl9mbEbM0lhOB_E";
