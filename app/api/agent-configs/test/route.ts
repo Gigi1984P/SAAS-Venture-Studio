@@ -5,7 +5,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { systemPrompt, query, model, provider, temperature } = body;
+    const { systemPrompt, query, model, temperature } = body;
 
     modelName = model || "meta-llama/llama-3.1-8b-instruct";
 
@@ -20,19 +20,18 @@ export async function POST(req: NextRequest) {
 
     if (!apiKey) {
       return NextResponse.json({
-        response: `❌ KEIN OPENROUTER API KEY KONFIGURIERT
-
-Bitte setze OPENROUTER_API_KEY als ENV Variable in Vercel.`,
+        response: "❌ KEIN OPENROUTER API KEY KONFIGURIERT\\n\\nBitte setze OPENROUTER_API_KEY als ENV Variable in Vercel.",
         model: modelName,
         simulated: true,
         error: "NO_API_KEY",
       });
     }
 
-    console.log(`[OPENROUTER REQUEST] Model: ${modelName}`);
+    console.log("[OPENROUTER REQUEST] Model:", modelName);
+    console.log("[OPENROUTER KEY] Present:", apiKey ? "YES (length: " + apiKey.length + ")" : "NO");
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
       const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -40,7 +39,7 @@ Bitte setze OPENROUTER_API_KEY als ENV Variable in Vercel.`,
         signal: controller.signal,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
+          "Authorization": "Bearer " + apiKey,
           "HTTP-Referer": "https://saas-venture-studio.vercel.app",
           "X-Title": "SAAS Venture Studio",
         },
@@ -59,9 +58,9 @@ Bitte setze OPENROUTER_API_KEY als ENV Variable in Vercel.`,
 
       if (!res.ok) {
         const errorText = await res.text();
-        console.error(`[OPENROUTER ERROR ${res.status}]`, errorText.slice(0, 500));
+        console.error("[OPENROUTER ERROR]", res.status, errorText.slice(0, 500));
         return NextResponse.json(
-          { error: `OpenRouter Fehler: ${res.status} — ${errorText.slice(0, 200)}` },
+          { error: "OpenRouter Fehler: " + res.status + " — " + errorText.slice(0, 200) },
           { status: 502 }
         );
       }
