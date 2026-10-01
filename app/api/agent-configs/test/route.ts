@@ -16,36 +16,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const apiKey = process.env.OLLAMA_API_KEY;
+    // Use user's Ollama server
+    const ollamaUrl = process.env.OLLAMA_BASE_URL || "http://187.124.0.184:32846";
 
-    if (!apiKey) {
-      return NextResponse.json({
-        response: `❌ KEIN OLLAMA API KEY KONFIGURIERT
-
-Bitte setze OLLAMA_API_KEY als ENV Variable in Vercel.
-
-Dein Key befindet sich in 1Password unter:
-"SAAS Venture Studio - Ollama - API-Zugangsdaten"
-
-Feld: Anmeldedaten`,
-        model: modelName,
-        simulated: true,
-        error: "NO_API_KEY",
-      });
-    }
+    console.log(`[OLLAMA REQUEST] Server: ${ollamaUrl}, Model: ${modelName}`);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
 
     try {
-      console.log(`[OLLAMA REQUEST] Model: ${modelName}`);
-
-      const res = await fetch("https://api.ollama.com/v1/chat/completions", {
+      const res = await fetch(`${ollamaUrl}/v1/chat/completions`, {
         method: "POST",
         signal: controller.signal,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           model: modelName,
@@ -64,22 +48,10 @@ Feld: Anmeldedaten`,
       if (!res.ok) {
         const errorText = await res.text();
         console.error(`[OLLAMA ERROR ${res.status}]`, errorText.slice(0, 500));
-        
-        return NextResponse.json({
-          response: `❌ OLLAMA API FEHLER (${res.status})
-
-Die Ollama API hat mit Fehler ${res.status} geantwortet.
-Mögliche Ursachen:
-• API Key ist ungültig oder abgelaufen
-• Modell "${modelName}" ist nicht verfügbar
-• Rate Limit überschritten
-• Ollama Cloud ist down
-
-Details: ${errorText.slice(0, 200)}`,
-          model: modelName,
-          simulated: true,
-          error: `HTTP_${res.status}`,
-        });
+        return NextResponse.json(
+          { error: `Ollama Fehler: ${res.status} — ${errorText.slice(0, 200)}` },
+          { status: 502 }
+        );
       }
 
       const data = await res.json();
@@ -87,12 +59,10 @@ Details: ${errorText.slice(0, 200)}`,
       const tokensUsed = data.usage?.total_tokens;
 
       if (!response) {
-        return NextResponse.json({
-          response: "⚠️ Leere Antwort von Ollama API. Bitte erneut versuchen.",
-          model: data.model || modelName,
-          simulated: true,
-          error: "EMPTY_RESPONSE",
-        });
+        return NextResponse.json(
+          { error: "Leere Antwort von Ollama", raw: JSON.stringify(data).slice(0, 500) },
+          { status: 502 }
+        );
       }
 
       return NextResponse.json({
@@ -107,12 +77,10 @@ Details: ${errorText.slice(0, 200)}`,
       clearTimeout(timeoutId);
       
       if (fetchError.name === "AbortError") {
-        return NextResponse.json({
-          response: "⏱️ TIMEOUT: Die Anfrage hat zu lange gedauert (>15s). Bitte erneut versuchen.",
-          model: modelName,
-          simulated: true,
-          error: "TIMEOUT",
-        });
+        return NextResponse.json(
+          { error: "Ollama-Anfrage hat zu lange gedauert (>60s). Das Modell wird möglicherweise gerade geladen. Bitte versuche es erneut." },
+          { status: 504 }
+        );
       }
       
       throw fetchError;
@@ -120,11 +88,9 @@ Details: ${errorText.slice(0, 200)}`,
 
   } catch (error: any) {
     console.error("[AGENT TEST]", error);
-    return NextResponse.json({
-      response: `❌ INTERNER FEHLER: ${error.message}\n\nBitte die Seite neu laden und erneut versuchen.`,
-      model: modelName,
-      simulated: true,
-      error: "INTERNAL_ERROR",
-    });
+    return NextResponse.json(
+      { error: "Interner Fehler: " + error.message },
+      { status: 500 }
+    );
   }
 }

@@ -26,7 +26,6 @@ export async function POST(req: NextRequest) {
 
     const result = await executeAgent(agent, query);
 
-    // Chain to next agent if requested
     if (chainTo && chainTo.length > 0) {
       const nextAgentId = chainTo[0];
       const nextAgent = await prisma.agentConfig.findUnique({
@@ -65,28 +64,18 @@ export async function POST(req: NextRequest) {
 }
 
 async function executeAgent(agent: any, query: string): Promise<string> {
-  const apiKey = process.env.OLLAMA_API_KEY || process.env.OPENROUTER_API_KEY;
-
-  if (!apiKey) {
-    return `❌ FEHLER: Kein API Key konfiguiert.
-
-Bitte setze OLLAMA_API_KEY als ENV Variable in Vercel.`;
-  }
-
-  const modelName = agent.model || "llama3.1";
-  const baseUrl = process.env.OLLAMA_BASE_URL || "https://api.ollama.com/v1";
+  const ollamaUrl = process.env.OLLAMA_BASE_URL || "http://187.124.0.184:32846";
 
   try {
-    console.log(`[LLM RUN] Ollama Cloud | Agent: ${agent.label}, Model: ${modelName}`);
+    console.log(`[OLLAMA RUN] Server: ${ollamaUrl}, Model: ${agent.model || "llama3.1"}`);
 
-    const res = await fetch(`${baseUrl}/chat/completions`, {
+    const res = await fetch(`${ollamaUrl}/v1/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: modelName,
+        model: agent.model || "llama3.1",
         messages: [
           { role: "system", content: agent.systemPrompt || "Du bist ein hilfreicher Assistent." },
           { role: "user", content: query },
@@ -100,14 +89,14 @@ Bitte setze OLLAMA_API_KEY als ENV Variable in Vercel.`;
     if (!res.ok) {
       const errorText = await res.text();
       console.error("[OLLAMA RUN ERROR]", res.status, errorText.slice(0, 500));
-      return `❌ Ollama API Fehler (${res.status}): ${errorText.slice(0, 200)}\n\nBitte prüfe deinen API Key und das Modell.`;
+      return `❌ Ollama Fehler (${res.status}): ${errorText.slice(0, 200)}\n\nBitte prüfe ob das Modell installiert ist.`;
     }
 
     const data = await res.json();
-    return data.choices?.[0]?.message?.content || "Leere Antwort von Ollama API.";
+    return data.choices?.[0]?.message?.content || "Leere Antwort von Ollama.";
 
   } catch (error: any) {
     console.error("[AGENT RUN ERROR]", error);
-    return `❌ Fehler bei der LLM-Anfrage: ${error.message}\n\nBitte prüfe deine Internetverbindung und den API Key.`;
+    return `❌ Fehler bei der Ollama-Anfrage: ${error.message}\n\nServer: ${ollamaUrl}\nBitte prüfe ob Ollama erreichbar ist.`;
   }
 }
