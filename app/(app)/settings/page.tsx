@@ -200,6 +200,7 @@ export default function SettingsPage() {
           query: testQuery,
           model: editForm.model,
           temperature: editForm.temperature,
+          provider: editForm.provider || "ollama-server",
         }),
       });
 
@@ -529,14 +530,24 @@ export default function SettingsPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium">Provider</label>
-                      <div className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
-                        🦙 Ollama (Dein Server)
-                      </div>
+                      <select
+                        value={editForm.provider || "ollama-server"}
+                        onChange={(e) => setEditForm({ ...editForm, provider: e.target.value })}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="ollama-server">🦙 Ollama Server (Dein Server)</option>
+                        <option value="ollama-cloud">☁️ Ollama Cloud (api.ollama.com)</option>
+                        <option value="openrouter">🌐 OpenRouter</option>
+                      </select>
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-sm font-medium">Server</label>
+                      <label className="text-sm font-medium">Server / URL</label>
                       <div className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
-                        187.124.0.184:32846
+                        {(editForm.provider || "ollama-server") === "ollama-server" 
+                          ? "187.124.0.184:32846" 
+                          : (editForm.provider || "ollama-server") === "ollama-cloud"
+                            ? "api.ollama.com"
+                            : "openrouter.ai"}
                       </div>
                     </div>
                   </div>
@@ -545,12 +556,27 @@ export default function SettingsPage() {
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium">Modell</label>
                       <select
-                        value={editForm.model || "llama3.1"}
+                        value={editForm.model || ((editForm.provider || "ollama-server") === "openrouter" ? "meta-llama/llama-3.1-8b-instruct" : "llama3.1")}
                         onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       >
-                        <option value="llama3.1">🦙 Llama 3.1 (Dein Server)</option>
-                        <option value="kimi-k2.6:cloud">🌙 Kimi K2.6 (Cloud)</option>
+                        {(editForm.provider || "ollama-server") === "ollama-server" && [
+                        <option key="llama3.1" value="llama3.1">🦙 Llama 3.1 (Dein Server)</option>,
+                        <option key="kimi" value="kimi-k2.6:cloud">🌙 Kimi K2.6 (Cloud)</option>
+                      ]}
+                      {(editForm.provider || "ollama-server") === "ollama-cloud" && [
+                        <option key="llama-cloud" value="llama3.1">🦙 Llama 3.1</option>,
+                        <option key="nemotron" value="nemotron-3-super">🤖 Nemotron 3 Super</option>,
+                        <option key="mistral" value="mistral-large-3">🌫️ Mistral Large 3</option>
+                      ]}
+                      {(editForm.provider || "ollama-server") === "openrouter" && [
+                        <option key="llama31" value="meta-llama/llama-3.1-8b-instruct">🦙 Llama 3.1 8B</option>,
+                        <option key="claude" value="anthropic/claude-3.5-sonnet">🧠 Claude 3.5 Sonnet</option>,
+                        <option key="haiku" value="anthropic/claude-haiku-4.5">⚡ Claude Haiku 4.5</option>,
+                        <option key="gemini" value="google/gemini-pro">💎 Gemini Pro</option>,
+                        <option key="llama70b" value="meta-llama/llama-3-70b-instruct">🦙 Llama 3 70B</option>,
+                        <option key="mistral7b" value="mistralai/mistral-7b-instruct">🌫️ Mistral 7B</option>
+                      ]}
                       </select>
                     </div>
                   </div>
