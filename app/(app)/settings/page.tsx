@@ -191,14 +191,16 @@ export default function SettingsPage() {
     }
     setTestLoading(true); setMessage("");
     try {
-      const ollamaRes = await fetch("/api/generate", {
+      const ollamaRes = await fetch("http://187.124.0.184:32846/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          systemPrompt: editForm.systemPrompt,
-          query: testQuery,
-          model: editForm.model,
-          temperature: editForm.temperature,
+          model: editForm.model || "llama3.1",
+          prompt: `${editForm.systemPrompt}\n\nBenutzer: ${testQuery}\n\nAssistent:`,
+          stream: false,
+          options: {
+            temperature: editForm.temperature || 0.7,
+          },
         }),
       });
 
