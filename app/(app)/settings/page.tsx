@@ -501,7 +501,7 @@ export default function SettingsPage() {
                       >
                         <option value="meta-llama/llama-3.1-8b-instruct">🦙 Llama 3.1 8B</option>
                         <option value="anthropic/claude-3.5-sonnet">🧠 Claude 3.5 Sonnet</option>
-                        <option value="anthropic/claude-3-haiku">⚡ Claude 3 Haiku</option>
+                        <option value="anthropic/claude-haiku-4.5">⚡ Claude Haiku 4.5</option>
                         <option value="google/gemini-pro">💎 Gemini Pro</option>
                         <option value="meta-llama/llama-3-70b">🦙 Llama 3 70B</option>
                         <option value="mistralai/mistral-7b-instruct">🌫️ Mistral 7B</option>
