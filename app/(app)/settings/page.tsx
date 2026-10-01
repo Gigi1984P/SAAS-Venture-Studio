@@ -47,8 +47,7 @@ export default function SettingsPage() {
   // Test panel
   const [testQuery, setTestQuery] = useState("");
   const [testLoading, setTestLoading] = useState(false);
-  const [warmupLoading, setWarmupLoading] = useState(false);
-  const [warmupMessage, setWarmupMessage] = useState("");
+
   const [testResult, setTestResult] = useState<any>(null);
 
   // Session stats
@@ -231,32 +230,6 @@ export default function SettingsPage() {
       setMessage("Fehler: " + err.message);
     } finally {
       setTestLoading(false);
-    }
-  }
-
-  async function warmupModel() {
-    setWarmupLoading(true);
-    setWarmupMessage("");
-    try {
-      const res = await fetch("/api/warmup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: editForm.model || "llama3.1",
-        }),
-      });
-
-      const data = await res.json();
-      
-      if (data.success) {
-        setWarmupMessage("✅ Modell ist bereit! Jetzt kannst du testen.");
-      } else {
-        setWarmupMessage("❌ Fehler: " + (data.error || "Unbekannter Fehler"));
-      }
-    } catch (err: any) {
-      setWarmupMessage("❌ Fehler: " + err.message);
-    } finally {
-      setWarmupLoading(false);
     }
   }
 
@@ -627,13 +600,6 @@ export default function SettingsPage() {
                     />
                     <div className="flex gap-2">
                       <button
-                        onClick={warmupModel}
-                        disabled={warmupLoading}
-                        className="inline-flex h-9 items-center justify-center rounded-md bg-amber-600 px-4 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
-                      >
-                        {warmupLoading ? "⏳ Lade..." : "🔥 Modell laden"}
-                      </button>
-                      <button
                         onClick={testAgent}
                         disabled={testLoading || !editForm.systemPrompt || !testQuery}
                         className="flex-1 inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
@@ -643,9 +609,7 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  {warmupMessage && (
-                    <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded">{warmupMessage}</div>
-                  )}
+
 
                   {testResult && (
                     <div className="rounded-md border bg-muted/50 p-4 space-y-2">
@@ -656,11 +620,7 @@ export default function SettingsPage() {
                         )}
                       </div>
                       <div className="text-sm whitespace-pre-wrap">{testResult.response}</div>
-                      {testResult.simulated && (
-                        <div className="text-xs text-orange-600 bg-orange-50 p-2 rounded">
-                          ⚠️ Simuliert — Kein API Key vorhanden
-                        </div>
-                      )}
+
                     </div>
                   )}
                 </div>
