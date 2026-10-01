@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const OLLAMA_URL = "http://187.124.0.184:32846";
-const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY;
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,25 +16,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log("[OLLAMA] Model:", modelName, "Key present:", !!OLLAMA_API_KEY);
+    console.log("[OLLAMA] Model:", modelName, "Query:", query.slice(0, 50));
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 25000);
 
     try {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      
-      if (OLLAMA_API_KEY) {
-        headers["Authorization"] = `Bearer ${OLLAMA_API_KEY}`;
-        console.log("[OLLAMA] Using auth header");
-      }
-
       const res = await fetch(`${OLLAMA_URL}/api/generate`, {
         method: "POST",
         signal: controller.signal,
-        headers,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: modelName,
           prompt: `${systemPrompt}\n\nBenutzer: ${query}\n\nAssistent:`,
