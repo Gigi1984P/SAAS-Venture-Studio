@@ -1,6 +1,7 @@
 export const runtime = "edge";
 
 const OLLAMA_URL = "http://187.124.0.184:32846";
+const OLLAMA_API_KEY = "ollama_JZU58JR9uI1Om0YU0CW8D75GqLkB3fEi9vRzNwT8xPy6aXcV7mHsQ4pKbE2yFwU5dZ";
 
 export async function POST(req: Request) {
   try {
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
       );
     }
 
-    console.log(`[OLLAMA] Model: ${modelName}, Query: ${query.slice(0, 50)}...`);
+    console.log(`[OLLAMA] Model: ${modelName}`);
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 9000);
@@ -25,7 +26,10 @@ export async function POST(req: Request) {
       const res = await fetch(`${OLLAMA_URL}/api/generate`, {
         method: "POST",
         signal: controller.signal,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${OLLAMA_API_KEY}`,
+        },
         body: JSON.stringify({
           model: modelName,
           prompt: `${systemPrompt}\n\nBenutzer: ${query}\n\nAssistent:`,
