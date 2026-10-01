@@ -191,7 +191,7 @@ export default function SettingsPage() {
     }
     setTestLoading(true); setMessage("");
     try {
-      const ollamaRes = await fetch("http://187.124.0.184:32846/api/generate", {
+      const ollamaRes = await fetch("/api/ollama", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
