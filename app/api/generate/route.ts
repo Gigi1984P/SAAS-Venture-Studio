@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+export const runtime = "edge";
 
 const OLLAMA_URL = "http://187.124.0.184:32846";
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { systemPrompt, query, model, temperature } = body;
@@ -10,9 +10,9 @@ export async function POST(req: NextRequest) {
     const modelName = model || "llama3.1";
 
     if (!systemPrompt || !query) {
-      return NextResponse.json(
-        { error: "System Prompt und Query sind erforderlich" },
-        { status: 400 }
+      return new Response(
+        JSON.stringify({ error: "System Prompt und Query sind erforderlich" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
@@ -40,24 +40,27 @@ export async function POST(req: NextRequest) {
 
       if (!res.ok) {
         const errorText = await res.text();
-        return NextResponse.json(
-          { error: `Ollama Server Fehler: ${res.status} — ${errorText.slice(0, 200)}` },
-          { status: 502 }
+        return new Response(
+          JSON.stringify({ error: `Ollama Server Fehler: ${res.status} — ${errorText.slice(0, 200)}` }),
+          { status: 502, headers: { "Content-Type": "application/json" } }
         );
       }
 
       const data = await res.json();
-      return NextResponse.json({
-        response: data.response,
-        provider: "ollama-server",
-        model: data.model || modelName,
-      });
+      return new Response(
+        JSON.stringify({
+          response: data.response,
+          provider: "ollama-server",
+          model: data.model || modelName,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
     } catch (fetchError: any) {
       clearTimeout(timeoutId);
       if (fetchError.name === "AbortError") {
-        return NextResponse.json(
-          { error: "⏳ Modell wird geladen... Bitte versuche es in 30 Sekunden erneut. Nach dem ersten Laden läuft es schnell!" },
-          { status: 504 }
+        return new Response(
+          JSON.stringify({ error: "⏳ Modell wird geladen... Bitte versuche es in 30 Sekunden erneut. Nach dem ersten Laden läuft es schnell!" }),
+          { status: 504, headers: { "Content-Type": "application/json" } }
         );
       }
       throw fetchError;
@@ -65,9 +68,9 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error("[OLLAMA SERVER]", error);
-    return NextResponse.json(
-      { error: "Interner Fehler: " + error.message },
-      { status: 500 }
+    return new Response(
+      JSON.stringify({ error: "Interner Fehler: " + error.message }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 }
