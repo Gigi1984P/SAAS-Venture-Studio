@@ -17,19 +17,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log("[OLLAMA] Model:", modelName, "Query:", query.slice(0, 50));
+    console.log("[OLLAMA] Model:", modelName, "Key present:", !!OLLAMA_API_KEY);
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 25000);
 
     try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      
+      if (OLLAMA_API_KEY) {
+        headers["Authorization"] = `Bearer ${OLLAMA_API_KEY}`;
+        console.log("[OLLAMA] Using auth header");
+      }
+
       const res = await fetch(`${OLLAMA_URL}/api/generate`, {
         method: "POST",
         signal: controller.signal,
-        headers: { 
-          "Content-Type": "application/json",
-          ...(OLLAMA_API_KEY ? { "X-API-Key": OLLAMA_API_KEY } : {})
-        },
+        headers,
         body: JSON.stringify({
           model: modelName,
           prompt: `${systemPrompt}\n\nBenutzer: ${query}\n\nAssistent:`,
