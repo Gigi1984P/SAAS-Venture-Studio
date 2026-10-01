@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
-  let providerName = "openrouter";
-  let modelName = "meta-llama/llama-3.1-8b-instruct:free";
+  let modelName = "llama3.1";
 
   try {
     const body = await req.json();
-    const { systemPrompt, query, model, provider, temperature } = body;
+    const { systemPrompt, query, model, temperature } = body;
 
-    providerName = provider || "openrouter";
-    modelName = model || "meta-llama/llama-3.1-8b-instruct:free";
+    modelName = model || "llama3.1";
 
     if (!systemPrompt || !query) {
       return NextResponse.json(
@@ -18,94 +16,66 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const apiKey = process.env.OLLAMA_API_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json({
+        response: `❌ KEIN OLLAMA API KEY KONFIGURIERT
+
+Bitte setze OLLAMA_API_KEY als ENV Variable in Vercel.
+
+Dein Key befindet sich in 1Password unter:
+"SAAS Venture Studio - Ollama - API-Zugangsdaten"
+
+Feld: Anmeldedaten`,
+        model: modelName,
+        simulated: true,
+        error: "NO_API_KEY",
+      });
+    }
+
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     try {
-      let apiUrl: string;
-      let apiKey: string | undefined;
-      let headers: Record<string, string> = { "Content-Type": "application/json" };
-      let requestBody: any;
+      console.log(`[OLLAMA REQUEST] Model: ${modelName}`);
 
-      if (providerName === "openai") {
-        apiKey = process.env.OPENAI_API_KEY;
-        apiUrl = "https://api.openai.com/v1/chat/completions";
-        headers["Authorization"] = `Bearer ${apiKey}`;
-        requestBody = {
-          model: modelName,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: query },
-          ],
-          temperature: temperature || 0.7,
-          max_tokens: 2048,
-        };
-      } else {
-        apiKey = process.env.OPENROUTER_API_KEY || process.env.OLLAMA_API_KEY;
-        apiUrl = "https://openrouter.ai/api/v1/chat/completions";
-        headers["Authorization"] = `Bearer ${apiKey}`;
-        headers["HTTP-Referer"] = "https://saas-venture-studio.vercel.app";
-        headers["X-Title"] = "SAAS Venture Studio";
-        requestBody = {
-          model: modelName,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: query },
-          ],
-          temperature: temperature || 0.7,
-          max_tokens: 2048,
-        };
-      }
-
-      if (!apiKey) {
-        return NextResponse.json({
-          response: `❌ KEIN API KEY KONFIGURIERT
-
-Bitte setze einen der folgenden ENV Variablen in Vercel:
-• OPENROUTER_API_KEY  (empfohlen, kostenlose Modelle)
-• OPENAI_API_KEY      (für GPT-4)
-
-So bekommst du einen Key:
-1. Geh zu https://openrouter.ai/keys
-2. Erstelle einen kostenlosen Account
-3. Generiere einen API Key
-4. Füge ihn in Vercel Settings > Environment Variables hinzu`,
-          provider: providerName,
-          model: modelName,
-          simulated: true,
-          error: "NO_API_KEY",
-        });
-      }
-
-      console.log(`[LLM REQUEST] Provider: ${providerName}, Model: ${requestBody.model}`);
-
-      const res = await fetch(apiUrl, {
+      const res = await fetch("https://api.ollama.com/v1/chat/completions", {
         method: "POST",
         signal: controller.signal,
-        headers,
-        body: JSON.stringify(requestBody),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: modelName,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: query },
+          ],
+          temperature: temperature || 0.7,
+          max_tokens: 2048,
+          stream: false,
+        }),
       });
 
       clearTimeout(timeoutId);
 
       if (!res.ok) {
         const errorText = await res.text();
-        console.error(`[LLM ERROR ${res.status}]`, errorText.slice(0, 500));
+        console.error(`[OLLAMA ERROR ${res.status}]`, errorText.slice(0, 500));
         
         return NextResponse.json({
-          response: `❌ LLM API FEHLER (${res.status})
+          response: `❌ OLLAMA API FEHLER (${res.status})
 
-Die API hat mit Fehler ${res.status} geantwortet.
+Die Ollama API hat mit Fehler ${res.status} geantwortet.
 Mögliche Ursachen:
 • API Key ist ungültig oder abgelaufen
 • Modell "${modelName}" ist nicht verfügbar
 • Rate Limit überschritten
-• API-Plattform ist down
+• Ollama Cloud ist down
 
-Details: ${errorText.slice(0, 200)}
-
-Versuche es später erneut oder wechsle das Modell.`,
-          provider: providerName,
+Details: ${errorText.slice(0, 200)}`,
           model: modelName,
           simulated: true,
           error: `HTTP_${res.status}`,
@@ -118,8 +88,7 @@ Versuche es später erneut oder wechsle das Modell.`,
 
       if (!response) {
         return NextResponse.json({
-          response: "⚠️ Leere Antwort von LLM API. Bitte erneut versuchen.",
-          provider: providerName,
+          response: "⚠️ Leere Antwort von Ollama API. Bitte erneut versuchen.",
           model: data.model || modelName,
           simulated: true,
           error: "EMPTY_RESPONSE",
@@ -128,7 +97,7 @@ Versuche es später erneut oder wechsle das Modell.`,
 
       return NextResponse.json({
         response,
-        provider: providerName,
+        provider: "ollama",
         model: data.model || modelName,
         tokensUsed,
         simulated: false,
@@ -139,8 +108,7 @@ Versuche es später erneut oder wechsle das Modell.`,
       
       if (fetchError.name === "AbortError") {
         return NextResponse.json({
-          response: "⏱️ TIMEOUT: Die Anfrage hat zu lange gedauert (>10s). Bitte erneut versuchen.",
-          provider: providerName,
+          response: "⏱️ TIMEOUT: Die Anfrage hat zu lange gedauert (>15s). Bitte erneut versuchen.",
           model: modelName,
           simulated: true,
           error: "TIMEOUT",
@@ -154,7 +122,6 @@ Versuche es später erneut oder wechsle das Modell.`,
     console.error("[AGENT TEST]", error);
     return NextResponse.json({
       response: `❌ INTERNER FEHLER: ${error.message}\n\nBitte die Seite neu laden und erneut versuchen.`,
-      provider: providerName,
       model: modelName,
       simulated: true,
       error: "INTERNAL_ERROR",
