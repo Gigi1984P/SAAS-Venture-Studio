@@ -190,35 +190,49 @@ export default function SettingsPage() {
     }
     setTestLoading(true); setMessage("");
     try {
-      const res = await fetch("/api/agent-configs/test", {
+      // Client-side Ollama call — no Vercel timeout!
+      const ollamaRes = await fetch("http://187.124.0.184:32846/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          systemPrompt: editForm.systemPrompt,
-          query: testQuery,
-          model: editForm.model,
-          provider: editForm.provider,
-          temperature: editForm.temperature,
-          apiKey: editForm.apiKey,
+          model: editForm.model || "llama3.1",
+          prompt: `${editForm.systemPrompt}\n\nBenutzer: ${testQuery}\n\nAssistent:`,
+          stream: false,
+          options: {
+            temperature: editForm.temperature || 0.7,
+          }
         }),
       });
-      const data = await res.json();
-      if (res.ok) {
-        setTestResult(data);
-        setTestHistory((prev) => [
-          {
-            agentLabel: editForm.label || "Unbekannt",
-            testQuery,
-            response: data.response,
-            timestamp: Date.now(),
-          },
-          ...prev.slice(0, 9),
-        ]);
-      } else {
-        setMessage(data.error || "Test fehlgeschlagen");
+
+      if (!ollamaRes.ok) {
+        const errorText = await ollamaRes.text();
+        throw new Error(`Ollama Fehler: ${ollamaRes.status} — ${errorText.slice(0, 200)}`);
       }
-    } catch { setMessage("Netzwerkfehler beim Testen"); }
-    finally { setTestLoading(false); }
+
+      const ollamaData = await ollamaRes.json();
+      const response = ollamaData.response;
+
+      setTestResult({
+        response,
+        provider: "ollama",
+        model: editForm.model || "llama3.1",
+        simulated: false,
+      });
+
+      setTestHistory((prev) => [
+        {
+          agentLabel: editForm.label || "Unbekannt",
+          testQuery,
+          response,
+          timestamp: Date.now(),
+        },
+        ...prev.slice(0, 9),
+      ]);
+    } catch (err: any) {
+      setMessage("Fehler: " + err.message);
+    } finally {
+      setTestLoading(false);
+    }
   }
 
   async function runChain() {
@@ -491,22 +505,14 @@ export default function SettingsPage() {
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium">Provider</label>
                       <div className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
-                        🌐 OpenRouter
+                        🦙 Ollama (Dein Server)
                       </div>
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-sm font-medium">OpenRouter API Key</label>
-                      <input
-                        type="password"
-                        value={editForm.apiKey || ""}
-                        onChange={(e) => setEditForm({ ...editForm, apiKey: e.target.value })}
-                        placeholder="sk-or-..."
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Erstelle einen Key auf {" "}
-                        <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="underline">openrouter.ai/keys</a>
-                      </p>
+                      <label className="text-sm font-medium">Server</label>
+                      <div className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
+                        187.124.0.184:32846
+                      </div>
                     </div>
                   </div>
 
@@ -514,16 +520,12 @@ export default function SettingsPage() {
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium">Modell</label>
                       <select
-                        value={editForm.model || "anthropic/claude-haiku-4.5"}
+                        value={editForm.model || "llama3.1"}
                         onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       >
-                        <option value="anthropic/claude-haiku-4.5">⚡ Claude Haiku 4.5 (Schnell)</option>
-                        <option value="meta-llama/llama-3.1-8b-instruct">🦙 Llama 3.1 8B</option>
-                        <option value="anthropic/claude-3.5-sonnet">🧠 Claude 3.5 Sonnet</option>
-                        <option value="google/gemini-pro">💎 Gemini Pro</option>
-                        <option value="meta-llama/llama-3-70b">🦙 Llama 3 70B</option>
-                        <option value="mistralai/mistral-7b-instruct">🌫️ Mistral 7B</option>
+                        <option value="llama3.1">🦙 Llama 3.1 (Dein Server)</option>
+                        <option value="kimi-k2.6:cloud">🌙 Kimi K2.6 (Cloud)</option>
                       </select>
                     </div>
                   </div>
