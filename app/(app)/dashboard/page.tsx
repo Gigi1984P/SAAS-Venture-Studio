@@ -12,6 +12,9 @@ import {
   Plus,
   BarChart3,
   Activity,
+  Tag,
+  GitCommit,
+  Calendar,
 } from "lucide-react";
 
 interface StatsData {
@@ -41,6 +44,13 @@ interface MonthlyData {
   ventures: number;
 }
 
+interface VersionInfo {
+  version: string;
+  codename: string;
+  buildDate: string;
+  totalReleases: number;
+}
+
 const statusColors: Record<string, string> = {
   discovered: "bg-gray-100 text-gray-700",
   validated: "bg-yellow-100 text-yellow-700",
@@ -60,6 +70,7 @@ export default function DashboardPage() {
     recentOpportunities: [],
   });
   const [monthly, setMonthly] = useState<MonthlyData[]>([]);
+  const [version, setVersion] = useState<VersionInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -70,9 +81,20 @@ export default function DashboardPage() {
       fetch("/api/analytics/monthly")
         .then((r) => (r.ok ? r.json() : []))
         .catch(() => []),
-    ]).then(([statsData, monthlyData]) => {
+      fetch("/api/deploy-info")
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null),
+    ]).then(([statsData, monthlyData, versionData]) => {
       if (statsData) setStats(statsData);
       if (monthlyData) setMonthly(monthlyData);
+      if (versionData) {
+        setVersion({
+          version: versionData.version,
+          codename: versionData.codename,
+          buildDate: versionData.lastCommitDate,
+          totalReleases: versionData.totalReleases,
+        });
+      }
     }).finally(() => setLoading(false));
   }, []);
 
@@ -132,18 +154,45 @@ export default function DashboardPage() {
   ];
 
   // Chart helpers
-  const maxVal = monthly.length > 0 
-    ? Math.max(...monthly.map(m => m.ideas + m.opportunities + m.ventures), 1)
+  const maxVal = monthly.length > 0
+    ? Math.max(...monthly.map((m) => m.ideas + m.opportunities + m.ventures), 1)
     : 1;
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">
-          Übersicht deines Venture Studios — Ideen, Opportunities und Ventures auf einen Blick.
-        </p>
+      {/* Header mit Version Badge */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">
+            Übersicht deines Venture Studios — Ideen, Opportunities und Ventures auf einen Blick.
+          </p>
+        </div>
+        {
+          /* Version Badge */
+        }
+        {version && (
+          <Link
+            href="/release-notes"
+            className="flex items-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm hover:shadow-md transition-shadow shrink-0"
+          >
+            <div className="flex flex-col items-end">
+              <div className="flex items-center gap-1.5 font-semibold">
+                <Tag className="w-3.5 h-3.5 text-primary" />
+                v{version.version}
+              </div>
+              <div className="text-xs text-muted-foreground">{version.codename}</div>
+            </div>
+            <div className="flex flex-col gap-0.5 text-[10px] text-muted-foreground border-l pl-3 ml-1">
+              <span className="flex items-center gap-1">
+                <GitCommit className="w-3 h-3" /> {version.totalReleases} Releases
+              </span>
+              <span className="flex items-center gap-1">
+                <Calendar className="w-3 h-3" /> {version.buildDate}
+              </span>
+            </div>
+          </Link>
+        )}
       </div>
 
       {/* Stat Cards */}
@@ -220,7 +269,9 @@ export default function DashboardPage() {
                         {new Date(idea.createdAt).toLocaleDateString("de-DE")}
                       </div>
                     </div>
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium shrink-0 ${statusColors[idea.status] || "bg-gray-100"}`}>
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium shrink-0 ${statusColors[idea.status] || "bg-gray-100"}`}
+                    >
                       {idea.status}
                     </span>
                   </Link>
@@ -261,7 +312,9 @@ export default function DashboardPage() {
                         {new Date(opp.createdAt).toLocaleDateString("de-DE")}
                       </div>
                     </div>
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium shrink-0 ${statusColors[opp.status] || "bg-gray-100"}`}>
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium shrink-0 ${statusColors[opp.status] || "bg-gray-100"}`}
+                    >
                       {opp.status}
                     </span>
                   </Link>
@@ -272,7 +325,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Monthly Activity Chart — ECHTE DATEN */}
+      {/* Monthly Activity Chart */}
       <div className="rounded-lg border bg-card p-5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -298,7 +351,6 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="space-y-2">
-            {/* Chart Bars */}
             <div className="h-56 flex items-end gap-1">
               {monthly.map((m) => {
                 const total = m.ideas + m.opportunities + m.ventures;
@@ -316,7 +368,9 @@ export default function DashboardPage() {
                       />
                       <div
                         className="w-full bg-blue-400"
-                        style={{ height: `${m.opportunities > 0 ? (m.opportunities / total) * 100 : 0}%` }}
+                        style={{
+                          height: `${m.opportunities > 0 ? (m.opportunities / total) * 100 : 0}%`,
+                        }}
                         title={`${m.opportunities} Opportunities`}
                       />
                       <div
@@ -329,22 +383,6 @@ export default function DashboardPage() {
                   </div>
                 );
               })}
-            </div>
-
-            {/* Stats Table */}
-            <div className="grid grid-cols-4 gap-4 pt-4 border-t text-sm">
-              <div></div>
-              {["Ideen", "Opportunities", "Ventures"].map((label) => (
-                <div key={label} className="text-center font-medium text-muted-foreground">{label}</div>
-              ))}
-              {monthly.slice(-3).map((m) => (
-                <>
-                  <div className="text-muted-foreground">{m.label}</div>
-                  <div className="text-center font-medium">{m.ideas}</div>
-                  <div className="text-center font-medium">{m.opportunities}</div>
-                  <div className="text-center font-medium">{m.ventures}</div>
-                </>
-              ))}
             </div>
           </div>
         )}

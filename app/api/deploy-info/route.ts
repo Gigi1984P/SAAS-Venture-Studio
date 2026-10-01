@@ -14,7 +14,8 @@ export async function GET() {
       environment: CURRENT_VERSION.environment,
       platform: "vercel",
       totalReleases: RELEASE_NOTES.length,
-      latestRelease: RELEASE_NOTES[0],
+      latestRelease: RELEASE_NOTES[0] || null,
+      allReleases: RELEASE_NOTES,
     });
   } catch {
     return NextResponse.json({
@@ -29,6 +30,7 @@ export async function GET() {
       platform: "vercel",
       totalReleases: 0,
       latestRelease: null,
+      allReleases: [],
     });
   }
 }
