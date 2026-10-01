@@ -47,6 +47,8 @@ export default function SettingsPage() {
   // Test panel
   const [testQuery, setTestQuery] = useState("");
   const [testLoading, setTestLoading] = useState(false);
+  const [warmupLoading, setWarmupLoading] = useState(false);
+  const [warmupMessage, setWarmupMessage] = useState("");
   const [testResult, setTestResult] = useState<any>(null);
 
   // Session stats
@@ -190,7 +192,6 @@ export default function SettingsPage() {
     }
     setTestLoading(true); setMessage("");
     try {
-      // Proxy through Vercel API to avoid CORS/Mixed Content
       const ollamaRes = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -230,6 +231,32 @@ export default function SettingsPage() {
       setMessage("Fehler: " + err.message);
     } finally {
       setTestLoading(false);
+    }
+  }
+
+  async function warmupModel() {
+    setWarmupLoading(true);
+    setWarmupMessage("");
+    try {
+      const res = await fetch("/api/generate/warmup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: editForm.model || "llama3.1",
+        }),
+      });
+
+      const data = await res.json();
+      
+      if (data.success) {
+        setWarmupMessage("✅ Modell ist bereit! Jetzt kannst du testen.");
+      } else {
+        setWarmupMessage("❌ Fehler: " + (data.error || "Unbekannter Fehler"));
+      }
+    } catch (err: any) {
+      setWarmupMessage("❌ Fehler: " + err.message);
+    } finally {
+      setWarmupLoading(false);
     }
   }
 
@@ -598,14 +625,27 @@ export default function SettingsPage() {
                       placeholder="Gib eine Test-Frage ein..."
                       className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     />
-                    <button
-                      onClick={testAgent}
-                      disabled={testLoading || !editForm.systemPrompt || !testQuery}
-                      className="w-full inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                    >
-                      {testLoading ? "Teste..." : "▶️ Agent testen"}
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={warmupModel}
+                        disabled={warmupLoading}
+                        className="inline-flex h-9 items-center justify-center rounded-md bg-amber-600 px-4 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+                      >
+                        {warmupLoading ? "⏳ Lade..." : "🔥 Modell laden"}
+                      </button>
+                      <button
+                        onClick={testAgent}
+                        disabled={testLoading || !editForm.systemPrompt || !testQuery}
+                        className="flex-1 inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                      >
+                        {testLoading ? "Teste..." : "▶️ Agent testen"}
+                      </button>
+                    </div>
                   </div>
+
+                  {warmupMessage && (
+                    <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded">{warmupMessage}</div>
+                  )}
 
                   {testResult && (
                     <div className="rounded-md border bg-muted/50 p-4 space-y-2">
