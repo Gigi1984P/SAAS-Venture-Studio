@@ -238,7 +238,7 @@ export default function SettingsPage() {
     setWarmupLoading(true);
     setWarmupMessage("");
     try {
-      const res = await fetch("/api/generate/warmup", {
+      const res = await fetch("/api/warmup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
