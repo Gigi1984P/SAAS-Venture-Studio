@@ -489,24 +489,49 @@ export default function SettingsPage() {
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium">Provider</label>
                       <select
-                        value={editForm.provider || "openai"}
+                        value={editForm.provider || "ollama"}
                         onChange={(e) => setEditForm({ ...editForm, provider: e.target.value })}
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       >
-                        <option value="openai">OpenAI (eigener API Key)</option>
-                        <option value="ollama">Ollama (lokal)</option>
-                        <option value="anthropic">Anthropic (Claude)</option>
+                        <option value="ollama">🦙 Ollama Cloud</option>
+                        <option value="openrouter">🌐 OpenRouter</option>
+                        <option value="openai">🤖 OpenAI</option>
                       </select>
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium">Modell</label>
-                      <input
-                        type="text"
+                      <select
                         value={editForm.model || ""}
                         onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
-                        placeholder="gpt-4"
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      />
+                      >
+                        {editForm.provider === "openai" && (
+                          <>
+                            <option value="gpt-4">GPT-4</option>
+                            <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                          </>
+                        )}
+                        {editForm.provider === "openrouter" && (
+                          <>
+                            <option value="meta-llama/llama-3.1-8b-instruct:free">Llama 3.1 8B (Free)</option>
+                            <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
+                            <option value="google/gemini-pro">Gemini Pro</option>
+                          </>
+                        )}
+                        {(editForm.provider === "ollama" || !editForm.provider) && (
+                          <>
+                            <option value="llama3.1">🦙 Llama 3.1</option>
+                            <option value="llama3.1:70b">🦙 Llama 3.1 70B</option>
+                            <option value="mistral">🌫️ Mistral</option>
+                            <option value="codellama">💻 CodeLlama</option>
+                            <option value="phi3">🔢 Phi-3</option>
+                            <option value="gemma2">💎 Gemma 2</option>
+                            <option value="kimi-k2.6">🌙 Kimi K2.6</option>
+                            <option value="deepseek-coder">🔍 DeepSeek Coder</option>
+                          </>
+                        )}
+                      </select>
                     </div>
                   </div>
 

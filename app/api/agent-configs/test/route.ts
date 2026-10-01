@@ -12,52 +12,101 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const apiKey = process.env.OLLAMA_API_KEY || process.env.OPENROUTER_API_KEY;
-
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "Kein API Key konfiguriert. Bitte OLLAMA_API_KEY als ENV Variable setzen." },
-        { status: 500 }
-      );
-    }
-
-    // Ollama Cloud API (OpenAI-kompatibel)
-    const modelName = model || "llama3.1";
-    const baseUrl = process.env.OLLAMA_BASE_URL || "https://api.ollama.com/v1";
-    
-    console.log(`[LLM REQUEST] Ollama Cloud | Model: ${modelName}`);
-
-    // AbortController with 15s timeout (Vercel has 10s limit for hobby)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 9000);
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     try {
-      const res = await fetch(`${baseUrl}/chat/completions`, {
-        method: "POST",
-        signal: controller.signal,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: modelName,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: query },
-          ],
-          temperature: temperature || 0.7,
-          max_tokens: 1024,
-          stream: false,
-        }),
-      });
+      let res;
+      const providerName = provider || "ollama";
+
+      if (providerName === "openai") {
+        // OpenAI API
+        const apiKey = process.env.OPENAI_API_KEY;
+        if (!apiKey) {
+          return NextResponse.json({ error: "OPENAI_API_KEY nicht konfiguriert" }, { status: 500 });
+        }
+
+        res = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          signal: controller.signal,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: model || "gpt-4",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: query },
+            ],
+            temperature: temperature || 0.7,
+            max_tokens: 2048,
+          }),
+        });
+
+      } else if (providerName === "openrouter") {
+        // OpenRouter API
+        const apiKey = process.env.OPENROUTER_API_KEY || process.env.OLLAMA_API_KEY;
+        if (!apiKey) {
+          return NextResponse.json({ error: "API Key nicht konfiguriert" }, { status: 500 });
+        }
+
+        res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          signal: controller.signal,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+            "HTTP-Referer": "https://saas-venture-studio.vercel.app",
+            "X-Title": "SAAS Venture Studio",
+          },
+          body: JSON.stringify({
+            model: model || "meta-llama/llama-3.1-8b-instruct:free",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: query },
+            ],
+            temperature: temperature || 0.7,
+            max_tokens: 2048,
+          }),
+        });
+
+      } else {
+        // Ollama Cloud API (default)
+        const apiKey = process.env.OLLAMA_API_KEY;
+        if (!apiKey) {
+          return NextResponse.json({ error: "OLLAMA_API_KEY nicht konfiguriert" }, { status: 500 });
+        }
+
+        const baseUrl = process.env.OLLAMA_BASE_URL || "https://api.ollama.com/v1";
+
+        res = await fetch(`${baseUrl}/chat/completions`, {
+          method: "POST",
+          signal: controller.signal,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: model || "llama3.1",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: query },
+            ],
+            temperature: temperature || 0.7,
+            max_tokens: 2048,
+            stream: false,
+          }),
+        });
+      }
 
       clearTimeout(timeoutId);
 
       if (!res.ok) {
         const errorText = await res.text();
-        console.error("[OLLAMA ERROR]", res.status, errorText.slice(0, 500));
+        console.error(`[${providerName.toUpperCase()} ERROR]`, res.status, errorText.slice(0, 500));
         return NextResponse.json(
-          { error: `Ollama API Fehler: ${res.status} — ${errorText.slice(0, 200)}` },
+          { error: `LLM API Fehler: ${res.status}` },
           { status: 502 }
         );
       }
@@ -68,15 +117,15 @@ export async function POST(req: NextRequest) {
 
       if (!response) {
         return NextResponse.json(
-          { error: "Leere Antwort von Ollama API", raw: JSON.stringify(data).slice(0, 500) },
+          { error: "Leere Antwort von LLM API", raw: JSON.stringify(data).slice(0, 500) },
           { status: 502 }
         );
       }
 
       return NextResponse.json({
         response,
-        provider: "ollama",
-        model: data.model || modelName,
+        provider: providerName,
+        model: data.model || model,
         tokensUsed,
         simulated: false,
       });
@@ -85,9 +134,8 @@ export async function POST(req: NextRequest) {
       clearTimeout(timeoutId);
       
       if (fetchError.name === "AbortError") {
-        console.error("[LLM TIMEOUT] Anfrage dauerte zu lange");
         return NextResponse.json(
-          { error: "Ollama-Anfrage hat zu lange gedauert (>9s). Bitte versuche es erneut." },
+          { error: "LLM-Anfrage hat zu lange gedauert (>15s). Bitte versuche es erneut." },
           { status: 504 }
         );
       }
