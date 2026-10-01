@@ -1,13 +1,11 @@
 export const runtime = "edge";
 
-const OLLAMA_URL = "http://187.124.0.184:32846";
-
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { systemPrompt, query, model, temperature } = body;
 
-    const modelName = model || "llama3.1";
+    const modelName = model || "meta-llama/llama-3.1-8b-instruct:free";
 
     if (!systemPrompt || !query) {
       return new Response(
@@ -16,65 +14,51 @@ export async function POST(req: Request) {
       );
     }
 
-    console.log(`[OLLAMA] Model: ${modelName}, Query: ${query.slice(0, 50)}...`);
+    console.log(`[AI] Model: ${modelName}`);
 
-    // Longer timeout for edge function
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 29000);
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://saas-venture-studio.vercel.app",
+        "X-Title": "SaaS Venture Studio",
+      },
+      body: JSON.stringify({
+        model: modelName,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: query },
+        ],
+        max_tokens: 2048,
+        temperature: temperature || 0.7,
+      }),
+    });
 
-    try {
-      const res = await fetch(`${OLLAMA_URL}/api/generate`, {
-        method: "POST",
-        signal: controller.signal,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: modelName,
-          prompt: `${systemPrompt}\n\nBenutzer: ${query}\n\nAssistent:`,
-          stream: false,
-          options: {
-            temperature: temperature || 0.7,
-          },
-        }),
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        return new Response(
-          JSON.stringify({ error: `Ollama Fehler: ${res.status} — ${errorText.slice(0, 200)}` }),
-          { status: 502, headers: { "Content-Type": "application/json" } }
-        );
-      }
-
-      const data = await res.json();
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`[AI] HTTP ${res.status}: ${errorText}`);
       return new Response(
-        JSON.stringify({
-          response: data.response,
-          model: data.model || modelName,
-          provider: "ollama-server",
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({ error: `AI Fehler: ${res.status} — ${errorText.slice(0, 200)}` }),
+        { status: 502, headers: { "Content-Type": "application/json" } }
       );
-
-    } catch (fetchError: any) {
-      clearTimeout(timeoutId);
-      if (fetchError.name === "AbortError") {
-        return new Response(
-          JSON.stringify({ 
-            error: "⏳ Modell wird geladen...", 
-            help: "Das Modell wird beim ersten Aufruf in den RAM geladen. Bitte warte 30 Sekunden und versuche es erneut. Nach dem ersten Laden geht es in 1-3 Sekunden!"
-          }),
-          { status: 504, headers: { "Content-Type": "application/json" } }
-        );
-      }
-      throw fetchError;
     }
 
-  } catch (error: any) {
-    console.error("[OLLAMA]", error);
+    const data = await res.json();
+    const content = data.choices?.[0]?.message?.content || "Keine Antwort";
+    
     return new Response(
-      JSON.stringify({ error: "Proxy Fehler: " + error.message }),
+      JSON.stringify({
+        response: content,
+        model: data.model || modelName,
+        provider: "openrouter-free",
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+
+  } catch (error: any) {
+    console.error("[AI]", error);
+    return new Response(
+      JSON.stringify({ error: "AI Fehler: " + error.message }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
