@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(req: NextRequest) {
-  let modelName = "anthropic/claude-haiku-4.5";
+const OLLAMA_URL = "http://187.124.0.184:32846";
 
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { systemPrompt, query, model, temperature, apiKey } = body;
+    const { systemPrompt, query, model, temperature } = body;
 
-    modelName = model || "anthropic/claude-haiku-4.5";
+    const modelName = model || "llama3.1";
 
     if (!systemPrompt || !query) {
       return NextResponse.json(
@@ -16,41 +16,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const effectiveApiKey = apiKey || process.env.OPENROUTER_API_KEY;
+    console.log("[OLLAMA] Model:", modelName, "Query:", query.slice(0, 50));
 
-    if (!effectiveApiKey) {
-      return NextResponse.json({
-        response: "❌ KEIN OPENROUTER API KEY KONFIGURIERT\\n\\nBitte gib deinen OpenRouter API Key ein.",
-        model: modelName,
-        simulated: true,
-        error: "NO_API_KEY",
-      });
-    }
-
-    console.log("[OPENROUTER] Model:", modelName);
-
-    // Use shorter timeout to avoid Vercel 504
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
-      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      const res = await fetch(`${OLLAMA_URL}/api/generate`, {
         method: "POST",
         signal: controller.signal,
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer " + effectiveApiKey,
-          "HTTP-Referer": "https://saas-venture-studio.vercel.app",
-          "X-Title": "SAAS Venture Studio",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: modelName,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: query },
-          ],
-          temperature: temperature || 0.7,
-          max_tokens: 2048,
+          prompt: `${systemPrompt}\n\nBenutzer: ${query}\n\nAssistent:`,
+          stream: false,
+          options: {
+            temperature: temperature || 0.7,
+          },
         }),
       });
 
@@ -58,29 +40,27 @@ export async function POST(req: NextRequest) {
 
       if (!res.ok) {
         const errorText = await res.text();
-        console.error("[OPENROUTER ERROR]", res.status, errorText.slice(0, 300));
+        console.error("[OLLAMA ERROR]", res.status, errorText.slice(0, 300));
         return NextResponse.json(
-          { error: `OpenRouter Fehler: ${res.status}` },
+          { error: `Ollama Fehler: ${res.status} — ${errorText.slice(0, 200)}` },
           { status: 502 }
         );
       }
 
       const data = await res.json();
-      const response = data.choices?.[0]?.message?.content;
-      const tokensUsed = data.usage?.total_tokens;
+      const response = data.response;
 
       if (!response) {
         return NextResponse.json(
-          { error: "Leere Antwort" },
+          { error: "Leere Antwort von Ollama", raw: JSON.stringify(data).slice(0, 500) },
           { status: 502 }
         );
       }
 
       return NextResponse.json({
         response,
-        provider: "openrouter",
+        provider: "ollama",
         model: data.model || modelName,
-        tokensUsed,
         simulated: false,
       });
 
@@ -89,10 +69,7 @@ export async function POST(req: NextRequest) {
       
       if (fetchError.name === "AbortError") {
         return NextResponse.json(
-          { 
-            error: "Anfrage zu langsam. Bitte wähle ein schnelleres Modell (z.B. ⚡ Claude Haiku 4.5) oder versuche es erneut.",
-            timeout: true
-          },
+          { error: "Ollama-Anfrage hat zu lange gedauert (>10s). Modell wird möglicherweise geladen. Bitte versuche es erneut." },
           { status: 504 }
         );
       }

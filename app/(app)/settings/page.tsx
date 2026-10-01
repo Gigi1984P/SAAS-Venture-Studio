@@ -191,16 +191,14 @@ export default function SettingsPage() {
     setTestLoading(true); setMessage("");
     try {
       // Proxy through Vercel API to avoid CORS/Mixed Content
-      const ollamaRes = await fetch("/api/ollama-proxy", {
+      const ollamaRes = await fetch("/api/agent-configs/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: editForm.model || "llama3.1",
-          prompt: testQuery,
-          system: editForm.systemPrompt,
-          options: {
-            temperature: editForm.temperature || 0.7,
-          }
+          systemPrompt: editForm.systemPrompt,
+          query: testQuery,
+          model: editForm.model,
+          temperature: editForm.temperature,
         }),
       });
 
