@@ -5,7 +5,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { systemPrompt, query, model, temperature } = body;
+    const { systemPrompt, query, model, temperature, apiKey } = body;
 
     modelName = model || "meta-llama/llama-3.1-8b-instruct";
 
@@ -16,11 +16,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const apiKey = process.env.OPENROUTER_API_KEY;
+    // Use provided API key or fall back to ENV
+    const effectiveApiKey = apiKey || process.env.OPENROUTER_API_KEY;
 
-    if (!apiKey) {
+    if (!effectiveApiKey) {
       return NextResponse.json({
-        response: "❌ KEIN OPENROUTER API KEY KONFIGURIERT\\n\\nBitte setze OPENROUTER_API_KEY als ENV Variable in Vercel.",
+        response: "❌ KEIN OPENROUTER API KEY KONFIGURIERT\\n\\nBitte gib deinen OpenRouter API Key ein oder setze OPENROUTER_API_KEY als ENV Variable.",
         model: modelName,
         simulated: true,
         error: "NO_API_KEY",
@@ -28,10 +29,9 @@ export async function POST(req: NextRequest) {
     }
 
     console.log("[OPENROUTER REQUEST] Model:", modelName);
-    console.log("[OPENROUTER KEY] Present:", apiKey ? "YES (length: " + apiKey.length + ")" : "NO");
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
 
     try {
       const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
         signal: controller.signal,
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer " + apiKey,
+          "Authorization": "Bearer " + effectiveApiKey,
           "HTTP-Referer": "https://saas-venture-studio.vercel.app",
           "X-Title": "SAAS Venture Studio",
         },
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
       
       if (fetchError.name === "AbortError") {
         return NextResponse.json(
-          { error: "OpenRouter-Anfrage hat zu lange gedauert (>30s). Bitte versuche es erneut." },
+          { error: "OpenRouter-Anfrage hat zu lange gedauert (>25s). Bitte versuche es erneut." },
           { status: 504 }
         );
       }

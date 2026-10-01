@@ -19,6 +19,7 @@ type AgentConfig = {
   maxTokens: number;
   systemPrompt: string | null;
   isEnabled: boolean;
+  apiKey?: string;
 };
 
 type TestResult = {
@@ -198,6 +199,7 @@ export default function SettingsPage() {
           model: editForm.model,
           provider: editForm.provider,
           temperature: editForm.temperature,
+          apiKey: editForm.apiKey,
         }),
       });
       const data = await res.json();
@@ -492,6 +494,23 @@ export default function SettingsPage() {
                         🌐 OpenRouter
                       </div>
                     </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium">OpenRouter API Key</label>
+                      <input
+                        type="password"
+                        value={editForm.apiKey || ""}
+                        onChange={(e) => setEditForm({ ...editForm, apiKey: e.target.value })}
+                        placeholder="sk-or-..."
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Erstelle einen Key auf {" "}
+                        <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="underline">openrouter.ai/keys</a>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium">Modell</label>
                       <select
