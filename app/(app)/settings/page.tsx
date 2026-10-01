@@ -2,6 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import {
+  AGENT_ROLES,
+  getAgentRole,
+} from "@/lib/agent-roles";
 
 /* ─── Types ─── */
 type AgentConfig = {
@@ -24,9 +28,11 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
-  // Agent edit modal
+  // Agent edit/create modal
   const [editingAgent, setEditingAgent] = useState<AgentConfig | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const [editForm, setEditForm] = useState<Partial<AgentConfig>>({});
+  const [selectedRole, setSelectedRole] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -44,31 +50,82 @@ export default function SettingsPage() {
 
   function startEdit(agent: AgentConfig) {
     setEditingAgent(agent);
+    setIsCreating(false);
     setEditForm({ ...agent });
+    // Try to detect role from system prompt
+    const role = AGENT_ROLES.find(r =>
+      agent.systemPrompt?.includes(r.systemPrompt.slice(0, 50))
+    );
+    setSelectedRole(role?.id || "");
     setMessage("");
   }
 
-  function cancelEdit() {
+  function startCreate() {
     setEditingAgent(null);
+    setIsCreating(true);
+    setEditForm({
+      name: "",
+      label: "",
+      description: "",
+      provider: "openai",
+      model: "gpt-4",
+      temperature: 0.7,
+      maxTokens: 4096,
+      systemPrompt: "",
+      isEnabled: true,
+    });
+    setSelectedRole("");
+    setMessage("");
+  }
+
+  function cancelModal() {
+    setEditingAgent(null);
+    setIsCreating(false);
     setEditForm({});
+    setSelectedRole("");
+  }
+
+  function applyRole(roleId: string) {
+    const role = getAgentRole(roleId);
+    if (!role) return;
+    setSelectedRole(roleId);
+    setEditForm(prev => ({
+      ...prev,
+      label: prev.label || role.label,
+      description: prev.description || role.description,
+      systemPrompt: role.systemPrompt,
+      temperature: role.defaultTemperature,
+    }));
   }
 
   async function saveAgent() {
-    if (!editingAgent) return;
+    if (!editForm.name) {
+      setMessage("Name ist erforderlich");
+      return;
+    }
     setSaving(true); setMessage("");
     try {
-      const res = await fetch(`/api/agent-configs/${editingAgent.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(editForm),
-      });
-      if (res.ok) {
-        setMessage(`Agent "${editForm.label || editingAgent.label}" gespeichert!`);
-        setEditingAgent(null);
+      let res;
+      if (isCreating) {
+        res = await fetch("/api/agent-configs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(editForm),
+        });
+      } else if (editingAgent) {
+        res = await fetch(`/api/agent-configs/${editingAgent.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(editForm),
+        });
+      }
+      if (res && res.ok) {
+        setMessage(`Agent "${editForm.label || editForm.name}" gespeichert!`);
+        cancelModal();
         fetchAgents();
-      } else {
+      } else if (res) {
         const data = await res.json();
-        setMessage(data.error || "Fehler beim Speichern");
+        setMessage(data.error || data.message || "Fehler beim Speichern");
       }
     } catch { setMessage("Netzwerkfehler"); }
     finally { setSaving(false); }
@@ -83,38 +140,6 @@ export default function SettingsPage() {
         fetchAgents();
       }
     } catch { setMessage("Fehler beim Löschen"); }
-  }
-
-  async function createAgent() {
-    const name = prompt("Agent Name (interner Identifikator):");
-    if (!name) return;
-    const label = prompt("Anzeigename:") || name;
-    setSaving(true); setMessage("");
-    try {
-      const res = await fetch("/api/agent-configs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          label,
-          description: "",
-          provider: "openai",
-          model: "gpt-4",
-          temperature: 0.7,
-          maxTokens: 4096,
-          systemPrompt: "",
-          isEnabled: true,
-        }),
-      });
-      if (res.ok) {
-        setMessage(`Agent "${label}" erstellt!`);
-        fetchAgents();
-      } else {
-        const data = await res.json();
-        setMessage(data.error || "Fehler beim Erstellen");
-      }
-    } catch { setMessage("Netzwerkfehler"); }
-    finally { setSaving(false); }
   }
 
   const tabs = [
@@ -166,7 +191,7 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Agenten ({agents.length})</h2>
             <button
-              onClick={createAgent}
+              onClick={startCreate}
               disabled={saving}
               className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
             >
@@ -184,7 +209,7 @@ export default function SettingsPage() {
             <div className="text-center py-12 text-muted-foreground">
               <p className="mb-4">Noch keine Agenten konfiguriert</p>
               <button
-                onClick={createAgent}
+                onClick={startCreate}
                 className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
               >
                 Ersten Agent erstellen
@@ -198,7 +223,7 @@ export default function SettingsPage() {
                   className="rounded-lg border bg-card p-5 hover:shadow-sm transition-shadow"
                 >
                   <div className="flex items-start justify-between">
-                    <div className="space-y-1">
+                    <div className="space-y-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold">{agent.label}</span>
                         <span
@@ -217,8 +242,11 @@ export default function SettingsPage() {
                       <div className="text-xs text-muted-foreground">
                         Temp: {agent.temperature} · Max Tokens: {agent.maxTokens}
                       </div>
+                      {agent.description && (
+                        <div className="text-xs text-muted-foreground mt-1">{agent.description}</div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                       <button
                         onClick={() => startEdit(agent)}
                         className="h-8 px-3 rounded-md border border-input bg-background text-sm font-medium hover:bg-accent"
@@ -250,16 +278,16 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* EDIT MODAL */}
-      {editingAgent && (
+      {/* CREATE / EDIT MODAL */}
+      {(isCreating || editingAgent) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-lg border bg-card p-6 shadow-lg">
+          <div className="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-lg border bg-card p-6 shadow-lg">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-semibold">
-                Agent bearbeiten: {editingAgent.label}
+                {isCreating ? "Neuen Agent erstellen" : `Agent bearbeiten: ${editingAgent?.label}`}
               </h2>
               <button
-                onClick={cancelEdit}
+                onClick={cancelModal}
                 className="text-muted-foreground hover:text-foreground"
               >
                 ✕
@@ -267,108 +295,152 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Name</label>
-                  <input
-                    type="text"
-                    value={editForm.name || ""}
-                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  />
+              {/* Role Selection */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">🎭 Agenten-Rolle wählen</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {AGENT_ROLES.map((role) => (
+                    <button
+                      key={role.id}
+                      onClick={() => applyRole(role.id)}
+                      className={`flex items-start gap-2 rounded-md border p-3 text-left transition-colors ${
+                        selectedRole === role.id
+                          ? "border-primary bg-primary/5"
+                          : "border-input hover:bg-muted/50"
+                      }`}
+                    >
+                      <span className="text-lg shrink-0">{role.icon}</span>
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium truncate">{role.label}</div>
+                        <div className="text-xs text-muted-foreground line-clamp-2">
+                          {role.description}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Label</label>
-                  <input
-                    type="text"
-                    value={editForm.label || ""}
-                    onChange={(e) => setEditForm({ ...editForm, label: e.target.value })}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  />
-                </div>
+                {selectedRole && (
+                  <p className="text-xs text-primary">
+                    ✓ {getAgentRole(selectedRole)?.label} ausgewählt — System Prompt und Einstellungen wurden übernommen
+                  </p>
+                )}
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Beschreibung</label>
-                <textarea
-                  value={editForm.description || ""}
-                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                  rows={2}
-                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                />
-              </div>
+              <div className="border-t pt-4">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                  Details
+                </p>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Provider</label>
-                  <select
-                    value={editForm.provider || "openai"}
-                    onChange={(e) => setEditForm({ ...editForm, provider: e.target.value })}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="openai">OpenAI</option>
-                    <option value="ollama">Ollama</option>
-                    <option value="anthropic">Anthropic</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Modell</label>
-                  <input
-                    type="text"
-                    value={editForm.model || ""}
-                    onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Temperatur: {editForm.temperature}</label>
-                  <input
-                    type="range"
-                    min={0}
-                    max={2}
-                    step={0.1}
-                    value={editForm.temperature || 0.7}
-                    onChange={(e) => setEditForm({ ...editForm, temperature: parseFloat(e.target.value) })}
-                    className="w-full"
-                  />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Präzise</span>
-                    <span>Kreativ</span>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Name (intern) *</label>
+                    <input
+                      type="text"
+                      value={editForm.name || ""}
+                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                      placeholder="idea-scout"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Anzeigename *</label>
+                    <input
+                      type="text"
+                      value={editForm.label || ""}
+                      onChange={(e) => setEditForm({ ...editForm, label: e.target.value })}
+                      placeholder="Ideen-Scout"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
                   </div>
                 </div>
+
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Max Tokens</label>
+                  <label className="text-sm font-medium">Beschreibung</label>
                   <input
-                    type="number"
-                    value={editForm.maxTokens || 4096}
-                    onChange={(e) => setEditForm({ ...editForm, maxTokens: parseInt(e.target.value) })}
+                    type="text"
+                    value={editForm.description || ""}
+                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                    placeholder="Was macht dieser Agent?"
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   />
                 </div>
-              </div>
 
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">System Prompt</label>
-                <textarea
-                  value={editForm.systemPrompt || ""}
-                  onChange={(e) => setEditForm({ ...editForm, systemPrompt: e.target.value })}
-                  rows={4}
-                  placeholder="Du bist ein hilfreicher Assistent..."
-                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
-                />
-              </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Provider</label>
+                    <select
+                      value={editForm.provider || "openai"}
+                      onChange={(e) => setEditForm({ ...editForm, provider: e.target.value })}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="openai">OpenAI</option>
+                      <option value="ollama">Ollama</option>
+                      <option value="anthropic">Anthropic</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Modell</label>
+                    <input
+                      type="text"
+                      value={editForm.model || ""}
+                      onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
+                      placeholder="gpt-4"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
 
-              <div className="flex items-center gap-2 pt-2">
-                <input
-                  type="checkbox"
-                  checked={editForm.isEnabled ?? true}
-                  onChange={(e) => setEditForm({ ...editForm, isEnabled: e.target.checked })}
-                  className="h-4 w-4"
-                />
-                <label className="text-sm font-medium">Aktiviert</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Temperatur: {editForm.temperature}</label>
+                    <input
+                      type="range"
+                      min={0}
+                      max={2}
+                      step={0.1}
+                      value={editForm.temperature || 0.7}
+                      onChange={(e) => setEditForm({ ...editForm, temperature: parseFloat(e.target.value) })}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Präzise (0)</span>
+                      <span>Kreativ (2)</span>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Max Tokens</label>
+                    <input
+                      type="number"
+                      value={editForm.maxTokens || 4096}
+                      onChange={(e) => setEditForm({ ...editForm, maxTokens: parseInt(e.target.value) })}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">System Prompt</label>
+                  <textarea
+                    value={editForm.systemPrompt || ""}
+                    onChange={(e) => setEditForm({ ...editForm, systemPrompt: e.target.value })}
+                    rows={6}
+                    placeholder="Du bist ein..."
+                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Definiert die Persönlichkeit und Aufgaben des Agents
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 pt-2">
+                  <input
+                    type="checkbox"
+                    checked={editForm.isEnabled ?? true}
+                    onChange={(e) => setEditForm({ ...editForm, isEnabled: e.target.checked })}
+                    className="h-4 w-4"
+                  />
+                  <label className="text-sm font-medium">Aktiviert</label>
+                </div>
               </div>
             </div>
 
@@ -378,10 +450,10 @@ export default function SettingsPage() {
                 disabled={saving}
                 className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
-                {saving ? "Speichern..." : "Speichern"}
+                {saving ? "Speichern..." : isCreating ? "Erstellen" : "Speichern"}
               </button>
               <button
-                onClick={cancelEdit}
+                onClick={cancelModal}
                 className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-medium hover:bg-accent"
               >
                 Abbrechen
