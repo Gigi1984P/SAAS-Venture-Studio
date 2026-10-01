@@ -489,18 +489,22 @@ export default function SettingsPage() {
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium">Provider</label>
                       <div className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
-                        🦙 Ollama Cloud (187.124.0.184:32846)
+                        🌐 OpenRouter
                       </div>
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium">Modell</label>
                       <select
-                        value={editForm.model || "llama3.1"}
+                        value={editForm.model || "meta-llama/llama-3.1-8b-instruct"}
                         onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       >
-                        <option value="llama3.1">🦙 Llama 3.1 (8B)</option>
-                        <option value="kimi-k2.6:cloud">🌙 Kimi K2.6 (1T — Cloud)</option>
+                        <option value="meta-llama/llama-3.1-8b-instruct">🦙 Llama 3.1 8B</option>
+                        <option value="anthropic/claude-3.5-sonnet">🧠 Claude 3.5 Sonnet</option>
+                        <option value="anthropic/claude-3-haiku">⚡ Claude 3 Haiku</option>
+                        <option value="google/gemini-pro">💎 Gemini Pro</option>
+                        <option value="meta-llama/llama-3-70b">🦙 Llama 3 70B</option>
+                        <option value="mistralai/mistral-7b-instruct">🌫️ Mistral 7B</option>
                       </select>
                     </div>
                   </div>
