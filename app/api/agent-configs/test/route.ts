@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
+  let providerName = "openrouter";
+  let modelName = "meta-llama/llama-3.1-8b-instruct:free";
+
   try {
     const body = await req.json();
     const { systemPrompt, query, model, provider, temperature } = body;
+
+    providerName = provider || "openrouter";
+    modelName = model || "meta-llama/llama-3.1-8b-instruct:free";
 
     if (!systemPrompt || !query) {
       return NextResponse.json(
@@ -13,102 +19,97 @@ export async function POST(req: NextRequest) {
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
-      let res;
-      const providerName = provider || "ollama";
+      let apiUrl: string;
+      let apiKey: string | undefined;
+      let headers: Record<string, string> = { "Content-Type": "application/json" };
+      let requestBody: any;
 
       if (providerName === "openai") {
-        // OpenAI API
-        const apiKey = process.env.OPENAI_API_KEY;
-        if (!apiKey) {
-          return NextResponse.json({ error: "OPENAI_API_KEY nicht konfiguriert" }, { status: 500 });
-        }
-
-        res = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          signal: controller.signal,
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            model: model || "gpt-4",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: query },
-            ],
-            temperature: temperature || 0.7,
-            max_tokens: 2048,
-          }),
-        });
-
-      } else if (providerName === "openrouter") {
-        // OpenRouter API
-        const apiKey = process.env.OPENROUTER_API_KEY || process.env.OLLAMA_API_KEY;
-        if (!apiKey) {
-          return NextResponse.json({ error: "API Key nicht konfiguriert" }, { status: 500 });
-        }
-
-        res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          signal: controller.signal,
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-            "HTTP-Referer": "https://saas-venture-studio.vercel.app",
-            "X-Title": "SAAS Venture Studio",
-          },
-          body: JSON.stringify({
-            model: model || "meta-llama/llama-3.1-8b-instruct:free",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: query },
-            ],
-            temperature: temperature || 0.7,
-            max_tokens: 2048,
-          }),
-        });
-
+        apiKey = process.env.OPENAI_API_KEY;
+        apiUrl = "https://api.openai.com/v1/chat/completions";
+        headers["Authorization"] = `Bearer ${apiKey}`;
+        requestBody = {
+          model: modelName,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: query },
+          ],
+          temperature: temperature || 0.7,
+          max_tokens: 2048,
+        };
       } else {
-        // Ollama Cloud API (default)
-        const apiKey = process.env.OLLAMA_API_KEY;
-        if (!apiKey) {
-          return NextResponse.json({ error: "OLLAMA_API_KEY nicht konfiguriert" }, { status: 500 });
-        }
+        apiKey = process.env.OPENROUTER_API_KEY || process.env.OLLAMA_API_KEY;
+        apiUrl = "https://openrouter.ai/api/v1/chat/completions";
+        headers["Authorization"] = `Bearer ${apiKey}`;
+        headers["HTTP-Referer"] = "https://saas-venture-studio.vercel.app";
+        headers["X-Title"] = "SAAS Venture Studio";
+        requestBody = {
+          model: modelName,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: query },
+          ],
+          temperature: temperature || 0.7,
+          max_tokens: 2048,
+        };
+      }
 
-        const baseUrl = process.env.OLLAMA_BASE_URL || "https://api.ollama.com/v1";
+      if (!apiKey) {
+        return NextResponse.json({
+          response: `❌ KEIN API KEY KONFIGURIERT
 
-        res = await fetch(`${baseUrl}/chat/completions`, {
-          method: "POST",
-          signal: controller.signal,
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            model: model || "llama3.1",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: query },
-            ],
-            temperature: temperature || 0.7,
-            max_tokens: 2048,
-            stream: false,
-          }),
+Bitte setze einen der folgenden ENV Variablen in Vercel:
+• OPENROUTER_API_KEY  (empfohlen, kostenlose Modelle)
+• OPENAI_API_KEY      (für GPT-4)
+
+So bekommst du einen Key:
+1. Geh zu https://openrouter.ai/keys
+2. Erstelle einen kostenlosen Account
+3. Generiere einen API Key
+4. Füge ihn in Vercel Settings > Environment Variables hinzu`,
+          provider: providerName,
+          model: modelName,
+          simulated: true,
+          error: "NO_API_KEY",
         });
       }
+
+      console.log(`[LLM REQUEST] Provider: ${providerName}, Model: ${requestBody.model}`);
+
+      const res = await fetch(apiUrl, {
+        method: "POST",
+        signal: controller.signal,
+        headers,
+        body: JSON.stringify(requestBody),
+      });
 
       clearTimeout(timeoutId);
 
       if (!res.ok) {
         const errorText = await res.text();
-        console.error(`[${providerName.toUpperCase()} ERROR]`, res.status, errorText.slice(0, 500));
-        return NextResponse.json(
-          { error: `LLM API Fehler: ${res.status}` },
-          { status: 502 }
-        );
+        console.error(`[LLM ERROR ${res.status}]`, errorText.slice(0, 500));
+        
+        return NextResponse.json({
+          response: `❌ LLM API FEHLER (${res.status})
+
+Die API hat mit Fehler ${res.status} geantwortet.
+Mögliche Ursachen:
+• API Key ist ungültig oder abgelaufen
+• Modell "${modelName}" ist nicht verfügbar
+• Rate Limit überschritten
+• API-Plattform ist down
+
+Details: ${errorText.slice(0, 200)}
+
+Versuche es später erneut oder wechsle das Modell.`,
+          provider: providerName,
+          model: modelName,
+          simulated: true,
+          error: `HTTP_${res.status}`,
+        });
       }
 
       const data = await res.json();
@@ -116,16 +117,19 @@ export async function POST(req: NextRequest) {
       const tokensUsed = data.usage?.total_tokens;
 
       if (!response) {
-        return NextResponse.json(
-          { error: "Leere Antwort von LLM API", raw: JSON.stringify(data).slice(0, 500) },
-          { status: 502 }
-        );
+        return NextResponse.json({
+          response: "⚠️ Leere Antwort von LLM API. Bitte erneut versuchen.",
+          provider: providerName,
+          model: data.model || modelName,
+          simulated: true,
+          error: "EMPTY_RESPONSE",
+        });
       }
 
       return NextResponse.json({
         response,
         provider: providerName,
-        model: data.model || model,
+        model: data.model || modelName,
         tokensUsed,
         simulated: false,
       });
@@ -134,10 +138,13 @@ export async function POST(req: NextRequest) {
       clearTimeout(timeoutId);
       
       if (fetchError.name === "AbortError") {
-        return NextResponse.json(
-          { error: "LLM-Anfrage hat zu lange gedauert (>15s). Bitte versuche es erneut." },
-          { status: 504 }
-        );
+        return NextResponse.json({
+          response: "⏱️ TIMEOUT: Die Anfrage hat zu lange gedauert (>10s). Bitte erneut versuchen.",
+          provider: providerName,
+          model: modelName,
+          simulated: true,
+          error: "TIMEOUT",
+        });
       }
       
       throw fetchError;
@@ -145,9 +152,12 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error("[AGENT TEST]", error);
-    return NextResponse.json(
-      { error: "Interner Fehler: " + error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      response: `❌ INTERNER FEHLER: ${error.message}\n\nBitte die Seite neu laden und erneut versuchen.`,
+      provider: providerName,
+      model: modelName,
+      simulated: true,
+      error: "INTERNAL_ERROR",
+    });
   }
 }
