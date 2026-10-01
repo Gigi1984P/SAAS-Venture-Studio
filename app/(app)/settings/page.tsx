@@ -191,7 +191,7 @@ export default function SettingsPage() {
     }
     setTestLoading(true); setMessage("");
     try {
-      const ollamaRes = await fetch("/api/ollama", {
+      const ollamaRes = await fetch("/api/ollama-proxy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
