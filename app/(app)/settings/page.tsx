@@ -503,7 +503,7 @@ export default function SettingsPage() {
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium">Provider</label>
                       <div className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
-                        🚀 Groq / OpenRouter (Kostenlos)
+                        🦙 Ollama Server (187.124.0.184)
                       </div>
                     </div>
                     <div className="space-y-1.5">
@@ -518,14 +518,12 @@ export default function SettingsPage() {
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium">Modell</label>
                       <select
-                        value={editForm.model || "meta-llama/llama-3.1-8b-instruct:free"}
+                        value={editForm.model || "llama3.1"}
                         onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                       >
-                        <option value="meta-llama/llama-3.1-8b-instruct:free">🚀 Llama 3.1 (Kostenlos)</option>
-                        <option value="google/gemma-2-9b-it:free">💎 Gemma 2 (Kostenlos)</option>
-                        <option value="mistralai/mistral-7b-instruct:free">🌊 Mistral 7B (Kostenlos)</option>
-                        <option value="huggingfaceh4/zephyr-7b-beta:free">🌪️ Zephyr 7B (Kostenlos)</option>
+                        <option value="llama3.1">🦙 Llama 3.1</option>
+                        <option value="kimi-k2.6:cloud">☁️ Kimi K2.6 (Cloud)</option>
                       </select>
                     </div>
                   </div>
