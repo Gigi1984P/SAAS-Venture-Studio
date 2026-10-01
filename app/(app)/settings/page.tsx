@@ -190,14 +190,14 @@ export default function SettingsPage() {
     }
     setTestLoading(true); setMessage("");
     try {
-      // Client-side Ollama call — no Vercel timeout!
-      const ollamaRes = await fetch("http://187.124.0.184:32846/api/generate", {
+      // Proxy through Vercel API to avoid CORS/Mixed Content
+      const ollamaRes = await fetch("/api/ollama/proxy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: editForm.model || "llama3.1",
-          prompt: `${editForm.systemPrompt}\n\nBenutzer: ${testQuery}\n\nAssistent:`,
-          stream: false,
+          prompt: testQuery,
+          system: editForm.systemPrompt,
           options: {
             temperature: editForm.temperature || 0.7,
           }
@@ -205,8 +205,8 @@ export default function SettingsPage() {
       });
 
       if (!ollamaRes.ok) {
-        const errorText = await ollamaRes.text();
-        throw new Error(`Ollama Fehler: ${ollamaRes.status} — ${errorText.slice(0, 200)}`);
+        const errorData = await ollamaRes.json().catch(() => ({}));
+        throw new Error(errorData.error || `Ollama Fehler: ${ollamaRes.status}`);
       }
 
       const ollamaData = await ollamaRes.json();
@@ -215,7 +215,7 @@ export default function SettingsPage() {
       setTestResult({
         response,
         provider: "ollama",
-        model: editForm.model || "llama3.1",
+        model: ollamaData.model || editForm.model || "llama3.1",
         simulated: false,
       });
 
