@@ -200,7 +200,6 @@ export default function SettingsPage() {
           query: testQuery,
           model: editForm.model,
           temperature: editForm.temperature,
-          provider: editForm.provider || "ollama-server",
         }),
       });
 
@@ -531,13 +530,13 @@ export default function SettingsPage() {
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium">Provider</label>
                       <div className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
-                        ☁️ Ollama Cloud
+                        🦙 Ollama Server (Dein Server)
                       </div>
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium">Server / URL</label>
                       <div className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
-                        api.ollama.com
+                        187.124.0.184:32846
                       </div>
                     </div>
                   </div>
@@ -550,9 +549,8 @@ export default function SettingsPage() {
                         onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       >
-                        <option value="llama3.1">🦙 Llama 3.1</option>
-                        <option value="nemotron-3-super">🤖 Nemotron 3 Super</option>
-                        <option value="mistral-large-3">🌫️ Mistral Large 3</option>
+                        <option value="llama3.1">🦙 Llama 3.1 (Dein Server)</option>
+                        <option value="kimi-k2.6:cloud">🌙 Kimi K2.6 (Cloud)</option>
                       </select>
                     </div>
                   </div>
