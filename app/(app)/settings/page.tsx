@@ -499,13 +499,11 @@ export default function SettingsPage() {
                         onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       >
-                        <option value="llama3.1">🦙 Llama 3.1</option>
+                        <option value="llama3.1">🦙 Llama 3.1 (8B)</option>
                         <option value="mistral">🌫️ Mistral</option>
                         <option value="codellama">💻 CodeLlama</option>
                         <option value="phi3">🔢 Phi-3</option>
                         <option value="gemma2">💎 Gemma 2</option>
-                        <option value="kimi-k2.6">🌙 Kimi K2.6</option>
-                        <option value="deepseek-coder">🔍 DeepSeek Coder</option>
                       </select>
                     </div>
                   </div>
