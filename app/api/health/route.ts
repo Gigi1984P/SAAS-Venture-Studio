@@ -1,51 +1,62 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// GET /api/health
-// Öffentlicher Health Check — zeigt DB-Status, ENV-Status, Version
 export async function GET() {
-  const checks: Record<string, { status: string; latencyMs?: number; error?: string }> = {};
-  const start = Date.now();
+  const checks: Record<string, { status: string; message: string; time?: number }> = {};
+  let overall = "healthy";
 
-  // 1. Database Check
+  // 1. DB Check
   try {
-    const dbStart = Date.now();
+    const start = Date.now();
     await prisma.$queryRaw`SELECT 1`;
-    checks.database = { status: "ok", latencyMs: Date.now() - dbStart };
-  } catch (error) {
-    checks.database = { status: "error", error: String(error) };
+    checks.database = {
+      status: "ok",
+      message: "PostgreSQL verbunden",
+      time: Date.now() - start,
+    };
+  } catch (e: any) {
+    checks.database = { status: "error", message: e.message };
+    overall = "unhealthy";
   }
 
-  // 2. NextAuth Secret Check (nur ob vorhanden, nicht den Wert)
-  checks.nextauth = {
-    status: process.env.NEXTAUTH_SECRET ? "ok" : "missing",
+  // 2. ENV Check
+  const requiredEnv = ["DATABASE_URL", "NEXTAUTH_SECRET"];
+  const missing = requiredEnv.filter((key) => !process.env[key]);
+  if (missing.length === 0) {
+    checks.environment = { status: "ok", message: "Alle ENV Variablen gesetzt" };
+  } else {
+    checks.environment = { status: "error", message: `Fehlend: ${missing.join(", ")}` };
+    overall = "unhealthy";
+  }
+
+  // 3. Memory Check
+  const mem = process.memoryUsage();
+  checks.memory = {
+    status: "ok",
+    message: `Heap: ${Math.round(mem.heapUsed / 1024 / 1024)}MB / ${Math.round(mem.heapTotal / 1024 / 1024)}MB`,
   };
 
-  // 3. Database URL Check
-  checks.databaseUrl = {
-    status: process.env.DATABASE_URL ? "ok" : "missing",
-    length: process.env.DATABASE_URL ? process.env.DATABASE_URL.length : 0,
-    start: process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 20) + "..." : null,
-  } as any;
+  // 4. Agent Count
+  try {
+    const agentCount = await prisma.agentConfig.count();
+    checks.agents = { status: "ok", message: `${agentCount} Agenten konfiguriert` };
+  } catch (e: any) {
+    checks.agents = { status: "error", message: e.message };
+  }
 
-  // 4. Resend API Key Check
-  checks.resend = {
-    status: process.env.RESEND_API_KEY ? "ok" : "missing",
+  // 5. Uptime
+  checks.uptime = {
+    status: "ok",
+    message: `${Math.round(process.uptime() / 60)} Minuten`,
   };
-
-  const allOk = Object.values(checks).every((c) => c.status === "ok");
-  const totalLatency = Date.now() - start;
 
   return NextResponse.json(
     {
-      status: allOk ? "ok" : "error",
+      status: overall,
       timestamp: new Date().toISOString(),
-      version: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || "dev-v2",
-      environment: process.env.VERCEL_ENV || "development",
-      nodeEnv: process.env.NODE_ENV || "unknown",
-      totalLatencyMs: totalLatency,
+      version: process.env.npm_package_version || "2.0.0",
       checks,
     },
-    { status: allOk ? 200 : 503 }
+    { status: overall === "healthy" ? 200 : 503 }
   );
 }
