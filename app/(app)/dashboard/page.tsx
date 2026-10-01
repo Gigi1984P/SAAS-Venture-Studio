@@ -6,9 +6,7 @@ import {
   Lightbulb,
   Target,
   Rocket,
-  Users,
   Zap,
-  TrendingUp,
   ArrowRight,
   Clock,
   Plus,
@@ -36,6 +34,13 @@ interface StatsData {
   }>;
 }
 
+interface MonthlyData {
+  label: string;
+  ideas: number;
+  opportunities: number;
+  ventures: number;
+}
+
 const statusColors: Record<string, string> = {
   discovered: "bg-gray-100 text-gray-700",
   validated: "bg-yellow-100 text-yellow-700",
@@ -54,16 +59,21 @@ export default function DashboardPage() {
     recentIdeas: [],
     recentOpportunities: [],
   });
+  const [monthly, setMonthly] = useState<MonthlyData[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/stats")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data) setStats(data);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    Promise.all([
+      fetch("/api/stats")
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null),
+      fetch("/api/analytics/monthly")
+        .then((r) => (r.ok ? r.json() : []))
+        .catch(() => []),
+    ]).then(([statsData, monthlyData]) => {
+      if (statsData) setStats(statsData);
+      if (monthlyData) setMonthly(monthlyData);
+    }).finally(() => setLoading(false));
   }, []);
 
   if (loading) {
@@ -120,6 +130,11 @@ export default function DashboardPage() {
     { label: "Venture", href: "/ventures/new", icon: Rocket },
     { label: "Template", href: "/templates/new", icon: BarChart3 },
   ];
+
+  // Chart helpers
+  const maxVal = monthly.length > 0 
+    ? Math.max(...monthly.map(m => m.ideas + m.opportunities + m.ventures), 1)
+    : 1;
 
   return (
     <div className="space-y-8">
@@ -257,27 +272,82 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Activity Chart Placeholder */}
+      {/* Monthly Activity Chart — ECHTE DATEN */}
       <div className="rounded-lg border bg-card p-5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Activity className="w-5 h-5 text-purple-500" />
-            <h2 className="font-semibold">Studio Aktivität</h2>
+            <h2 className="font-semibold">Studio Aktivität (letzte 12 Monate)</h2>
+          </div>
+          <div className="flex gap-4 text-sm">
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 rounded-sm bg-yellow-400" /> Ideen
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 rounded-sm bg-blue-400" /> Opportunities
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 rounded-sm bg-green-400" /> Ventures
+            </span>
           </div>
         </div>
-        <div className="h-48 flex items-end gap-2">
-          {[40, 65, 45, 80, 55, 90, 70, 85, 60, 75, 50, 95].map((h, i) => (
-            <div key={i} className="flex-1 flex flex-col items-center gap-1">
-              <div
-                className="w-full bg-primary/20 rounded-t-sm hover:bg-primary/30 transition-colors"
-                style={{ height: `${h}%` }}
-              />
-              <span className="text-[10px] text-muted-foreground">
-                {["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"][i]}
-              </span>
+
+        {monthly.length === 0 ? (
+          <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
+            Keine Aktivitätsdaten verfügbar
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {/* Chart Bars */}
+            <div className="h-56 flex items-end gap-1">
+              {monthly.map((m) => {
+                const total = m.ideas + m.opportunities + m.ventures;
+                const height = total > 0 ? (total / maxVal) * 100 : 2;
+                return (
+                  <div key={m.label} className="flex-1 flex flex-col items-center gap-1">
+                    <div
+                      className="w-full flex flex-col-reverse rounded-t-sm overflow-hidden"
+                      style={{ height: `${Math.max(height, 2)}%` }}
+                    >
+                      <div
+                        className="w-full bg-yellow-400"
+                        style={{ height: `${m.ideas > 0 ? (m.ideas / total) * 100 : 0}%` }}
+                        title={`${m.ideas} Ideen`}
+                      />
+                      <div
+                        className="w-full bg-blue-400"
+                        style={{ height: `${m.opportunities > 0 ? (m.opportunities / total) * 100 : 0}%` }}
+                        title={`${m.opportunities} Opportunities`}
+                      />
+                      <div
+                        className="w-full bg-green-400"
+                        style={{ height: `${m.ventures > 0 ? (m.ventures / total) * 100 : 0}%` }}
+                        title={`${m.ventures} Ventures`}
+                      />
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">{m.label}</span>
+                  </div>
+                );
+              })}
             </div>
-          ))}
-        </div>
+
+            {/* Stats Table */}
+            <div className="grid grid-cols-4 gap-4 pt-4 border-t text-sm">
+              <div></div>
+              {["Ideen", "Opportunities", "Ventures"].map((label) => (
+                <div key={label} className="text-center font-medium text-muted-foreground">{label}</div>
+              ))}
+              {monthly.slice(-3).map((m) => (
+                <>
+                  <div className="text-muted-foreground">{m.label}</div>
+                  <div className="text-center font-medium">{m.ideas}</div>
+                  <div className="text-center font-medium">{m.opportunities}</div>
+                  <div className="text-center font-medium">{m.ventures}</div>
+                </>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
