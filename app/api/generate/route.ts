@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const OLLAMA_URL = "http://187.124.0.184:32846";
+const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY;
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log("[OLLAMA V2] Model:", modelName, "Query:", query.slice(0, 50));
+    console.log("[OLLAMA] Model:", modelName, "Query:", query.slice(0, 50));
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 25000);
@@ -25,7 +26,10 @@ export async function POST(req: NextRequest) {
       const res = await fetch(`${OLLAMA_URL}/api/generate`, {
         method: "POST",
         signal: controller.signal,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...(OLLAMA_API_KEY ? { "X-API-Key": OLLAMA_API_KEY } : {})
+        },
         body: JSON.stringify({
           model: modelName,
           prompt: `${systemPrompt}\n\nBenutzer: ${query}\n\nAssistent:`,
@@ -78,7 +82,7 @@ export async function POST(req: NextRequest) {
     }
 
   } catch (error: any) {
-    console.error("[OLLAMA V2]", error);
+    console.error("[OLLAMA]", error);
     return NextResponse.json(
       { error: "Interner Fehler: " + error.message },
       { status: 500 }
