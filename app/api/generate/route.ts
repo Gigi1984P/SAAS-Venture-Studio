@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
       case "ollama-server":
       default: {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 25000);
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
 
         try {
           const res = await fetch(`${OLLAMA_URL}/api/generate`, {
@@ -167,10 +167,57 @@ export async function POST(req: NextRequest) {
         } catch (fetchError: any) {
           clearTimeout(timeoutId);
           if (fetchError.name === "AbortError") {
-            return NextResponse.json(
-              { error: "⏳ Modell wird geladen... Bitte versuche es in 30 Sekunden erneut" },
-              { status: 504 }
-            );
+            // Fallback to OpenRouter automatically
+            console.log("[OLLAMA] Timeout — Fallback zu OpenRouter");
+            const apiKey = process.env.OPENROUTER_API_KEY;
+            if (!apiKey) {
+              return NextResponse.json(
+                { error: "Ollama Server Timeout und kein OpenRouter Key konfiguriert" },
+                { status: 504 }
+              );
+            }
+
+            try {
+              const fallbackRes = await fetch(`${OPENROUTER_URL}/chat/completions`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${apiKey}`,
+                  "HTTP-Referer": "https://saas-venture-studio.vercel.app",
+                },
+                body: JSON.stringify({
+                  model: "meta-llama/llama-3.1-8b-instruct",
+                  messages: [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: query },
+                  ],
+                  max_tokens: 1024,
+                  temperature: temperature || 0.7,
+                }),
+              });
+
+              if (!fallbackRes.ok) {
+                const errorText = await fallbackRes.text();
+                return NextResponse.json(
+                  { error: `Fallback Fehler: ${fallbackRes.status} — ${errorText.slice(0, 200)}` },
+                  { status: 502 }
+                );
+              }
+
+              const data = await fallbackRes.json();
+              return NextResponse.json({
+                response: data.choices?.[0]?.message?.content || "Keine Antwort",
+                provider: "openrouter (fallback)",
+                model: data.model || "meta-llama/llama-3.1-8b-instruct",
+                simulated: false,
+                fallback: true,
+              });
+            } catch (fallbackError: any) {
+              return NextResponse.json(
+                { error: "Ollama Timeout und OpenRouter Fallback fehlgeschlagen: " + fallbackError.message },
+                { status: 504 }
+              );
+            }
           }
           throw fetchError;
         }
