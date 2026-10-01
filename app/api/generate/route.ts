@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     console.log("[OLLAMA V2] Model:", modelName, "Query:", query.slice(0, 50));
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
 
     try {
       const res = await fetch(`${OLLAMA_URL}/api/generate`, {
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       
       if (fetchError.name === "AbortError") {
         return NextResponse.json(
-          { error: "Ollama-Anfrage hat zu lange gedauert. Modell wird möglicherweise geladen." },
+          { error: "⏳ Modell wird geladen... Bitte versuche es in 30 Sekunden erneut. Nach dem ersten Laden läuft es schnell!" },
           { status: 504 }
         );
       }
