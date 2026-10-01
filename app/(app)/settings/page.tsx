@@ -191,7 +191,7 @@ export default function SettingsPage() {
     setTestLoading(true); setMessage("");
     try {
       // Proxy through Vercel API to avoid CORS/Mixed Content
-      const ollamaRes = await fetch("/api/agent-configs/test", {
+      const ollamaRes = await fetch("/api/llm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

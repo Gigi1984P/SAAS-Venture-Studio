@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log("[OLLAMA] Model:", modelName, "Query:", query.slice(0, 50));
+    console.log("[OLLAMA V2] Model:", modelName, "Query:", query.slice(0, 50));
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
 
       if (!response) {
         return NextResponse.json(
-          { error: "Leere Antwort von Ollama", raw: JSON.stringify(data).slice(0, 500) },
+          { error: "Leere Antwort von Ollama" },
           { status: 502 }
         );
       }
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       
       if (fetchError.name === "AbortError") {
         return NextResponse.json(
-          { error: "Ollama-Anfrage hat zu lange gedauert (>10s). Modell wird möglicherweise geladen. Bitte versuche es erneut." },
+          { error: "Ollama-Anfrage hat zu lange gedauert. Modell wird möglicherweise geladen." },
           { status: 504 }
         );
       }
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
     }
 
   } catch (error: any) {
-    console.error("[AGENT TEST]", error);
+    console.error("[OLLAMA V2]", error);
     return NextResponse.json(
       { error: "Interner Fehler: " + error.message },
       { status: 500 }
