@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import {
   AGENT_ROLES,
   getAgentRole,
+  getTemplate,
 } from "@/lib/agent-roles";
 
 /* ─── Types ─── */
@@ -21,6 +21,13 @@ type AgentConfig = {
   isEnabled: boolean;
 };
 
+type TestResult = {
+  agentLabel: string;
+  testQuery: string;
+  response: string;
+  timestamp: number;
+};
+
 /* ─── Page ─── */
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("agents");
@@ -28,12 +35,21 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
-  // Agent edit/create modal
+  // Agent modal
   const [editingAgent, setEditingAgent] = useState<AgentConfig | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [editForm, setEditForm] = useState<Partial<AgentConfig>>({});
   const [selectedRole, setSelectedRole] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Test panel
+  const [testQuery, setTestQuery] = useState("");
+  const [testLoading, setTestLoading] = useState(false);
+  const [testResult, setTestResult] = useState<string | null>(null);
+
+  // Session stats
+  const [testHistory, setTestHistory] = useState<TestResult[]>([]);
 
   useEffect(() => {
     fetchAgents();
@@ -52,12 +68,13 @@ export default function SettingsPage() {
     setEditingAgent(agent);
     setIsCreating(false);
     setEditForm({ ...agent });
-    // Try to detect role from system prompt
-    const role = AGENT_ROLES.find(r =>
-      agent.systemPrompt?.includes(r.systemPrompt.slice(0, 50))
+    const role = AGENT_ROLES.find((r) =>
+      agent.systemPrompt?.includes(r.templates[0]?.systemPrompt.slice(0, 30) || "")
     );
     setSelectedRole(role?.id || "");
+    setSelectedTemplate("");
     setMessage("");
+    setTestResult(null);
   }
 
   function startCreate() {
@@ -75,7 +92,9 @@ export default function SettingsPage() {
       isEnabled: true,
     });
     setSelectedRole("");
+    setSelectedTemplate("");
     setMessage("");
+    setTestResult(null);
   }
 
   function cancelModal() {
@@ -83,18 +102,31 @@ export default function SettingsPage() {
     setIsCreating(false);
     setEditForm({});
     setSelectedRole("");
+    setSelectedTemplate("");
+    setTestResult(null);
   }
 
   function applyRole(roleId: string) {
     const role = getAgentRole(roleId);
     if (!role) return;
     setSelectedRole(roleId);
-    setEditForm(prev => ({
+    setSelectedTemplate("");
+    setEditForm((prev) => ({
       ...prev,
       label: prev.label || role.label,
       description: prev.description || role.description,
-      systemPrompt: role.systemPrompt,
       temperature: role.defaultTemperature,
+    }));
+  }
+
+  function applyTemplate(roleId: string, templateId: string) {
+    const template = getTemplate(roleId, templateId);
+    if (!template) return;
+    setSelectedTemplate(templateId);
+    setEditForm((prev) => ({
+      ...prev,
+      systemPrompt: template.systemPrompt,
+      description: template.description,
     }));
   }
 
@@ -142,10 +174,52 @@ export default function SettingsPage() {
     } catch { setMessage("Fehler beim Löschen"); }
   }
 
+  async function testAgent() {
+    if (!editForm.systemPrompt || !testQuery) {
+      setMessage("System Prompt und Test-Frage sind erforderlich");
+      return;
+    }
+    setTestLoading(true); setMessage("");
+    try {
+      const res = await fetch("/api/agent-configs/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemPrompt: editForm.systemPrompt,
+          query: testQuery,
+          model: editForm.model,
+          provider: editForm.provider,
+          temperature: editForm.temperature,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setTestResult(data.response);
+        setTestHistory((prev) => [
+          {
+            agentLabel: editForm.label || "Unbekannt",
+            testQuery,
+            response: data.response,
+            timestamp: Date.now(),
+          },
+          ...prev.slice(0, 9),
+        ]);
+      } else {
+        setMessage(data.error || "Test fehlgeschlagen");
+      }
+    } catch { setMessage("Netzwerkfehler beim Testen"); }
+    finally { setTestLoading(false); }
+  }
+
   const tabs = [
     { id: "agents", label: "🤖 Agenten" },
     { id: "profile", label: "👤 Profil" },
   ];
+
+  const currentRole = getAgentRole(selectedRole);
+  const currentTemplate = selectedRole && selectedTemplate
+    ? getTemplate(selectedRole, selectedTemplate)
+    : null;
 
   /* ─── Render ─── */
   return (
@@ -155,7 +229,9 @@ export default function SettingsPage() {
         <p className="text-muted-foreground">Agenten verwalten und System konfigurieren</p>
       </div>
 
-      {/* Tabs */}
+      {
+        /* Tabs */
+      }
       <div className="border-b">
         <nav className="flex gap-6">
           {tabs.map((tab) => (
@@ -174,7 +250,9 @@ export default function SettingsPage() {
         </nav>
       </div>
 
-      {/* Messages */}
+      {
+        /* Messages */
+      }
       {message && (
         <div className={`rounded-md border px-4 py-3 text-sm ${
           message.includes("Fehler") || message.includes("Netzwerk")
@@ -185,11 +263,18 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* AGENTS TAB */}
+      {
+        /* AGENTS TAB */
+      }
       {activeTab === "agents" && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Agenten ({agents.length})</h2>
+            <div>
+              <h2 className="text-lg font-semibold">Agenten ({agents.length})</h2>
+              <p className="text-sm text-muted-foreground">
+                {testHistory.length > 0 && `${testHistory.length} Tests in dieser Session`}
+              </p>
+            </div>
             <button
               onClick={startCreate}
               disabled={saving}
@@ -268,179 +353,242 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* PROFILE TAB */}
+      {
+        /* PROFILE TAB */
+      }
       {activeTab === "profile" && (
         <div className="rounded-lg border bg-card p-6">
           <h2 className="text-lg font-semibold mb-4">Profil</h2>
-          <p className="text-muted-foreground">
-            Profil-Einstellungen kommen bald...
-          </p>
+          <p className="text-muted-foreground">Profil-Einstellungen kommen bald...</p>
         </div>
       )}
 
-      {/* CREATE / EDIT MODAL */}
+      {
+        /* CREATE / EDIT MODAL */
+      }
       {(isCreating || editingAgent) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-lg border bg-card p-6 shadow-lg">
+          <div className="w-full max-w-5xl max-h-[95vh] overflow-y-auto rounded-lg border bg-card p-6 shadow-lg">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-semibold">
                 {isCreating ? "Neuen Agent erstellen" : `Agent bearbeiten: ${editingAgent?.label}`}
               </h2>
-              <button
-                onClick={cancelModal}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                ✕
-              </button>
+              <button onClick={cancelModal} className="text-muted-foreground hover:text-foreground">✕</button>
             </div>
 
-            <div className="space-y-4">
-              {/* Role Selection */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">🎭 Agenten-Rolle wählen</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {AGENT_ROLES.map((role) => (
-                    <button
-                      key={role.id}
-                      onClick={() => applyRole(role.id)}
-                      className={`flex items-start gap-2 rounded-md border p-3 text-left transition-colors ${
-                        selectedRole === role.id
-                          ? "border-primary bg-primary/5"
-                          : "border-input hover:bg-muted/50"
-                      }`}
-                    >
-                      <span className="text-lg shrink-0">{role.icon}</span>
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium truncate">{role.label}</div>
-                        <div className="text-xs text-muted-foreground line-clamp-2">
-                          {role.description}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {
+                /* LEFT COLUMN — Config */
+              }
+              <div className="space-y-5">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">🎭 Agenten-Rolle</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {AGENT_ROLES.map((role) => (
+                      <button
+                        key={role.id}
+                        onClick={() => applyRole(role.id)}
+                        className={`flex items-start gap-2 rounded-md border p-3 text-left transition-colors ${
+                          selectedRole === role.id
+                            ? "border-primary bg-primary/5"
+                            : "border-input hover:bg-muted/50"
+                        }`}
+                      >
+                        <span className="text-lg shrink-0">{role.icon}</span>
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium truncate">{role.label}</div>
+                          <div className="text-xs text-muted-foreground line-clamp-2">{role.description}</div>
                         </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-                {selectedRole && (
-                  <p className="text-xs text-primary">
-                    ✓ {getAgentRole(selectedRole)?.label} ausgewählt — System Prompt und Einstellungen wurden übernommen
-                  </p>
-                )}
-              </div>
-
-              <div className="border-t pt-4">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-                  Details
-                </p>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Name (intern) *</label>
-                    <input
-                      type="text"
-                      value={editForm.name || ""}
-                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                      placeholder="idea-scout"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Anzeigename *</label>
-                    <input
-                      type="text"
-                      value={editForm.label || ""}
-                      onChange={(e) => setEditForm({ ...editForm, label: e.target.value })}
-                      placeholder="Ideen-Scout"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    />
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Beschreibung</label>
-                  <input
-                    type="text"
-                    value={editForm.description || ""}
-                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                    placeholder="Was macht dieser Agent?"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Provider</label>
+                {currentRole && currentRole.templates.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">📝 Prompt-Vorlage</label>
                     <select
-                      value={editForm.provider || "openai"}
-                      onChange={(e) => setEditForm({ ...editForm, provider: e.target.value })}
+                      value={selectedTemplate}
+                      onChange={(e) => applyTemplate(selectedRole, e.target.value)}
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     >
-                      <option value="openai">OpenAI</option>
-                      <option value="ollama">Ollama</option>
-                      <option value="anthropic">Anthropic</option>
+                      <option value="">Eigener Prompt (keine Vorlage)</option>
+                      {currentRole.templates.map((t) => (
+                        <option key={t.id} value={t.id}>{t.label} — {t.description}</option>
+                      ))}
                     </select>
+                    {currentTemplate && (
+                      <p className="text-xs text-primary">
+                        ✓ {currentTemplate.label} — System Prompt übernommen
+                      </p>
+                    )}
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Modell</label>
-                    <input
-                      type="text"
-                      value={editForm.model || ""}
-                      onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
-                      placeholder="gpt-4"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    />
-                  </div>
-                </div>
+                )}
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Temperatur: {editForm.temperature}</label>
-                    <input
-                      type="range"
-                      min={0}
-                      max={2}
-                      step={0.1}
-                      value={editForm.temperature || 0.7}
-                      onChange={(e) => setEditForm({ ...editForm, temperature: parseFloat(e.target.value) })}
-                      className="w-full"
-                    />
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Präzise (0)</span>
-                      <span>Kreativ (2)</span>
+                <div className="border-t pt-4 space-y-4">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Details</p>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium">Name *</label>
+                      <input
+                        type="text"
+                        value={editForm.name || ""}
+                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                        placeholder="idea-scout"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium">Anzeigename *</label>
+                      <input
+                        type="text"
+                        value={editForm.label || ""}
+                        onChange={(e) => setEditForm({ ...editForm, label: e.target.value })}
+                        placeholder="Ideen-Scout"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      />
                     </div>
                   </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium">Provider</label>
+                      <select
+                        value={editForm.provider || "openai"}
+                        onChange={(e) => setEditForm({ ...editForm, provider: e.target.value })}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="openai">OpenAI</option>
+                        <option value="ollama">Ollama</option>
+                        <option value="anthropic">Anthropic</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium">Modell</label>
+                      <input
+                        type="text"
+                        value={editForm.model || ""}
+                        onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
+                        placeholder="gpt-4"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium">Temperatur: {editForm.temperature}</label>
+                      <input
+                        type="range"
+                        min={0}
+                        max={2}
+                        step={0.1}
+                        value={editForm.temperature || 0.7}
+                        onChange={(e) => setEditForm({ ...editForm, temperature: parseFloat(e.target.value) })}
+                        className="w-full"
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Präzise</span>
+                        <span>Kreativ</span>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium">Max Tokens</label>
+                      <input
+                        type="number"
+                        value={editForm.maxTokens || 4096}
+                        onChange={(e) => setEditForm({ ...editForm, maxTokens: parseInt(e.target.value) })}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Max Tokens</label>
-                    <input
-                      type="number"
-                      value={editForm.maxTokens || 4096}
-                      onChange={(e) => setEditForm({ ...editForm, maxTokens: parseInt(e.target.value) })}
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    <label className="text-sm font-medium">System Prompt</label>
+                    <textarea
+                      value={editForm.systemPrompt || ""}
+                      onChange={(e) => setEditForm({ ...editForm, systemPrompt: e.target.value })}
+                      rows={5}
+                      placeholder="Du bist ein..."
+                      className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
                     />
+                    <p className="text-xs text-muted-foreground">{editForm.systemPrompt?.length || 0} Zeichen</p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={editForm.isEnabled ?? true}
+                      onChange={(e) => setEditForm({ ...editForm, isEnabled: e.target.checked })}
+                      className="h-4 w-4"
+                    />
+                    <label className="text-sm font-medium">Aktiviert</label>
+                  </div>
+                </div>
+              </div>
+
+              {
+                /* RIGHT COLUMN — Test & Preview */
+              }
+              <div className="space-y-5 border-l lg:pl-6">
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold">🧪 Agent Testen</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Teste den Agent mit einer Beispiel-Frage
+                  </p>
+
+                  <div className="space-y-2">
+                    <textarea
+                      value={testQuery}
+                      onChange={(e) => setTestQuery(e.target.value)}
+                      rows={3}
+                      placeholder="Gib eine Test-Frage ein..."
+                      className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                    <button
+                      onClick={testAgent}
+                      disabled={testLoading || !editForm.systemPrompt || !testQuery}
+                      className="w-full inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                    >
+                      {testLoading ? "Teste..." : "▶️ Agent testen"}
+                    </button>
+                  </div>
+
+                  {testResult && (
+                    <div className="rounded-md border bg-muted/50 p-4 space-y-2">
+                      <div className="text-xs font-medium text-muted-foreground uppercase">Antwort</div>
+                      <div className="text-sm whitespace-pre-wrap">{testResult}</div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold">👁️ System Prompt Vorschau</h3>
+                  <div className="rounded-md border bg-muted/30 p-3 max-h-48 overflow-y-auto">
+                    <pre className="text-xs font-mono whitespace-pre-wrap text-muted-foreground">
+                      {editForm.systemPrompt || "(Kein System Prompt)"}
+                    </pre>
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">System Prompt</label>
-                  <textarea
-                    value={editForm.systemPrompt || ""}
-                    onChange={(e) => setEditForm({ ...editForm, systemPrompt: e.target.value })}
-                    rows={6}
-                    placeholder="Du bist ein..."
-                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Definiert die Persönlichkeit und Aufgaben des Agents
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2 pt-2">
-                  <input
-                    type="checkbox"
-                    checked={editForm.isEnabled ?? true}
-                    onChange={(e) => setEditForm({ ...editForm, isEnabled: e.target.checked })}
-                    className="h-4 w-4"
-                  />
-                  <label className="text-sm font-medium">Aktiviert</label>
-                </div>
+                {testHistory.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold">📊 Test-Historie (Session)</h3>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {testHistory.map((t, i) => (
+                        <div key={i} className="rounded-md border p-3 text-xs space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">{t.agentLabel}</span>
+                            <span className="text-muted-foreground">{new Date(t.timestamp).toLocaleTimeString("de-DE")}</span>
+                          </div>
+                          <div className="text-muted-foreground truncate">Q: {t.testQuery}</div>
+                          <div className="text-muted-foreground line-clamp-2">A: {t.response}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
