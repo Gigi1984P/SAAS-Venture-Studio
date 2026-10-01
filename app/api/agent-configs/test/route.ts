@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,71 +12,72 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Try real API if provider is openai and key exists
-    if (provider === "openai" && process.env.OPENAI_API_KEY) {
-      try {
-        const openAiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: model || "gpt-4",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: query },
-            ],
-            temperature: temperature || 0.7,
-            max_tokens: 1000,
-          }),
-        });
+    const apiKey = process.env.OPENROUTER_API_KEY || process.env.OLLAMA_API_KEY;
 
-        if (openAiRes.ok) {
-          const data = await openAiRes.json();
-          return NextResponse.json({
-            response: data.choices[0]?.message?.content || "Keine Antwort",
-            provider: "openai",
-            model: model || "gpt-4",
-            tokensUsed: data.usage?.total_tokens,
-          });
-        } else {
-          const error = await openAiRes.text();
-          console.error("[OPENAI ERROR]", error);
-          // Fall back to simulation
-        }
-      } catch (apiError) {
-        console.error("[OPENAI FETCH ERROR]", apiError);
-        // Fall back to simulation
-      }
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "Kein API Key konfiguriert. Bitte OPENROUTER_API_KEY oder OLLAMA_API_KEY als ENV Variable setzen." },
+        { status: 500 }
+      );
     }
 
-    // Simulation fallback
-    const simulatedResponse = `[SIMULIERT] Antwort von ${provider || "openai"} / ${model || "gpt-4"}:
+    // Use OpenRouter API (supports many models including free ones)
+    const modelName = model || "meta-llama/llama-3.1-8b-instruct:free";
+    
+    console.log(`[LLM REQUEST] Model: ${modelName}, Provider: ${provider || "openrouter"}`);
 
-Mit System Prompt: "${systemPrompt.slice(0, 80)}..."
+    const openRouterRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+        "HTTP-Referer": "https://saas-venture-studio.vercel.app",
+        "X-Title": "SAAS Venture Studio",
+      },
+      body: JSON.stringify({
+        model: modelName,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: query },
+        ],
+        temperature: temperature || 0.7,
+        max_tokens: 2048,
+      }),
+    });
 
-Frage: "${query}"
+    if (!openRouterRes.ok) {
+      const errorText = await openRouterRes.text();
+      console.error("[OPENROUTER ERROR]", errorText);
+      return NextResponse.json(
+        { error: `LLM API Fehler: ${openRouterRes.status} — ${errorText.slice(0, 200)}` },
+        { status: 502 }
+      );
+    }
 
-Hier würde normalerweise die echte LLM-Antwort erscheinen.
+    const data = await openRouterRes.json();
+    const response = data.choices?.[0]?.message?.content;
+    const tokensUsed = data.usage?.total_tokens;
+    const modelUsed = data.model;
 
-Um echte Antworten zu erhalten:
-1. Stelle sicher, dass OPENAI_API_KEY als ENV Variable gesetzt ist
-2. Wähle Provider "openai"
-3. Wähle ein gültiges Modell (z.B. "gpt-4", "gpt-3.5-turbo")
-
-Dein aktueller Provider: ${provider || "nicht gesetzt"}
-API Key vorhanden: ${process.env.OPENAI_API_KEY ? "Ja ✅" : "Nein ❌"}`;
+    if (!response) {
+      return NextResponse.json(
+        { error: "Leere Antwort von LLM API" },
+        { status: 502 }
+      );
+    }
 
     return NextResponse.json({
-      response: simulatedResponse,
-      provider: provider || "simulation",
-      simulated: true,
+      response,
+      provider: "openrouter",
+      model: modelUsed || modelName,
+      tokensUsed,
+      simulated: false,
     });
-  } catch (error) {
+
+  } catch (error: any) {
     console.error("[AGENT TEST]", error);
     return NextResponse.json(
-      { error: "Interner Fehler beim Testen" },
+      { error: "Interner Fehler: " + error.message },
       { status: 500 }
     );
   }
