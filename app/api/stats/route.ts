@@ -21,26 +21,18 @@ export async function GET() {
       prisma.opportunity.findMany({ take: 5, orderBy: { createdAt: "desc" }, select: { id: true, title: true, status: true, createdAt: true } }),
     ]);
 
-    // Scout-Ideen zaehlen - versuche verschiedene Methoden
     let totalScoutIdeas = 0;
     let activeScoutRuns = 0;
     
     try {
-      // Methode 1: COUNT ohne Cast
-      const countResult = await prisma.$queryRawUnsafe(`SELECT COUNT(*) as count FROM business_ideas`);
-      const count = (countResult as any[]);
-      totalScoutIdeas = Number(count?.[0]?.count || 0);
-    } catch (e: any) {
-      console.error("[STATS] business_ideas count failed:", e.message);
-    }
+      const result = await prisma.$queryRawUnsafe(`SELECT COUNT(*) as count FROM business_ideas`);
+      totalScoutIdeas = Number((result as any[])[0].count);
+    } catch { /* ignore */ }
 
     try {
-      const runsResult = await prisma.$queryRawUnsafe(`SELECT COUNT(*) as count FROM scout_runs WHERE status = 'running'`);
-      const runs = (runsResult as any[]);
-      activeScoutRuns = Number(runs?.[0]?.count || 0);
-    } catch (e: any) {
-      console.error("[STATS] scout_runs count failed:", e.message);
-    }
+      const result = await prisma.$queryRawUnsafe(`SELECT COUNT(*) as count FROM scout_runs WHERE status = 'running'`);
+      activeScoutRuns = Number((result as any[])[0].count);
+    } catch { /* ignore */ }
 
     return NextResponse.json({
       totalIdeas,

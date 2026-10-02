@@ -5,54 +5,30 @@ export async function GET() {
   try {
     let totalScoutIdeas = 0;
     let activeScoutRuns = 0;
-    let tables = [];
-    let rawBusinessCount = null;
-    let rawRunsCount = null;
+    let errors: string[] = [];
 
-    // Zuerst: Welche Tabellen existieren?
+    // Scout-Ideen zaehlen
     try {
-      const tableResult = await prisma.$queryRawUnsafe(
-        `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'`
-      );
-      tables = (tableResult as any[]).map((r) => r.table_name);
+      const result = await prisma.$queryRawUnsafe(`SELECT COUNT(*) as count FROM business_ideas`);
+      const rows = result as any[];
+      totalScoutIdeas = Number(rows?.[0]?.count || 0);
     } catch (e: any) {
-      tables = ["ERROR: " + e.message];
+      errors.push("business_ideas: " + e.message);
     }
 
-    // Dann: Scout-Ideen zählen
-    if (tables.includes("business_ideas")) {
-      try {
-        const result = await prisma.$queryRawUnsafe(`SELECT COUNT(*) as count FROM business_ideas`);
-        rawBusinessCount = result;
-        const rows = result as any[];
-        if (rows && rows.length > 0) {
-          totalScoutIdeas = Number(rows[0].count || 0);
-        }
-      } catch (e: any) {
-        rawBusinessCount = "ERROR: " + e.message;
-      }
-    }
-
-    // Dann: Scout Runs zählen
-    if (tables.includes("scout_runs")) {
-      try {
-        const result = await prisma.$queryRawUnsafe(`SELECT COUNT(*) as count FROM scout_runs WHERE status = 'running'`);
-        rawRunsCount = result;
-        const rows = result as any[];
-        if (rows && rows.length > 0) {
-          activeScoutRuns = Number(rows[0].count || 0);
-        }
-      } catch (e: any) {
-        rawRunsCount = "ERROR: " + e.message;
-      }
+    // Scout Runs zaehlen
+    try {
+      const result = await prisma.$queryRawUnsafe(`SELECT COUNT(*) as count FROM scout_runs WHERE status = 'running'`);
+      const rows = result as any[];
+      activeScoutRuns = Number(rows?.[0]?.count || 0);
+    } catch (e: any) {
+      errors.push("scout_runs: " + e.message);
     }
 
     return NextResponse.json({
       totalScoutIdeas,
       activeScoutRuns,
-      tables,
-      rawBusinessCount,
-      rawRunsCount,
+      errors,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
