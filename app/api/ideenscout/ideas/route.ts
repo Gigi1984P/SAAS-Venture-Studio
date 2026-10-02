@@ -93,8 +93,8 @@ export async function POST(req: NextRequest) {
     let ventures;
     try {
       ventures = await queryRaw(
-        `INSERT INTO ventures (name, slug, description, status, owner_id, created_at, updated_at)
-         VALUES ($1, $2, $3, 'ideation', $4, NOW(), NOW())
+        `INSERT INTO ventures (id, name, slug, description, status, owner_id, created_at, updated_at)
+         VALUES (gen_random_uuid()::TEXT, $1, $2, $3, 'ideation', $4, NOW(), NOW())
          RETURNING *`,
         idea.title,
         slug,
