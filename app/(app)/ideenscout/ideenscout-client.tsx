@@ -19,7 +19,13 @@ interface BusinessIdea {
   title: string;
   description: string;
   category: string | null;
+  target_audience: string | null;
+  revenue_model: string | null;
+  mvp_effort: string | null;
   potential: string | null;
+  competition: string | null;
+  differentiation: string | null;
+  is_saved: boolean;
   created_at: string;
 }
 
@@ -28,6 +34,7 @@ export default function IdeenScoutClient() {
   const [ideas, setIdeas] = useState<BusinessIdea[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [filterSaved, setFilterSaved] = useState(false);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchStatus = useCallback(async () => {
@@ -40,7 +47,6 @@ export default function IdeenScoutClient() {
     } catch { /* ignore */ }
   }, []);
 
-  // Heartbeat: alle 5 Sekunden Status laden
   useEffect(() => {
     fetchStatus();
     heartbeatRef.current = setInterval(fetchStatus, 5000);
@@ -49,7 +55,7 @@ export default function IdeenScoutClient() {
     };
   }, [fetchStatus]);
 
-  // Wenn running: alle 30 Sekunden eine Idee generieren (Heartbeat)
+  // Vercel Pro: Heartbeat alle 30s (statt vorher 60s, da Pro)
   useEffect(() => {
     if (run?.status !== "running") return;
     
@@ -60,11 +66,9 @@ export default function IdeenScoutClient() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ scoutRunId: run.id }),
         });
-        if (res.ok) {
-          fetchStatus(); // Sofort aktualisieren
-        }
+        if (res.ok) fetchStatus();
       } catch { /* ignore */ }
-    }, 30000); // Alle 30 Sekunden
+    }, 30000);
 
     return () => clearInterval(generateInterval);
   }, [run?.status, run?.id, fetchStatus]);
@@ -92,18 +96,53 @@ export default function IdeenScoutClient() {
     }
   }
 
+  async function saveIdea(ideaId: string) {
+    try {
+      const res = await fetch("/api/ideenscout/ideas", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ideaId, isSaved: true }),
+      });
+      if (res.ok) {
+        setMessage("💾 Idee gespeichert");
+        fetchStatus();
+      }
+    } catch { /* ignore */ }
+  }
+
+  async function convertToVenture(ideaId: string) {
+    try {
+      const res = await fetch("/api/ideenscout/ideas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ideaId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMessage(`🚀 Venture "${data.venture.name}" erstellt!`);
+        fetchStatus();
+      } else {
+        setMessage(data.error || "Fehler bei Konvertierung");
+      }
+    } catch { /* ignore */ }
+  }
+
   const statusColors: Record<string, string> = {
     running: "text-green-600 bg-green-50 border-green-200",
     paused: "text-amber-600 bg-amber-50 border-amber-200",
     stopped: "text-gray-600 bg-gray-50 border-gray-200",
   };
 
+  const displayedIdeas = filterSaved ? ideas.filter(i => i.is_saved) : ideas;
+
   return (
-    <div className="space-y-8 max-w-5xl mx-auto px-4 py-8">
+    <div className="space-y-8 max-w-6xl mx-auto px-4 py-8">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">🔍 IdeenScout</h1>
           <p className="text-muted-foreground mt-1">Autonomer SaaS-Ideen-Scout — findet ständig neue Geschäftsmöglichkeiten</p>
+          <p className="text-xs text-green-600 mt-1 font-medium">⚡ Vercel Pro Modus — 60s Timeout, GPT-4o</p>
         </div>
         <div className={`px-4 py-2 rounded-full border text-sm font-semibold ${statusColors[run?.status || "stopped"] || statusColors.stopped}`}>
           {run?.status === "running" ? "🟢 Läuft" : run?.status === "paused" ? "🟡 Pausiert" : "🔴 Gestoppt"}
@@ -112,7 +151,7 @@ export default function IdeenScoutClient() {
 
       {/* Steuerung */}
       <div className="rounded-lg border bg-card p-6 space-y-4">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
           <button
             onClick={() => control("start")}
             disabled={loading || run?.status === "running"}
@@ -134,16 +173,32 @@ export default function IdeenScoutClient() {
           >
             {loading ? "..." : "🛑 Stoppen"}
           </button>
+
+          <div className="ml-auto flex items-center gap-2">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input 
+                type="checkbox" 
+                checked={filterSaved} 
+                onChange={e => setFilterSaved(e.target.checked)}
+                className="rounded"
+              />
+              Nur Gespeicherte
+            </label>
+          </div>
         </div>
 
         {message && (
-          <div className="text-sm font-medium text-primary">{message}</div>
+          <div className="text-sm font-medium text-primary animate-pulse">{message}</div>
         )}
 
-        <div className="grid grid-cols-3 gap-4 text-sm">
+        <div className="grid grid-cols-4 gap-4 text-sm">
           <div className="rounded-md bg-muted p-3">
             <div className="text-muted-foreground">Ideen gefunden</div>
             <div className="text-2xl font-bold">{run?.total_ideas || 0}</div>
+          </div>
+          <div className="rounded-md bg-muted p-3">
+            <div className="text-muted-foreground">Gespeichert</div>
+            <div className="text-2xl font-bold text-blue-600">{ideas.filter(i => i.is_saved).length}</div>
           </div>
           <div className="rounded-md bg-muted p-3">
             <div className="text-muted-foreground">Fehler</div>
@@ -166,19 +221,24 @@ export default function IdeenScoutClient() {
 
       {/* Ideen Liste */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">🎯 Gefundene Ideen ({ideas.length})</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">🎯 Gefundene Ideen ({displayedIdeas.length})</h2>
+          <div className="text-xs text-muted-foreground">
+            {filterSaved ? "Nur gespeicherte Ideen" : "Alle Ideen"} — Auto-Refresh alle 5s
+          </div>
+        </div>
         
-        {ideas.length === 0 ? (
+        {displayedIdeas.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground rounded-lg border border-dashed">
             Noch keine Ideen. Starte den IdeenScout, um automatisch Ideen zu generieren.
           </div>
         ) : (
           <div className="grid gap-4">
-            {ideas.map((idea) => (
-              <div key={idea.id} className="rounded-lg border bg-card p-5 hover:shadow-md transition-shadow">
+            {displayedIdeas.map((idea) => (
+              <div key={idea.id} className={`rounded-lg border p-5 hover:shadow-md transition-shadow ${idea.is_saved ? 'bg-blue-50 border-blue-200' : 'bg-card'}`}>
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <h3 className="text-lg font-semibold">{idea.title}</h3>
                       {idea.potential && (
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -189,17 +249,46 @@ export default function IdeenScoutClient() {
                           {idea.potential === "high" ? "🚀 Hoch" : idea.potential === "medium" ? "⭐ Mittel" : "📉 Niedrig"}
                         </span>
                       )}
+                      {idea.mvp_effort && (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700">
+                          MVP: {idea.mvp_effort === "low" ? "Schnell" : idea.mvp_effort === "medium" ? "Mittel" : "Aufwändig"}
+                        </span>
+                      )}
+                      {idea.is_saved && <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">💾 Gespeichert</span>}
                     </div>
-                    <p className="text-sm text-muted-foreground line-clamp-3">{idea.description}</p>
                     
-                    {idea.category && (
-                      <div className="mt-2 text-xs text-muted-foreground">
-                        Kategorie: {idea.category}
+                    <p className="text-sm text-muted-foreground line-clamp-3 mb-3">{idea.description}</p>
+                    
+                    <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+                      {idea.category && <span>🏷️ {idea.category}</span>}
+                      {idea.target_audience && <span>👥 {idea.target_audience}</span>}
+                      {idea.revenue_model && <span>💰 {idea.revenue_model}</span>}
+                      {idea.competition && <span>⚔️ Wettbewerb: {idea.competition}</span>}
+                    </div>
+
+                    {idea.differentiation && (
+                      <div className="mt-2 text-xs bg-green-50 text-green-700 p-2 rounded-md">
+                        ✨ <strong>Anders als alle:</strong> {idea.differentiation}
                       </div>
                     )}
                   </div>
-                  <div className="text-xs text-muted-foreground whitespace-nowrap">
-                    {new Date(idea.created_at).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+                  <div className="flex flex-col gap-2 items-end">
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(idea.created_at).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+                    </div>
+                    <button
+                      onClick={() => saveIdea(idea.id)}
+                      disabled={idea.is_saved}
+                      className="text-xs px-3 py-1 rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {idea.is_saved ? "💾 Gespeichert" : "💾 Speichern"}
+                    </button>
+                    <button
+                      onClick={() => convertToVenture(idea.id)}
+                      className="text-xs px-3 py-1 rounded-md bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
+                    >
+                      🚀 Zu Venture
+                    </button>
                   </div>
                 </div>
               </div>

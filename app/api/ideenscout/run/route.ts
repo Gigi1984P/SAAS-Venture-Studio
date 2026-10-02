@@ -19,7 +19,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { scoutRunId } = body;
 
-    // ScoutRun laden
     const runs = await queryRaw(`SELECT * FROM scout_runs WHERE id = $1`, scoutRunId);
     const run = (runs as any[])?.[0];
 
@@ -33,10 +32,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "AI_GATEWAY_API_KEY fehlt" }, { status: 401 });
     }
 
-    const prompt = `${run.prompt}\n\nGeneriere JETZT eine konkrete, innovative SaaS-Geschäftsidee. Gib die Antwort als JSON zurück mit den Feldern: title (max 60 Zeichen), description (3-4 Sätze), category, targetAudience, revenueModel, mvpEffort (low/medium/high), potential (low/medium/high).`;
+    // Vercel Pro: Mehr Zeit, besseres Modell, längere Antworten
+    const prompt = `${run.prompt}\n\nGeneriere JETZT eine konkrete, innovative SaaS-Geschäftsidee. Gib die Antwort als JSON zurück mit den Feldern: title (max 80 Zeichen), description (4-5 Sätze mit Problem-Lösung-Modell), category, targetAudience, revenueModel (konkret: z.B. "€29-99/Monat pro User"), mvpEffort (low/medium/high), potential (low/medium/high), competition (schwach/mittel/stark), differentiation (was macht diese Idee einzigartig?).`;
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 55000); // Vercel Pro: 55s
 
     const res = await fetch(GATEWAY_URL, {
       method: "POST",
@@ -46,13 +46,13 @@ export async function POST(req: NextRequest) {
         Authorization: "Bearer " + apiKey,
       },
       body: JSON.stringify({
-        model: "openai/gpt-4o-mini",
+        model: "openai/gpt-4o", // Vercel Pro: besseres Modell
         messages: [
-          { role: "system", content: "Du bist ein erfahrener Venture-Scout. Du findest lukrative SaaS-Nischen. Antworte NUR mit gültigem JSON." },
+          { role: "system", content: "Du bist ein erfahrener Venture-Scout und Produktstratege. Du findest lukrative SaaS-Nischen mit konkretem Geschäftsmodell. Antworte NUR mit gültigem JSON." },
           { role: "user", content: prompt },
         ],
-        temperature: 0.9,
-        max_tokens: 600,
+        temperature: 0.85,
+        max_tokens: 2048, // Vercel Pro: längere Antworten
       }),
     });
 
@@ -72,7 +72,6 @@ export async function POST(req: NextRequest) {
     const data = await res.json();
     const content = data.choices?.[0]?.message?.content || "";
 
-    // JSON extrahieren
     let idea;
     try {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -80,27 +79,33 @@ export async function POST(req: NextRequest) {
     } catch {
       idea = {
         title: "Neue Idee",
-        description: content.slice(0, 500),
+        description: content.slice(0, 1000),
         category: "Unbekannt",
         targetAudience: "Solopreneure",
         revenueModel: "SaaS-Abonnement",
         mvpEffort: "medium",
         potential: "medium",
+        competition: "mittel",
+        differentiation: "Automatisierter Ansatz",
       };
     }
 
-    // BusinessIdea speichern
-    await queryRaw(
-      `INSERT INTO business_ideas (scout_run_id, title, description, category, target_audience, revenue_model, mvp_effort, potential)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    // BusinessIdea mit erweiterten Feldern speichern
+    const savedIdeas = await queryRaw(
+      `INSERT INTO business_ideas 
+       (scout_run_id, title, description, category, target_audience, revenue_model, mvp_effort, potential, competition, differentiation)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING *`,
       scoutRunId,
       idea.title?.slice(0, 100) || "Unbenannte Idee",
-      idea.description?.slice(0, 2000) || "",
+      idea.description?.slice(0, 3000) || "",
       idea.category || null,
       idea.targetAudience || null,
       idea.revenueModel || null,
       idea.mvpEffort || null,
-      idea.potential || null
+      idea.potential || null,
+      idea.competition || null,
+      idea.differentiation || null
     );
 
     await queryRaw(`UPDATE scout_runs SET total_ideas = total_ideas + 1, last_run_at = NOW() WHERE id = $1`, scoutRunId);
@@ -108,7 +113,11 @@ export async function POST(req: NextRequest) {
     const elapsed = Date.now() - startTime;
     await logDebug("SUCCESS", `Idee generiert`, `${elapsed}ms — ${idea.title}`);
 
-    return NextResponse.json({ title: idea.title, elapsed: `${elapsed}ms` });
+    return NextResponse.json({ 
+      idea: (savedIdeas as any[])?.[0], 
+      elapsed: `${elapsed}ms`,
+      model: "gpt-4o" 
+    });
 
   } catch (error: any) {
     const elapsed = Date.now() - startTime;
