@@ -191,7 +191,7 @@ export default function SettingsPage() {
     }
     setTestLoading(true); setMessage("");
     try {
-      const ollamaRes = await fetch("/api/ai-generate", {
+      const ollamaRes = await fetch("/api/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
