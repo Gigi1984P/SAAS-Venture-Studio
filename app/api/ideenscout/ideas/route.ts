@@ -90,15 +90,28 @@ export async function POST(req: NextRequest) {
     }
 
     // Venture erstellen
-    const ventures = await queryRaw(
-      `INSERT INTO ventures (name, slug, description, status, owner_id, created_at, updated_at)
-       VALUES ($1, $2, $3, 'ideation', $4, NOW(), NOW())
-       RETURNING *`,
-      idea.title,
-      slug,
-      idea.description,
-      ownerId
-    );
+    let ventures;
+    try {
+      ventures = await queryRaw(
+        `INSERT INTO ventures (name, slug, description, status, owner_id, created_at, updated_at)
+         VALUES ($1, $2, $3, 'ideation', $4, NOW(), NOW())
+         RETURNING *`,
+        idea.title,
+        slug,
+        idea.description,
+        ownerId
+      );
+    } catch (dbError: any) {
+      console.error("[VENTURE INSERT]", dbError);
+      return NextResponse.json({ 
+        error: `DB Fehler: ${dbError.message}`, 
+        hint: "Prüfe ob ventures Tabelle die richtigen Spalten hat (owner_id, slug)" 
+      }, { status: 500 });
+    }
+
+    if (!ventures || (ventures as any[]).length === 0) {
+      return NextResponse.json({ error: "Venture konnte nicht erstellt werden" }, { status: 500 });
+    }
 
     const venture = (ventures as any[])?.[0];
     
