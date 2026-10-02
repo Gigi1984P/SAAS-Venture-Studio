@@ -1,22 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+const GATEWAY_URL = "https://ai-gateway.vercel.sh/v1/chat/completions";
 
-// Modelle nach Geschwindigkeit sortiert (Vercel Hobby = 10s Timeout)
+// Verfügbare AI Gateway Modelle (provider/model Format)
 const MODELS: Record<string, { id: string; name: string; maxTokens: number }> = {
+  "gpt-4o-mini": {
+    id: "openai/gpt-4o-mini",
+    name: "GPT-4o Mini",
+    maxTokens: 2048,
+  },
+  "gpt-4o": {
+    id: "openai/gpt-4o",
+    name: "GPT-4o",
+    maxTokens: 2048,
+  },
+  "gpt-5-nano": {
+    id: "openai/gpt-5-nano",
+    name: "GPT-5 Nano",
+    maxTokens: 2048,
+  },
+  "gpt-5-mini": {
+    id: "openai/gpt-5-mini",
+    name: "GPT-5 Mini",
+    maxTokens: 2048,
+  },
   "claude-haiku-4.5": {
     id: "anthropic/claude-haiku-4.5",
     name: "Claude Haiku 4.5",
-    maxTokens: 2048,
-  },
-  "llama-3.1-8b": {
-    id: "meta-llama/llama-3.1-8b-instruct",
-    name: "Llama 3.1 8B",
-    maxTokens: 2048,
-  },
-  "claude-sonnet-3.5": {
-    id: "anthropic/claude-3.5-sonnet",
-    name: "Claude 3.5 Sonnet",
     maxTokens: 2048,
   },
 };
@@ -30,7 +40,6 @@ export async function POST(req: NextRequest) {
       model: modelKey,
       temperature,
       maxTokens,
-      apiKey: clientApiKey,
     } = body;
 
     if (!systemPrompt || !query) {
@@ -40,37 +49,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // API Key: Client-seitig (vom UI) oder ENV
-    const apiKey = clientApiKey || process.env.OPENROUTER_API_KEY;
+    // API Key: ENV (server-seitig, kein Client-Key nötig!)
+    const apiKey = process.env.AI_GATEWAY_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json(
         {
-          error:
-            "Kein OpenRouter API Key. Bitte in Settings → OpenRouter einen gültigen Key eintragen.",
-          hint: "https://openrouter.ai/keys",
+          error: "AI Gateway API Key nicht konfiguriert.",
+          hint: "Bitte AI_GATEWAY_API_KEY in den Vercel Environment Variables setzen.",
         },
         { status: 401 }
       );
     }
 
     // Modell-Key auflösen
-    const model =
-      MODELS[modelKey as string] || MODELS["claude-haiku-4.5"];
+    const model = MODELS[modelKey as string] || MODELS["gpt-4o-mini"];
 
-    // Fast-Abort: Bei ungültigem Key kommt von OpenRouter sofort 401
-    // Wir setzen Timeout auf 12s um Buffer zu haben (Vercel Hobby max ~10s)
+    // Timeout für Vercel Hobby (max ~10s)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000);
+    const timeoutId = setTimeout(() => controller.abort(), 9000);
 
-    const res = await fetch(OPENROUTER_URL, {
+    const res = await fetch(GATEWAY_URL, {
       method: "POST",
       signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
         Authorization: "Bearer " + apiKey,
-        "HTTP-Referer": process.env.NEXTAUTH_URL || "http://localhost:3000",
-        "X-Title": "SAAS Venture Studio",
       },
       body: JSON.stringify({
         model: model.id,
@@ -87,7 +91,7 @@ export async function POST(req: NextRequest) {
 
     if (!res.ok) {
       const errorText = await res.text();
-      console.error(`[OPENROUTER] HTTP ${res.status}: ${errorText.slice(0, 300)}`);
+      console.error(`[AI GATEWAY] HTTP ${res.status}: ${errorText.slice(0, 300)}`);
       let parsed;
       try { parsed = JSON.parse(errorText); } catch { /* ignore */ }
       const msg = parsed?.error?.message || errorText.slice(0, 200);
@@ -95,17 +99,28 @@ export async function POST(req: NextRequest) {
       if (res.status === 401) {
         return NextResponse.json(
           {
-            error: "OpenRouter API Key ungültig oder abgelaufen.",
+            error: "AI Gateway API Key ungültig oder abgelaufen.",
             detail: msg,
-            hint: "Bitte unter https://openrouter.ai/keys einen neuen Key erstellen und in Settings → OpenRouter eintragen.",
+            hint: "Bitte in Vercel Dashboard → AI Gateway einen neuen Key erstellen.",
           },
           { status: 401 }
         );
       }
 
+      if (res.status === 403) {
+        return NextResponse.json(
+          {
+            error: "Modell nicht verfügbar im Free Tier.",
+            detail: msg,
+            hint: "Versuche gpt-4o-mini (schnell und günstig).",
+          },
+          { status: 403 }
+        );
+      }
+
       return NextResponse.json(
         {
-          error: `OpenRouter Fehler ${res.status}: ${msg}`,
+          error: `AI Gateway Fehler ${res.status}: ${msg}`,
         },
         { status: 502 }
       );
@@ -115,7 +130,7 @@ export async function POST(req: NextRequest) {
 
     if (!data.choices?.[0]?.message?.content) {
       return NextResponse.json(
-        { error: "Ungültige OpenRouter-Antwort: Kein Content vorhanden" },
+        { error: "Ungültige AI Gateway-Antwort: Kein Content vorhanden" },
         { status: 502 }
       );
     }
@@ -125,7 +140,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       response: data.choices[0].message.content,
       model: model.name,
-      provider: "openrouter",
+      provider: "vercel-ai-gateway",
       usage: {
         promptTokens: usage.prompt_tokens,
         completionTokens: usage.completion_tokens,
@@ -137,15 +152,14 @@ export async function POST(req: NextRequest) {
     if (error.name === "AbortError") {
       return NextResponse.json(
         {
-          error:
-            "Anfrage zu langsam (>12s). OpenRouter antwortet nicht.",
-          hint: "Versuche Claude Haiku 4.5 (schnellstes Modell). Falls der Fehler bleibt: Überprüfe deinen API Key unter openrouter.ai/keys.",
+          error: "Anfrage zu langsam (>9s). AI Gateway antwortet nicht.",
+          hint: "Versuche gpt-4o-mini (schnellstes Modell).",
         },
         { status: 504 }
       );
     }
 
-    console.error("[OPENROUTER]", error);
+    console.error("[AI GATEWAY]", error);
     return NextResponse.json(
       { error: "Proxy Fehler: " + error.message },
       { status: 500 }

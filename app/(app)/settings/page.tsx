@@ -58,21 +58,10 @@ export default function SettingsPage() {
   const [chainResult, setChainResult] = useState<any>(null);
   const [chainLoading, setChainLoading] = useState(false);
 
-  // OpenRouter
-  const [openrouterKey, setOpenrouterKey] = useState(() => {
-    if (typeof window !== "undefined") {
-      try { return localStorage.getItem("openrouter_key") || ""; } catch { return ""; }
-    }
-    return "";
-  });
-  const [openrouterModel, setOpenrouterModel] = useState(() => {
-    if (typeof window !== "undefined") {
-      try { return localStorage.getItem("openrouter_model") || "claude-haiku-4.5"; } catch { return "claude-haiku-4.5"; }
-    }
-    return "claude-haiku-4.5";
-  });
-  const [openrouterTesting, setOpenrouterTesting] = useState(false);
-  const [openrouterTestResult, setOpenrouterTestResult] = useState("");
+  // AI Gateway
+  const [gatewayModel, setGatewayModel] = useState("gpt-4o-mini");
+  const [gatewayTesting, setGatewayTesting] = useState(false);
+  const [gatewayTestResult, setGatewayTestResult] = useState("");
 
   useEffect(() => {
     fetchAgents();
@@ -213,9 +202,8 @@ export default function SettingsPage() {
         body: JSON.stringify({
           systemPrompt: editForm.systemPrompt,
           query: testQuery,
-          model: openrouterModel,
+          model: gatewayModel,
           temperature: editForm.temperature,
-          apiKey: openrouterKey,
         }),
       });
 
@@ -227,8 +215,8 @@ export default function SettingsPage() {
       const data = await res.json();
       setTestResult({
         response: data.response,
-        provider: data.provider || "openrouter",
-        model: data.model || openrouterModel,
+        provider: data.provider || "vercel-ai-gateway",
+        model: data.model || gatewayModel,
         usage: data.usage,
       });
 
@@ -248,20 +236,8 @@ export default function SettingsPage() {
     }
   }
 
-  async function saveOpenrouter(e: React.FormEvent) {
-    e.preventDefault();
-    setMessage("");
-    try {
-      localStorage.setItem("openrouter_key", openrouterKey);
-      localStorage.setItem("openrouter_model", openrouterModel);
-      setMessage("OpenRouter Konfiguration gespeichert!");
-    } catch {
-      setMessage("Fehler beim Speichern in localStorage");
-    }
-  }
-
-  async function testOpenrouter() {
-    setOpenrouterTesting(true); setMessage(""); setOpenrouterTestResult("");
+  async function testGateway() {
+    setGatewayTesting(true); setMessage(""); setGatewayTestResult("");
     try {
       const res = await fetch("/api/ai-generate", {
         method: "POST",
@@ -269,13 +245,12 @@ export default function SettingsPage() {
         body: JSON.stringify({
           systemPrompt: "Du bist ein hilfreicher Assistent.",
           query: "Sag Hallo auf Deutsch.",
-          model: openrouterModel,
-          apiKey: openrouterKey,
+          model: gatewayModel,
         }),
       });
       const data = await res.json();
       if (res.ok && data.response) {
-        setOpenrouterTestResult(data.response);
+        setGatewayTestResult(data.response);
         setMessage(`Erfolg! Modell: ${data.model} · Tokens: ${data.usage?.totalTokens || 'N/A'}`);
       } else {
         setMessage(data.error || "Test fehlgeschlagen");
@@ -283,7 +258,7 @@ export default function SettingsPage() {
     } catch {
       setMessage("Netzwerkfehler beim Testen");
     } finally {
-      setOpenrouterTesting(false);
+      setGatewayTesting(false);
     }
   }
 
@@ -297,7 +272,6 @@ export default function SettingsPage() {
         body: JSON.stringify({
           configId: editingAgent.id,
           input: testQuery,
-          apiKey: openrouterKey,
         }),
       });
       const data = await res.json();
@@ -313,7 +287,7 @@ export default function SettingsPage() {
   const tabs = [
     { id: "agents", label: "🤖 Agenten" },
     { id: "profile", label: "👤 Profil" },
-    { id: "openrouter", label: "🔑 OpenRouter" },
+    { id: "gateway", label: "⚡ AI Gateway" },
   ];
 
   const currentRole = getAgentRole(selectedRole);
@@ -420,8 +394,8 @@ export default function SettingsPage() {
                         >
                           {agent.isEnabled ? "Aktiv" : "Inaktiv"}
                         </span>
-                        {agent.provider === "openrouter" && (
-                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">🔌 OpenRouter</span>
+                        {agent.provider === "gateway" && (
+                          <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">⚡ AI Gateway</span>
                         )}
                         {agent.provider === "ollama" && (
                           <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">🦙 Ollama</span>
@@ -470,80 +444,51 @@ export default function SettingsPage() {
       )}
 
       {
-        /* OPENROUTER TAB */
+        /* AI GATEWAY TAB */
       }
-      {activeTab === "openrouter" && (
+      {activeTab === "gateway" && (
         <div className="space-y-6">
           <div>
-            <h2 className="text-lg font-semibold">OpenRouter API Key</h2>
+            <h2 className="text-lg font-semibold">⚡ Vercel AI Gateway</h2>
             <p className="text-sm text-muted-foreground">
-              Dein persönlicher OpenRouter Key für LLM-Anfragen. Wird lokal im Browser gespeichert (localStorage).
+              Server-seitige LLM-Anbindung über Vercel AI Gateway. Kein Client-Key nötig!
             </p>
           </div>
 
-          <form onSubmit={saveOpenrouter} className="rounded-lg border bg-card p-6 space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">OpenRouter API Key</label>
-              <input
-                type="password"
-                value={openrouterKey}
-                onChange={e => setOpenrouterKey(e.target.value)}
-                placeholder="sk-or-..."
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              />
-              <p className="text-xs text-muted-foreground">
-                Erstelle einen Key unter{" "}
-                <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                  openrouter.ai/keys
-                </a>
-                {" "}— kostenlos für die meisten Modelle.
-              </p>
-            </div>
-
+          <div className="rounded-lg border bg-card p-6 space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Standard-Modell</label>
               <select
-                value={openrouterModel}
-                onChange={e => setOpenrouterModel(e.target.value)}
+                value={gatewayModel}
+                onChange={e => setGatewayModel(e.target.value)}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
-                <option value="claude-haiku-4.5">Claude Haiku 4.5 — schnell (1-2s)</option>
-                <option value="llama-3.1-8b">Llama 3.1 8B — Mittel (3-8s)</option>
-                <option value="claude-sonnet-3.5">Claude 3.5 Sonnet — qualitativ (3-5s)</option>
+                <option value="gpt-4o-mini">GPT-4o Mini — schnell & günstig</option>
+                <option value="gpt-4o">GPT-4o — leistungsstark</option>
+                <option value="gpt-5-nano">GPT-5 Nano — neueste</option>
+                <option value="claude-haiku-4.5">Claude Haiku 4.5</option>
               </select>
               <p className="text-xs text-muted-foreground">
-                <strong>Tipp:</strong> Claude Haiku 4.5 ist am schnellsten und eignet sich am besten für Vercel (10s Timeout).
+                Modelle werden über Vercel AI Gateway geroutet. Keine Timeouts mehr!
               </p>
             </div>
 
             <div className="flex gap-3 pt-2">
-              <button type="submit" className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-                Speichern
-              </button>
               <button
                 type="button"
-                onClick={testOpenrouter}
-                disabled={!openrouterKey || openrouterTesting}
+                onClick={testGateway}
+                disabled={gatewayTesting}
                 className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-medium hover:bg-accent disabled:opacity-50"
               >
-                {openrouterTesting ? "Teste..." : "🔄 Verbindung testen"}
+                {gatewayTesting ? "Teste..." : "🔄 Verbindung testen"}
               </button>
-              {openrouterKey && (
-                <button
-                  type="button"
-                  onClick={() => { localStorage.removeItem("openrouter_key"); localStorage.removeItem("openrouter_model"); setOpenrouterKey(""); setMessage("Key entfernt"); }}
-                  className="inline-flex h-10 items-center justify-center rounded-md border border-red-200 bg-red-50 px-4 text-sm font-medium text-red-600 hover:bg-red-100"
-                >
-                  Löschen
-                </button>
-              )}
             </div>
-          </form>
+          </div>
 
-          {openrouterTestResult && (
+          {gatewayTestResult && (
             <div className="rounded-lg border bg-card p-6 space-y-3">
               <h3 className="text-sm font-semibold">Test-Ergebnis</h3>
-              <div className="rounded-md bg-muted p-3 text-sm whitespace-pre-wrap">{openrouterTestResult}</div>
+              <div className="rounded-md bg-muted p-3 text-sm whitespace-pre-wrap">{gatewayTestResult}</div>
             </div>
           )}
         </div>
@@ -644,13 +589,13 @@ export default function SettingsPage() {
                         value={editForm.provider || "ollama"}
                         onChange={(e) => {
                           const newProvider = e.target.value;
-                          const defaultModel = newProvider === "openrouter" ? "claude-haiku-4.5" : "llama3.1";
+                          const defaultModel = newProvider === "gateway" ? "openai/gpt-4o-mini" : "llama3.1";
                           setEditForm({ ...editForm, provider: newProvider, model: defaultModel });
                         }}
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       >
                         <option value="ollama">🦙 Ollama Server (187.124.0.184)</option>
-                        <option value="openrouter">🔌 OpenRouter (Cloud)</option>
+                        <option value="gateway">⚡ AI Gateway (Cloud)</option>
                       </select>
                     </div>
                     <div className="space-y-1.5">
@@ -660,7 +605,7 @@ export default function SettingsPage() {
                         onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       >
-                        {editForm.provider === "openrouter" ? (
+                        {editForm.provider === "gateway" ? (
                           <>
                             <option value="claude-haiku-4.5">🚀 Claude Haiku 4.5 (schnell)</option>
                             <option value="llama-3.1-8b">🦙 Llama 3.1 8B (Mittel)</option>
