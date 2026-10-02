@@ -524,10 +524,25 @@ export default function SettingsPage() {
                 onChange={e => setGatewayModel(e.target.value)}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
-                <option value="gpt-4o-mini">GPT-4o Mini — schnell & günstig</option>
-                <option value="gpt-4o">GPT-4o — leistungsstark</option>
-                <option value="gpt-5-nano">GPT-5 Nano — neueste</option>
-                <option value="claude-haiku-4.5">Claude Haiku 4.5</option>
+                <optgroup label="OpenAI — schnell & zuverlässig">
+                  <option value="gpt-4o-mini">GPT-4o Mini — schnell & günstig (1–2s)</option>
+                  <option value="gpt-4o">GPT-4o — leistungsstark (2–4s)</option>
+                  <option value="gpt-4">GPT-4 — klassisch (2–4s)</option>
+                  <option value="gpt-5-nano">GPT-5 Nano — neueste (2–3s)</option>
+                </optgroup>
+                <optgroup label="Anthropic — qualitativ & sicher">
+                  <option value="claude-haiku-4.5">Claude Haiku 4.5 — schnell (1–2s)</option>
+                  <option value="claude-3.5-sonnet">Claude 3.5 Sonnet — ausgewogen (3–5s)</option>
+                  <option value="claude-3-opus">Claude 3 Opus — Premium (4–7s)</option>
+                </optgroup>
+                <optgroup label="Google — multimodal & kontextstark">
+                  <option value="gemini-1.5-flash">Gemini 1.5 Flash — schnell (1–2s)</option>
+                  <option value="gemini-1.5-pro">Gemini 1.5 Pro — leistungsstark (3–5s)</option>
+                </optgroup>
+                <optgroup label="Meta & DeepSeek">
+                  <option value="llama-3.1-8b">Llama 3.1 8B — Open Source (2–4s)</option>
+                  <option value="deepseek-chat">DeepSeek Chat — chinesisch (2–3s)</option>
+                </optgroup>
               </select>
               <p className="text-xs text-muted-foreground">
                 Modelle werden über Vercel AI Gateway geroutet. Keine Timeouts mehr!
@@ -742,9 +757,25 @@ export default function SettingsPage() {
                       >
                         {editForm.provider === "gateway" ? (
                           <>
-                            <option value="claude-haiku-4.5">🚀 Claude Haiku 4.5 (schnell)</option>
-                            <option value="llama-3.1-8b">🦙 Llama 3.1 8B (Mittel)</option>
-                            <option value="claude-sonnet-3.5">🧠 Claude 3.5 Sonnet (qualitativ)</option>
+                            <optgroup label="OpenAI">
+                              <option value="gpt-4o-mini">GPT-4o Mini — schnell (1–2s)</option>
+                              <option value="gpt-4o">GPT-4o — leistungsstark (2–4s)</option>
+                              <option value="gpt-4">GPT-4 — klassisch (2–4s)</option>
+                              <option value="gpt-5-nano">GPT-5 Nano — neueste (2–3s)</option>
+                            </optgroup>
+                            <optgroup label="Anthropic">
+                              <option value="claude-haiku-4.5">Claude Haiku 4.5 — schnell (1–2s)</option>
+                              <option value="claude-3.5-sonnet">Claude 3.5 Sonnet — ausgewogen (3–5s)</option>
+                              <option value="claude-3-opus">Claude 3 Opus — Premium (4–7s)</option>
+                            </optgroup>
+                            <optgroup label="Google">
+                              <option value="gemini-1.5-flash">Gemini 1.5 Flash — schnell (1–2s)</option>
+                              <option value="gemini-1.5-pro">Gemini 1.5 Pro — leistungsstark (3–5s)</option>
+                            </optgroup>
+                            <optgroup label="Meta & DeepSeek">
+                              <option value="llama-3.1-8b">Llama 3.1 8B — Open Source (2–4s)</option>
+                              <option value="deepseek-chat">DeepSeek Chat (2–3s)</option>
+                            </optgroup>
                           </>
                         ) : (
                           <>
