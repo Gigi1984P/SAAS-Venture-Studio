@@ -67,34 +67,44 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Idee nicht gefunden" }, { status: 404 });
     }
 
-    // Prüfe ob Venture schon existiert (duplikat-verhinderung)
+    // Ersten User finden (solo-operated)
+    const users = await queryRaw(`SELECT id FROM users ORDER BY created_at ASC LIMIT 1`);
+    const ownerId = (users as any[])?.[0]?.id;
+    
+    if (!ownerId) {
+      return NextResponse.json({ error: "Kein User gefunden. Bitte registriere dich zuerst." }, { status: 400 });
+    }
+
+    // Slug generieren
+    const baseSlug = idea.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 50);
+    const slug = `${baseSlug}-${Date.now().toString(36).slice(-4)}`;
+
+    // Prüfe ob Venture schon existiert
     const existing = await queryRaw(
-      `SELECT id FROM ventures WHERE name = $1 LIMIT 1`,
-      idea.title
+      `SELECT id FROM ventures WHERE slug = $1 LIMIT 1`,
+      slug
     );
     
     if ((existing as any[])?.length > 0) {
-      return NextResponse.json({ error: "Venture mit diesem Namen existiert bereits" }, { status: 409 });
+      return NextResponse.json({ error: "Venture mit diesem Slug existiert bereits" }, { status: 409 });
     }
 
     // Venture erstellen
     const ventures = await queryRaw(
-      `INSERT INTO ventures (name, description, category, status, revenue_model, target_audience, created_at)
-       VALUES ($1, $2, $3, 'ideation', $4, $5, NOW())
+      `INSERT INTO ventures (name, slug, description, status, owner_id, created_at, updated_at)
+       VALUES ($1, $2, $3, 'ideation', $4, NOW(), NOW())
        RETURNING *`,
       idea.title,
+      slug,
       idea.description,
-      idea.category || "SaaS",
-      idea.revenue_model || "SaaS-Abonnement",
-      idea.target_audience || "Solopreneure"
+      ownerId
     );
 
     const venture = (ventures as any[])?.[0];
     
-    // Idee als konvertiert markieren
+    // Idee als gespeichert markieren
     await queryRaw(
-      `UPDATE business_ideas SET is_saved = true, converted_to_venture_id = $1 WHERE id = $2`,
-      venture.id,
+      `UPDATE business_ideas SET is_saved = true WHERE id = $1`,
       ideaId
     );
 
@@ -104,6 +114,7 @@ export async function POST(req: NextRequest) {
       venture: {
         id: venture.id,
         name: venture.name,
+        slug: venture.slug,
         status: venture.status,
       }
     });
