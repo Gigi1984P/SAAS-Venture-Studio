@@ -1,18 +1,14 @@
-import { SidebarNav } from "@/components/sidebar-nav";
-
-export const dynamic = "force-dynamic";
+import { redirect } from "next/navigation";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Einfaches Layout ohne Sidebar (ist jetzt in page.tsx)
   return (
-    <div className="flex min-h-screen">
-      <SidebarNav />
-      <main className="flex-1 lg:ml-64">
-        {children}
-      </main>
+    <div className="min-h-screen">
+      {children}
     </div>
   );
 }
