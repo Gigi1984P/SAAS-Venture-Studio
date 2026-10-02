@@ -15,6 +15,7 @@ import {
   Tag,
   GitCommit,
   Calendar,
+  Telescope,
 } from "lucide-react";
 
 interface StatsData {
@@ -23,6 +24,8 @@ interface StatsData {
   totalSprints: number;
   totalVentures: number;
   totalUsers: number;
+  totalScoutIdeas: number;
+  activeScoutRuns: number;
   recentIdeas: Array<{
     id: string;
     title: string;
@@ -66,6 +69,8 @@ export default function DashboardPage() {
     totalSprints: 0,
     totalVentures: 0,
     totalUsers: 0,
+    totalScoutIdeas: 0,
+    activeScoutRuns: 0,
     recentIdeas: [],
     recentOpportunities: [],
   });
@@ -112,6 +117,15 @@ export default function DashboardPage() {
   }
 
   const statCards = [
+    {
+      label: "IdeenScout",
+      value: stats.totalScoutIdeas,
+      icon: Telescope,
+      color: "text-purple-500",
+      bg: "bg-purple-50",
+      href: "/ideenscout",
+      badge: stats.activeScoutRuns > 0 ? `${stats.activeScoutRuns} laufend` : null,
+    },
     {
       label: "Ideen",
       value: stats.totalIdeas,
@@ -223,6 +237,15 @@ export default function DashboardPage() {
           Schnellaktionen
         </h2>
         <div className="flex flex-wrap gap-3">
+          {<Link
+            key="IdeenScout"
+            href="/ideenscout"
+            className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium hover:bg-accent transition-colors bg-purple-50 border-purple-200 text-purple-700"
+          >
+            <Telescope className="w-4 h-4" />
+            🔍 IdeenScout
+          </Link>
+          }
           {quickActions.map((action) => (
             <Link
               key={action.label}

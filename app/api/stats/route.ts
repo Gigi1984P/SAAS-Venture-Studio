@@ -21,6 +21,16 @@ export async function GET() {
       prisma.opportunity.findMany({ take: 5, orderBy: { createdAt: "desc" }, select: { id: true, title: true, status: true, createdAt: true } }),
     ]);
 
+    // Scout-Ideen aus business_ideas Tabelle (Raw SQL da Prisma Client evtl. nicht alle Spalten kennt)
+    let scoutIdeasCount = 0;
+    let scoutRunsCount = 0;
+    try {
+      const scoutResult = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::int as count FROM business_ideas`);
+      scoutIdeasCount = (scoutResult as any[])?.[0]?.count || 0;
+      const runsResult = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::int as count FROM scout_runs WHERE status = 'running'`);
+      scoutRunsCount = (runsResult as any[])?.[0]?.count || 0;
+    } catch { /* ignore */ }
+
     return NextResponse.json({
       totalIdeas,
       totalOpportunities,
@@ -29,6 +39,8 @@ export async function GET() {
       totalUsers,
       recentIdeas,
       recentOpportunities,
+      totalScoutIdeas: scoutIdeasCount,
+      activeScoutRuns: scoutRunsCount,
     });
   } catch (error) {
     console.error("[STATS]", error);
@@ -40,6 +52,8 @@ export async function GET() {
       totalUsers: 0,
       recentIdeas: [],
       recentOpportunities: [],
+      totalScoutIdeas: 0,
+      activeScoutRuns: 0,
     });
   }
 }
