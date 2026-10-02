@@ -2587,3 +2587,41 @@ model DebugLog {
   @@index([createdAt])
   @@map("debug_logs")
 }
+
+// ─── Autonomer Ideen-Scout ───
+
+model AgentRun {
+  id            String    @id @default(cuid())
+  agentId       String    @map("agent_id")
+  status        String    @default("stopped") // running, paused, stopped
+  lastRunAt     DateTime? @map("last_run_at")
+  totalIdeas    Int       @default(0) @map("total_ideas")
+  errorCount    Int       @default(0) @map("error_count")
+  lastError     String?   @map("last_error")
+  prompt        String    @default("Finde innovative SaaS-Geschäftsideen für Solopreneure und kleine Teams. Fokus auf Marktlücken, wiederkehrende Einnahmen und niedrige Einstiegshürden.")
+  intervalSec   Int       @default(300) @map("interval_sec") // 5 Minuten
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([agentId])
+  @@map("agent_runs")
+}
+
+model BusinessIdea {
+  id            String   @id @default(cuid())
+  agentRunId    String   @map("agent_run_id")
+  title         String
+  description   String   @db.Text
+  category      String?
+  targetAudience String? @map("target_audience")
+  revenueModel  String?  @map("revenue_model")
+  mvpEffort     String?  @map("mvp_effort") // low, medium, high
+  potential     String?  // low, medium, high
+  isSaved       Boolean  @default(false) @map("is_saved")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([agentRunId])
+  @@index([isSaved])
+  @@index([createdAt])
+  @@map("business_ideas")
+}
