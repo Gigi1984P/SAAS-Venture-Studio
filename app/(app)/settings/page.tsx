@@ -59,18 +59,22 @@ export default function SettingsPage() {
   const [chainLoading, setChainLoading] = useState(false);
 
   // OpenRouter
-  const [openrouterKey, setOpenrouterKey] = useState("");
-  const [openrouterModel, setOpenrouterModel] = useState("claude-haiku-4.5");
+  const [openrouterKey, setOpenrouterKey] = useState(() => {
+    if (typeof window !== "undefined") {
+      try { return localStorage.getItem("openrouter_key") || ""; } catch { return ""; }
+    }
+    return "";
+  });
+  const [openrouterModel, setOpenrouterModel] = useState(() => {
+    if (typeof window !== "undefined") {
+      try { return localStorage.getItem("openrouter_model") || "claude-haiku-4.5"; } catch { return "claude-haiku-4.5"; }
+    }
+    return "claude-haiku-4.5";
+  });
   const [openrouterTesting, setOpenrouterTesting] = useState(false);
   const [openrouterTestResult, setOpenrouterTestResult] = useState("");
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedKey = localStorage.getItem("openrouter_key");
-      const savedModel = localStorage.getItem("openrouter_model");
-      if (savedKey) setOpenrouterKey(savedKey);
-      if (savedModel) setOpenrouterModel(savedModel);
-    }
     fetchAgents();
   }, []);
 
