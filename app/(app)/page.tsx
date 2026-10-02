@@ -1,13 +1,9 @@
-"use client";
-
 import Link from "next/link";
 
 export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-8 text-center">
-      <h1 className="mb-4 text-4xl font-bold tracking-tight sm:text-5xl">
-        SAAS Venture Studio
-      </h1>
+      <h1 className="mb-4 text-4xl font-bold tracking-tight sm:text-5xl">SAAS Venture Studio</h1>
       <p className="mb-8 max-w-2xl text-lg text-muted-foreground">
         Venture-Studio-Plattform für SaaS-Produkte. Verwalte Startups, Ventures und Teams an einem Ort.
       </p>
