@@ -543,6 +543,10 @@ export default function SettingsPage() {
                   <option value="llama-3.1-8b">Llama 3.1 8B — Open Source (2–4s)</option>
                   <option value="deepseek-chat">DeepSeek Chat — chinesisch (2–3s)</option>
                 </optgroup>
+                <optgroup label="Moonshot AI (Kimi)">
+                  <option value="kimi-k2.6">Kimi K2.6 — langkontext (3–5s)</option>
+                  <option value="kimi-k3">Kimi K3 — neueste (3–5s)</option>
+                </optgroup>
               </select>
               <p className="text-xs text-muted-foreground">
                 Modelle werden über Vercel AI Gateway geroutet. Keine Timeouts mehr!
@@ -775,6 +779,10 @@ export default function SettingsPage() {
                             <optgroup label="Meta & DeepSeek">
                               <option value="llama-3.1-8b">Llama 3.1 8B — Open Source (2–4s)</option>
                               <option value="deepseek-chat">DeepSeek Chat (2–3s)</option>
+                            </optgroup>
+                            <optgroup label="Moonshot AI (Kimi)">
+                              <option value="kimi-k2.6">Kimi K2.6 — langkontext (3–5s)</option>
+                              <option value="kimi-k3">Kimi K3 — neueste (3–5s)</option>
                             </optgroup>
                           </>
                         ) : (

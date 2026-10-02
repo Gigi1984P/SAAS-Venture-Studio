@@ -20,6 +20,9 @@ const MODEL_MAP: Record<string, { id: string; timeout: number }> = {
   // Meta & DeepSeek
   "llama-3.1-8b":        { id: "meta-llama/llama-3.1-8b-instruct", timeout: 8000 },
   "deepseek-chat":       { id: "deepseek/deepseek-chat", timeout: 8000 },
+  // Moonshot AI (Kimi)
+  "kimi-k2.6":           { id: "moonshotai/kimi-k2-6", timeout: 9000 },
+  "kimi-k3":             { id: "moonshotai/kimi-k3", timeout: 9000 },
 };
 
 async function logDebug(type: string, msg: string, detail?: string) {

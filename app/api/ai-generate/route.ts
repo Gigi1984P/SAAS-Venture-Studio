@@ -70,6 +70,18 @@ const MODELS: Record<string, { id: string; name: string; maxTokens: number; time
     maxTokens: 512,
     timeout: 8000,
   },
+  "kimi-k2.6": {
+    id: "moonshotai/kimi-k2-6",
+    name: "Kimi K2.6",
+    maxTokens: 512,
+    timeout: 9000,
+  },
+  "kimi-k3": {
+    id: "moonshotai/kimi-k3",
+    name: "Kimi K3",
+    maxTokens: 512,
+    timeout: 9000,
+  },
 };
 
 async function logDebug(type: string, msg: string, detail?: string) {
