@@ -416,8 +416,11 @@ export default function SettingsPage() {
                         >
                           {agent.isEnabled ? "Aktiv" : "Inaktiv"}
                         </span>
-                        {agent.provider === "openai" && (
-                          <span className="text-xs text-blue-600">🤖 AI</span>
+                        {agent.provider === "openrouter" && (
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">🔌 OpenRouter</span>
+                        )}
+                        {agent.provider === "ollama" && (
+                          <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">🦙 Ollama</span>
                         )}
                       </div>
                       <div className="text-sm text-muted-foreground">
@@ -633,28 +636,38 @@ export default function SettingsPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium">Provider</label>
-                      <div className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
-                        🦙 Ollama Server (187.124.0.184)
-                      </div>
+                      <select
+                        value={editForm.provider || "ollama"}
+                        onChange={(e) => {
+                          const newProvider = e.target.value;
+                          const defaultModel = newProvider === "openrouter" ? "claude-haiku-4.5" : "llama3.1";
+                          setEditForm({ ...editForm, provider: newProvider, model: defaultModel });
+                        }}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="ollama">🦙 Ollama Server (187.124.0.184)</option>
+                        <option value="openrouter">🔌 OpenRouter (Cloud)</option>
+                      </select>
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium">Server / URL</label>
-                      <div className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
-                        187.124.0.184:32846
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium">Modell</label>
                       <select
                         value={editForm.model || "llama3.1"}
                         onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       >
-                        <option value="llama3.1">🦙 Llama 3.1</option>
-                        <option value="kimi-k2.6:cloud">☁️ Kimi K2.6 (Cloud)</option>
+                        {editForm.provider === "openrouter" ? (
+                          <>
+                            <option value="claude-haiku-4.5">🚀 Claude Haiku 4.5 (schnell)</option>
+                            <option value="llama-3.1-8b">🦙 Llama 3.1 8B (Mittel)</option>
+                            <option value="claude-sonnet-3.5">🧠 Claude 3.5 Sonnet (qualitativ)</option>
+                          </>
+                        ) : (
+                          <>
+                            <option value="llama3.1">🦙 Llama 3.1</option>
+                            <option value="kimi-k2.6:cloud">☁️ Kimi K2.6 (Cloud)</option>
+                          </>
+                        )}
                       </select>
                     </div>
                   </div>
