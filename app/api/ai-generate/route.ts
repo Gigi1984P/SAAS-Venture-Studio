@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 const GATEWAY_URL = "https://ai-gateway.vercel.sh/v1/chat/completions";
 
@@ -6,7 +7,7 @@ const MODELS: Record<string, { id: string; name: string; maxTokens: number; time
   "gpt-4o-mini": {
     id: "openai/gpt-4o-mini",
     name: "GPT-4o Mini",
-    maxTokens: 512,   // Kompakt für Vercel Hobby
+    maxTokens: 512,
     timeout: 8000,
   },
   "gpt-4o": {
@@ -21,12 +22,6 @@ const MODELS: Record<string, { id: string; name: string; maxTokens: number; time
     maxTokens: 512,
     timeout: 8000,
   },
-  "gpt-5-mini": {
-    id: "openai/gpt-5-mini",
-    name: "GPT-5 Mini",
-    maxTokens: 512,
-    timeout: 8000,
-  },
   "claude-haiku-4.5": {
     id: "anthropic/claude-haiku-4.5",
     name: "Claude Haiku 4.5",
@@ -34,6 +29,12 @@ const MODELS: Record<string, { id: string; name: string; maxTokens: number; time
     timeout: 8000,
   },
 };
+
+async function logDebug(type: string, msg: string, detail?: string) {
+  try {
+    await prisma.debugLog.create({ data: { type, msg, detail: detail || null } });
+  } catch { /* ignore — DB könnte noch nicht da sein */ }
+}
 
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
@@ -50,6 +51,7 @@ export async function POST(req: NextRequest) {
 
     const apiKey = process.env.AI_GATEWAY_API_KEY;
     if (!apiKey) {
+      await logDebug("ERROR", "AI_GATEWAY_API_KEY fehlt", "ENV Variable nicht gesetzt");
       return NextResponse.json(
         { error: "AI_GATEWAY_API_KEY nicht konfiguriert." },
         { status: 401 }
@@ -57,12 +59,11 @@ export async function POST(req: NextRequest) {
     }
 
     const model = MODELS[modelKey as string] || MODELS["gpt-4o-mini"];
+    await logDebug("TEST", "AI Gateway Anfrage gestartet", `Modell: ${model.name}, maxTokens: ${model.maxTokens}`);
 
-    // Timeout: Modell-spezifisch + Buffer
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), model.timeout);
 
-    // Füge Instruktion für Kompaktheit hinzu
     const compactSystem = systemPrompt + "\n\nWICHTIG: Antworte prägnant, maximal 2-3 Sätze. Keine Einleitung.";
 
     const res = await fetch(GATEWAY_URL, {
@@ -91,6 +92,7 @@ export async function POST(req: NextRequest) {
       let parsed;
       try { parsed = JSON.parse(errorText); } catch { /* ignore */ }
       const msg = parsed?.error?.message || errorText.slice(0, 200);
+      await logDebug("ERROR", `AI Gateway HTTP ${res.status}`, `${elapsed}ms — ${msg}`);
       return NextResponse.json(
         { error: `AI Gateway ${res.status}: ${msg}`, elapsed: `${elapsed}ms` },
         { status: 502 }
@@ -98,15 +100,9 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await res.json();
-
-    if (!data.choices?.[0]?.message?.content) {
-      return NextResponse.json(
-        { error: "Kein Content in Antwort" },
-        { status: 502 }
-      );
-    }
-
     const usage = data.usage || {};
+
+    await logDebug("SUCCESS", "AI Gateway Antwort erhalten", `${elapsed}ms — ${model.name} — ${usage.total_tokens || '?'} Tokens`);
 
     return NextResponse.json({
       response: data.choices[0].message.content,
@@ -123,6 +119,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     const elapsed = Date.now() - startTime;
     if (error.name === "AbortError") {
+      await logDebug("ERROR", "AI Gateway Timeout", `${elapsed}ms — Request aborted`);
       return NextResponse.json(
         {
           error: `Timeout nach ${elapsed}ms. AI Gateway antwortet zu langsam.`,
@@ -131,6 +128,7 @@ export async function POST(req: NextRequest) {
         { status: 504 }
       );
     }
+    await logDebug("ERROR", "AI Gateway Exception", error.message);
     console.error("[AI GATEWAY]", error);
     return NextResponse.json(
       { error: "Proxy Fehler: " + error.message },
