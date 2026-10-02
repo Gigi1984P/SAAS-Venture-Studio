@@ -63,16 +63,38 @@ export default function SettingsPage() {
   const [gatewayTesting, setGatewayTesting] = useState(false);
   const [gatewayTestResult, setGatewayTestResult] = useState("");
 
+  // Live Debug Logging
+  const [debugLogs, setDebugLogs] = useState<Array<{time: string; type: string; msg: string; detail?: string}>>([]);
+  const [showDebug, setShowDebug] = useState(false);
+
+  function addDebugLog(type: string, msg: string, detail?: string) {
+    const time = new Date().toLocaleTimeString("de-DE", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit", fractionalSecondDigits: 3 });
+    setDebugLogs(prev => [{ time, type, msg, detail }, ...prev.slice(0, 49)]);
+    console.log(`[DEBUG ${type}] ${msg}`, detail || "");
+  }
+
   useEffect(() => {
     fetchAgents();
   }, []);
 
   async function fetchAgents() {
     setLoading(true);
+    addDebugLog("FETCH", "Lade Agenten von /api/agent-configs");
     try {
+      const start = Date.now();
       const res = await fetch("/api/agent-configs");
-      if (res.ok) setAgents(await res.json());
-    } catch (e) { console.error(e); }
+      const elapsed = Date.now() - start;
+      if (res.ok) {
+        const data = await res.json();
+        setAgents(data);
+        addDebugLog("FETCH", `Agenten geladen (${data.length})`, `${elapsed}ms`);
+      } else {
+        const err = await res.text();
+        addDebugLog("ERROR", `Agenten laden fehlgeschlagen: HTTP ${res.status}`, err.slice(0, 200));
+      }
+    } catch (e: any) {
+      addDebugLog("ERROR", "Agenten laden Exception", e.message);
+    }
     finally { setLoading(false); }
   }
 
@@ -195,6 +217,8 @@ export default function SettingsPage() {
       return;
     }
     setTestLoading(true); setMessage("");
+    addDebugLog("TEST", "Starte Agent-Test", `Modell: ${gatewayModel}, Agent: ${editForm.label || editForm.name}`);
+    const start = Date.now();
     try {
       const res = await fetch("/api/ai-generate", {
         method: "POST",
@@ -206,13 +230,16 @@ export default function SettingsPage() {
           temperature: editForm.temperature,
         }),
       });
+      const elapsed = Date.now() - start;
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
+        addDebugLog("ERROR", `Agent-Test fehlgeschlagen: HTTP ${res.status}`, `${elapsed}ms — ${errorData.error || errorData.message || "Unknown"}`);
         throw new Error(errorData.error || `Fehler: ${res.status}`);
       }
 
       const data = await res.json();
+      addDebugLog("SUCCESS", `Agent-Test OK`, `${elapsed}ms — ${data.model} — ${data.usage?.totalTokens || '?'} Tokens — "${data.response?.slice(0, 80)}..."`);
       setTestResult({
         response: data.response,
         provider: data.provider || "vercel-ai-gateway",
@@ -230,6 +257,7 @@ export default function SettingsPage() {
         ...prev.slice(0, 9),
       ]);
     } catch (err: any) {
+      addDebugLog("ERROR", "Agent-Test Exception", err.message);
       setMessage("Fehler: " + err.message);
     } finally {
       setTestLoading(false);
@@ -238,6 +266,8 @@ export default function SettingsPage() {
 
   async function testGateway() {
     setGatewayTesting(true); setMessage(""); setGatewayTestResult("");
+    addDebugLog("TEST", "Starte AI Gateway Test", `Modell: ${gatewayModel}`);
+    const start = Date.now();
     try {
       const res = await fetch("/api/ai-generate", {
         method: "POST",
@@ -248,14 +278,18 @@ export default function SettingsPage() {
           model: gatewayModel,
         }),
       });
+      const elapsed = Date.now() - start;
       const data = await res.json();
       if (res.ok && data.response) {
+        addDebugLog("SUCCESS", `Gateway-Test OK`, `${elapsed}ms — ${data.model} — ${data.usage?.totalTokens || '?'} Tokens`);
         setGatewayTestResult(data.response);
         setMessage(`Erfolg! Modell: ${data.model} · Tokens: ${data.usage?.totalTokens || 'N/A'}`);
       } else {
+        addDebugLog("ERROR", `Gateway-Test fehlgeschlagen: HTTP ${res.status}`, `${elapsed}ms — ${data.error || data.message || "Unknown"}`);
         setMessage(data.error || "Test fehlgeschlagen");
       }
-    } catch {
+    } catch (e: any) {
+      addDebugLog("ERROR", "Gateway-Test Exception", e.message);
       setMessage("Netzwerkfehler beim Testen");
     } finally {
       setGatewayTesting(false);
@@ -265,6 +299,8 @@ export default function SettingsPage() {
   async function runChain() {
     if (!editingAgent || !chainTarget) return;
     setChainLoading(true); setMessage("");
+    addDebugLog("CHAIN", "Starte Agent-Chain", `Agent: ${editingAgent.name}, Input: ${chainTarget.slice(0, 50)}`);
+    const start = Date.now();
     try {
       const res = await fetch("/api/agent-configs/run", {
         method: "POST",
@@ -275,12 +311,18 @@ export default function SettingsPage() {
         }),
       });
       const data = await res.json();
+      const elapsed = Date.now() - start;
       if (res.ok) {
+        addDebugLog("SUCCESS", `Chain OK`, `${elapsed}ms — ${data.result?.slice(0, 80)}...`);
         setChainResult(data);
       } else {
+        addDebugLog("ERROR", `Chain fehlgeschlagen: HTTP ${res.status}`, `${elapsed}ms — ${data.error || data.message || "Unknown"}`);
         setMessage(data.error || "Chain fehlgeschlagen");
       }
-    } catch { setMessage("Netzwerkfehler bei Chain"); }
+    } catch (e: any) {
+      addDebugLog("ERROR", "Chain Exception", e.message);
+      setMessage("Netzwerkfehler bei Chain");
+    }
     finally { setChainLoading(false); }
   }
 
@@ -288,6 +330,7 @@ export default function SettingsPage() {
     { id: "agents", label: "🤖 Agenten" },
     { id: "profile", label: "👤 Profil" },
     { id: "gateway", label: "⚡ AI Gateway" },
+    { id: "debug", label: "🐛 Debug" },
   ];
 
   const currentRole = getAgentRole(selectedRole);
@@ -491,6 +534,80 @@ export default function SettingsPage() {
               <div className="rounded-md bg-muted p-3 text-sm whitespace-pre-wrap">{gatewayTestResult}</div>
             </div>
           )}
+        </div>
+      )}
+
+      {
+        /* DEBUG TAB */
+      }
+      {activeTab === "debug" && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">🐛 Live Debug</h2>
+              <p className="text-sm text-muted-foreground">API-Aufrufe und Fehler in Echtzeit protokolliert.</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setDebugLogs([])}
+                className="px-3 py-1.5 rounded-md border border-input bg-background text-xs font-medium hover:bg-accent"
+              >
+                🗑️ Leeren
+              </button>
+              <button
+                onClick={() => {
+                  const text = debugLogs.map(l => `[${l.time}] ${l.type}: ${l.msg}${l.detail ? ' | ' + l.detail : ''}`).join('\n');
+                  navigator.clipboard.writeText(text);
+                  setMessage("Logs kopiert!");
+                }}
+                className="px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90"
+              >
+                📋 Kopieren
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-lg border bg-card overflow-hidden">
+            <div className="flex border-b bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground">
+              <div className="w-24 shrink-0">Zeit</div>
+              <div className="w-16 shrink-0">Typ</div>
+              <div className="flex-1">Nachricht</div>
+            </div>
+            <div className="max-h-[500px] overflow-y-auto">
+              {debugLogs.length === 0 && (
+                <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  Noch keine Logs. Führe einen Test durch, um Logs zu sehen.
+                </div>
+              )}
+              {debugLogs.map((log, idx) => (
+                <div
+                  key={idx}
+                  className={`flex border-b px-4 py-2 text-xs ${
+                    log.type === "ERROR"
+                      ? "bg-red-50/50 border-red-100"
+                      : log.type === "SUCCESS"
+                      ? "bg-green-50/50 border-green-100"
+                      : "border-border/50"
+                  }`}
+                >
+                  <div className="w-24 shrink-0 font-mono text-muted-foreground">{log.time}</div>
+                  <div className={`w-16 shrink-0 font-semibold ${
+                    log.type === "ERROR" ? "text-red-600" :
+                    log.type === "SUCCESS" ? "text-green-600" :
+                    log.type === "FETCH" ? "text-blue-600" :
+                    log.type === "CHAIN" ? "text-purple-600" :
+                    "text-amber-600"
+                  }`}>{log.type}</div>
+                  <div className="flex-1">
+                    <div className="font-medium">{log.msg}</div>
+                    {log.detail && (
+                      <div className="text-muted-foreground mt-0.5 break-all">{log.detail}</div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
