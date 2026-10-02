@@ -2590,7 +2590,7 @@ model DebugLog {
 
 // ─── Autonomer Ideen-Scout ───
 
-model AgentRun {
+model ScoutRun {
   id            String    @id @default(cuid())
   agentId       String    @map("agent_id")
   status        String    @default("stopped") // running, paused, stopped
@@ -2604,12 +2604,12 @@ model AgentRun {
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
   @@index([agentId])
-  @@map("agent_runs")
+  @@map("scout_runs")
 }
 
 model BusinessIdea {
   id            String   @id @default(cuid())
-  agentRunId    String   @map("agent_run_id")
+  scoutRunId    String   @map("scout_run_id")
   title         String
   description   String   @db.Text
   category      String?
@@ -2620,7 +2620,7 @@ model BusinessIdea {
   isSaved       Boolean  @default(false) @map("is_saved")
   createdAt     DateTime @default(now()) @map("created_at")
 
-  @@index([agentRunId])
+  @@index([scoutRunId])
   @@index([isSaved])
   @@index([createdAt])
   @@map("business_ideas")
