@@ -147,6 +147,14 @@ export async function POST(req: NextRequest) {
       try { parsed = JSON.parse(errorText); } catch { /* ignore */ }
       const msg = parsed?.error?.message || errorText.slice(0, 200);
       await logDebug("ERROR", `AI Gateway HTTP ${res.status}`, `${elapsed}ms — ${msg}`);
+      
+      if (res.status === 403 && msg.includes("Free tier")) {
+        return NextResponse.json(
+          { error: `Modell '${model.name}' ist im Free Tier nicht verfügbar.`, detail: msg },
+          { status: 403 }
+        );
+      }
+      
       return NextResponse.json(
         { error: `AI Gateway ${res.status}: ${msg}`, elapsed: `${elapsed}ms` },
         { status: 502 }
