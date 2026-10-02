@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
     // ScoutRun laden
     const runs = await queryRaw(`SELECT * FROM scout_runs WHERE id = $1`, scoutRunId);
-    const run = runs?.[0];
+    const run = (runs as any[])?.[0];
 
     if (!run || run.status !== "running") {
       return NextResponse.json({ error: "Scout nicht aktiv" }, { status: 400 });
@@ -61,13 +61,18 @@ export async function POST(req: NextRequest) {
     if (!res.ok) {
       const text = await res.text();
       await logDebug("ERROR", `Ideenscout HTTP ${res.status}`, text.slice(0, 200));
-      await queryRaw(`UPDATE scout_runs SET error_count = error_count + 1, last_error = $2 WHERE id = $1`, scoutRunId, `HTTP ${res.status}: ${text.slice(0, 200)}`);
+      await queryRaw(
+        `UPDATE scout_runs SET error_count = error_count + 1, last_error = $2 WHERE id = $1`,
+        scoutRunId,
+        `HTTP ${res.status}: ${text.slice(0, 200)}`
+      );
       return NextResponse.json({ error: `AI Gateway ${res.status}` }, { status: 502 });
     }
 
     const data = await res.json();
     const content = data.choices?.[0]?.message?.content || "";
 
+    // JSON extrahieren
     let idea;
     try {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -85,9 +90,9 @@ export async function POST(req: NextRequest) {
     }
 
     // BusinessIdea speichern
-    const savedIdeas = await queryRaw(
+    await queryRaw(
       `INSERT INTO business_ideas (scout_run_id, title, description, category, target_audience, revenue_model, mvp_effort, potential)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       scoutRunId,
       idea.title?.slice(0, 100) || "Unbenannte Idee",
       idea.description?.slice(0, 2000) || "",
@@ -101,9 +106,9 @@ export async function POST(req: NextRequest) {
     await queryRaw(`UPDATE scout_runs SET total_ideas = total_ideas + 1, last_run_at = NOW() WHERE id = $1`, scoutRunId);
 
     const elapsed = Date.now() - startTime;
-    await logDebug("SUCCESS", `Idee generiert`, `${elapsed}ms — ${savedIdeas?.[0]?.title}`);
+    await logDebug("SUCCESS", `Idee generiert`, `${elapsed}ms — ${idea.title}`);
 
-    return NextResponse.json({ idea: savedIdeas?.[0], elapsed: `${elapsed}ms` });
+    return NextResponse.json({ title: idea.title, elapsed: `${elapsed}ms` });
 
   } catch (error: any) {
     const elapsed = Date.now() - startTime;
