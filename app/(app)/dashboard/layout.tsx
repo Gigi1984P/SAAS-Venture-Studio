@@ -1,5 +1,7 @@
 import { SidebarNav } from "@/components/sidebar-nav";
 
+export const dynamic = "force-dynamic";
+
 export default function DashboardLayout({
   children,
 }: {
