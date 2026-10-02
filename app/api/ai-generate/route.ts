@@ -2,45 +2,44 @@ import { NextRequest, NextResponse } from "next/server";
 
 const GATEWAY_URL = "https://ai-gateway.vercel.sh/v1/chat/completions";
 
-// Verfügbare AI Gateway Modelle (provider/model Format)
-const MODELS: Record<string, { id: string; name: string; maxTokens: number }> = {
+const MODELS: Record<string, { id: string; name: string; maxTokens: number; timeout: number }> = {
   "gpt-4o-mini": {
     id: "openai/gpt-4o-mini",
     name: "GPT-4o Mini",
-    maxTokens: 2048,
+    maxTokens: 512,   // Kompakt für Vercel Hobby
+    timeout: 8000,
   },
   "gpt-4o": {
     id: "openai/gpt-4o",
     name: "GPT-4o",
-    maxTokens: 2048,
+    maxTokens: 512,
+    timeout: 8000,
   },
   "gpt-5-nano": {
     id: "openai/gpt-5-nano",
     name: "GPT-5 Nano",
-    maxTokens: 2048,
+    maxTokens: 512,
+    timeout: 8000,
   },
   "gpt-5-mini": {
     id: "openai/gpt-5-mini",
     name: "GPT-5 Mini",
-    maxTokens: 2048,
+    maxTokens: 512,
+    timeout: 8000,
   },
   "claude-haiku-4.5": {
     id: "anthropic/claude-haiku-4.5",
     name: "Claude Haiku 4.5",
-    maxTokens: 2048,
+    maxTokens: 512,
+    timeout: 8000,
   },
 };
 
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
   try {
     const body = await req.json();
-    const {
-      systemPrompt,
-      query,
-      model: modelKey,
-      temperature,
-      maxTokens,
-    } = body;
+    const { systemPrompt, query, model: modelKey, temperature } = body;
 
     if (!systemPrompt || !query) {
       return NextResponse.json(
@@ -49,25 +48,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // API Key: ENV (server-seitig, kein Client-Key nötig!)
     const apiKey = process.env.AI_GATEWAY_API_KEY;
-
     if (!apiKey) {
       return NextResponse.json(
-        {
-          error: "AI Gateway API Key nicht konfiguriert.",
-          hint: "Bitte AI_GATEWAY_API_KEY in den Vercel Environment Variables setzen.",
-        },
+        { error: "AI_GATEWAY_API_KEY nicht konfiguriert." },
         { status: 401 }
       );
     }
 
-    // Modell-Key auflösen
     const model = MODELS[modelKey as string] || MODELS["gpt-4o-mini"];
 
-    // Timeout für Vercel Hobby (max ~10s)
+    // Timeout: Modell-spezifisch + Buffer
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 9000);
+    const timeoutId = setTimeout(() => controller.abort(), model.timeout);
+
+    // Füge Instruktion für Kompaktheit hinzu
+    const compactSystem = systemPrompt + "\n\nWICHTIG: Antworte prägnant, maximal 2-3 Sätze. Keine Einleitung.";
 
     const res = await fetch(GATEWAY_URL, {
       method: "POST",
@@ -79,49 +75,24 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         model: model.id,
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: compactSystem },
           { role: "user", content: query },
         ],
         temperature: temperature ?? 0.7,
-        max_tokens: maxTokens ?? model.maxTokens,
+        max_tokens: model.maxTokens,
       }),
     });
 
     clearTimeout(timeoutId);
+    const elapsed = Date.now() - startTime;
 
     if (!res.ok) {
       const errorText = await res.text();
-      console.error(`[AI GATEWAY] HTTP ${res.status}: ${errorText.slice(0, 300)}`);
       let parsed;
       try { parsed = JSON.parse(errorText); } catch { /* ignore */ }
       const msg = parsed?.error?.message || errorText.slice(0, 200);
-      
-      if (res.status === 401) {
-        return NextResponse.json(
-          {
-            error: "AI Gateway API Key ungültig oder abgelaufen.",
-            detail: msg,
-            hint: "Bitte in Vercel Dashboard → AI Gateway einen neuen Key erstellen.",
-          },
-          { status: 401 }
-        );
-      }
-
-      if (res.status === 403) {
-        return NextResponse.json(
-          {
-            error: "Modell nicht verfügbar im Free Tier.",
-            detail: msg,
-            hint: "Versuche gpt-4o-mini (schnell und günstig).",
-          },
-          { status: 403 }
-        );
-      }
-
       return NextResponse.json(
-        {
-          error: `AI Gateway Fehler ${res.status}: ${msg}`,
-        },
+        { error: `AI Gateway ${res.status}: ${msg}`, elapsed: `${elapsed}ms` },
         { status: 502 }
       );
     }
@@ -130,7 +101,7 @@ export async function POST(req: NextRequest) {
 
     if (!data.choices?.[0]?.message?.content) {
       return NextResponse.json(
-        { error: "Ungültige AI Gateway-Antwort: Kein Content vorhanden" },
+        { error: "Kein Content in Antwort" },
         { status: 502 }
       );
     }
@@ -141,6 +112,7 @@ export async function POST(req: NextRequest) {
       response: data.choices[0].message.content,
       model: model.name,
       provider: "vercel-ai-gateway",
+      elapsed: `${elapsed}ms`,
       usage: {
         promptTokens: usage.prompt_tokens,
         completionTokens: usage.completion_tokens,
@@ -149,16 +121,16 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: any) {
+    const elapsed = Date.now() - startTime;
     if (error.name === "AbortError") {
       return NextResponse.json(
         {
-          error: "Anfrage zu langsam (>9s). AI Gateway antwortet nicht.",
-          hint: "Versuche gpt-4o-mini (schnellstes Modell).",
+          error: `Timeout nach ${elapsed}ms. AI Gateway antwortet zu langsam.`,
+          hint: "Versuche gpt-4o-mini. Das Modell war möglicherweise überlastet.",
         },
         { status: 504 }
       );
     }
-
     console.error("[AI GATEWAY]", error);
     return NextResponse.json(
       { error: "Proxy Fehler: " + error.message },

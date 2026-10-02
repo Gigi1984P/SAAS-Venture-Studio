@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 const GATEWAY_URL = "https://ai-gateway.vercel.sh/v1/chat/completions";
 
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
   try {
     const body = await req.json();
     const { agentId, input, target } = body;
@@ -21,14 +22,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "AI_GATEWAY_API_KEY nicht gesetzt" }, { status: 401 });
     }
 
-    const modelId = config.provider === "openrouter" || config.provider === "openai"
-      ? config.modelName || "openai/gpt-4o-mini"
+    const modelId = config.provider === "gateway" || config.provider === "openrouter"
+      ? config.model || "openai/gpt-4o-mini"
       : "openai/gpt-4o-mini";
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 9000);
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-    const prompt = `${config.systemPrompt}\n\nEingabe: ${input}${target ? `\nZiel: ${target}` : ""}`;
+    const prompt = `${config.systemPrompt}\n\nWICHTIG: Antworte prägnant, maximal 2-3 Sätze.\n\nEingabe: ${input}${target ? `\nZiel: ${target}` : ""}`;
 
     const res = await fetch(GATEWAY_URL, {
       method: "POST",
@@ -41,11 +42,12 @@ export async function POST(req: NextRequest) {
         model: modelId,
         messages: [{ role: "user", content: prompt }],
         temperature: config.temperature ?? 0.7,
-        max_tokens: 2048,
+        max_tokens: 512,
       }),
     });
 
     clearTimeout(timeoutId);
+    const elapsed = Date.now() - startTime;
 
     if (!res.ok) {
       const text = await res.text();
@@ -59,11 +61,13 @@ export async function POST(req: NextRequest) {
       result: data.choices?.[0]?.message?.content || "Keine Antwort",
       provider: "vercel-ai-gateway",
       model: modelId,
+      elapsed: `${elapsed}ms`,
     });
 
   } catch (error: any) {
+    const elapsed = Date.now() - startTime;
     if (error.name === "AbortError") {
-      return NextResponse.json({ error: "Timeout (>9s)" }, { status: 504 });
+      return NextResponse.json({ error: `Timeout nach ${elapsed}ms` }, { status: 504 });
     }
     console.error("[AGENT RUN]", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
