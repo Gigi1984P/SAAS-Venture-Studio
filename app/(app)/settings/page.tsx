@@ -349,9 +349,19 @@ export default function SettingsPage() {
   /* ─── Render ─── */
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Einstellungen</h1>
-        <p className="text-muted-foreground">Agenten verwalten und System konfigurieren</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Einstellungen</h1>
+          <p className="text-muted-foreground">Agenten verwalten und System konfigurieren</p>
+        </div>
+        <a
+          href="/debug"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-3 py-2 rounded-md bg-amber-100 text-amber-700 text-sm font-medium hover:bg-amber-200 transition-colors"
+        >
+          📋 Vollständige Logs ansehen →
+        </a>
       </div>
 
       {
