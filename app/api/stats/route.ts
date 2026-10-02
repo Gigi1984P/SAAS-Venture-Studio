@@ -21,15 +21,18 @@ export async function GET() {
       prisma.opportunity.findMany({ take: 5, orderBy: { createdAt: "desc" }, select: { id: true, title: true, status: true, createdAt: true } }),
     ]);
 
-    // Scout-Ideen aus business_ideas Tabelle (Raw SQL da Prisma Client evtl. nicht alle Spalten kennt)
-    let scoutIdeasCount = 0;
-    let scoutRunsCount = 0;
+    // Scout-Ideen zaehlen (try/catch fuer den Fall dass Tabellen nicht existieren)
+    let totalScoutIdeas = 0;
+    let activeScoutRuns = 0;
     try {
-      const scoutResult = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::int as count FROM business_ideas`);
-      scoutIdeasCount = (scoutResult as any[])?.[0]?.count || 0;
+      const countResult = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::int as count FROM business_ideas`);
+      totalScoutIdeas = (countResult as any[])?.[0]?.count || 0;
+    } catch { /* Tabelle existiert nicht */ }
+
+    try {
       const runsResult = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::int as count FROM scout_runs WHERE status = 'running'`);
-      scoutRunsCount = (runsResult as any[])?.[0]?.count || 0;
-    } catch { /* ignore */ }
+      activeScoutRuns = (runsResult as any[])?.[0]?.count || 0;
+    } catch { /* Tabelle existiert nicht */ }
 
     return NextResponse.json({
       totalIdeas,
@@ -37,10 +40,10 @@ export async function GET() {
       totalSprints,
       totalVentures,
       totalUsers,
+      totalScoutIdeas,
+      activeScoutRuns,
       recentIdeas,
       recentOpportunities,
-      totalScoutIdeas: scoutIdeasCount,
-      activeScoutRuns: scoutRunsCount,
     });
   } catch (error) {
     console.error("[STATS]", error);
@@ -50,10 +53,10 @@ export async function GET() {
       totalSprints: 0,
       totalVentures: 0,
       totalUsers: 0,
-      recentIdeas: [],
-      recentOpportunities: [],
       totalScoutIdeas: 0,
       activeScoutRuns: 0,
+      recentIdeas: [],
+      recentOpportunities: [],
     });
   }
 }
