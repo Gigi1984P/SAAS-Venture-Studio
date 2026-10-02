@@ -71,9 +71,24 @@ export default function SettingsClient({ user }: { user: UserProfile }) {
   const [ollamaMessage, setOllamaMessage] = useState("");
   const [ollamaError, setOllamaError] = useState("");
 
+  // OpenRouter States
+  const [openrouterKey, setOpenrouterKey] = useState("");
+  const [openrouterModel, setOpenrouterModel] = useState("claude-haiku-4.5");
+  const [openrouterTesting, setOpenrouterTesting] = useState(false);
+  const [openrouterMessage, setOpenrouterMessage] = useState("");
+  const [openrouterError, setOpenrouterError] = useState("");
+  const [openrouterTestResult, setOpenrouterTestResult] = useState("");
+
   useEffect(() => {
     if (activeTab === "agents") { fetchAgents(); fetchProviders(); }
     if (activeTab === "ollama") { fetchOllamaConfig(); fetchOllamaModels(); }
+    if (activeTab === "openrouter") {
+      // Load from localStorage
+      const savedKey = localStorage.getItem("openrouter_key");
+      const savedModel = localStorage.getItem("openrouter_model");
+      if (savedKey) setOpenrouterKey(savedKey);
+      if (savedModel) setOpenrouterModel(savedModel);
+    }
   }, [activeTab]);
 
   async function fetchAgents() {
@@ -156,6 +171,46 @@ export default function SettingsClient({ user }: { user: UserProfile }) {
       }
     } catch { setOllamaError("Netzwerkfehler beim Testen"); }
     finally { setOllamaLoading(false); }
+  }
+
+  async function saveOpenrouterKey(e: React.FormEvent) {
+    e.preventDefault();
+    setOpenrouterError(""); setOpenrouterMessage(""); setOpenrouterTestResult("");
+    try {
+      localStorage.setItem("openrouter_key", openrouterKey);
+      localStorage.setItem("openrouter_model", openrouterModel);
+      setOpenrouterMessage("OpenRouter Konfiguration gespeichert!");
+    } catch {
+      setOpenrouterError("Fehler beim Speichern in localStorage");
+    }
+  }
+
+  async function testOpenrouter() {
+    setOpenrouterError(""); setOpenrouterMessage(""); setOpenrouterTestResult("");
+    setOpenrouterTesting(true);
+    try {
+      const res = await fetch("/api/ai-generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemPrompt: "Du bist ein hilfreicher Assistent.",
+          query: "Sag Hallo auf Deutsch.",
+          model: openrouterModel,
+          apiKey: openrouterKey,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.response) {
+        setOpenrouterTestResult(data.response);
+        setOpenrouterMessage(`Erfolg! Modell: ${data.model} · Tokens: ${data.usage?.totalTokens || 'N/A'}`);
+      } else {
+        setOpenrouterError(data.error || "Test fehlgeschlagen");
+      }
+    } catch {
+      setOpenrouterError("Netzwerkfehler beim Testen");
+    } finally {
+      setOpenrouterTesting(false);
+    }
   }
 
   async function assignOllamaModelToAgent(agentId: string, modelName: string) {
@@ -252,6 +307,7 @@ export default function SettingsClient({ user }: { user: UserProfile }) {
     { id: "agents", label: "Agenten" },
     { id: "providers", label: "LLM Provider" },
     { id: "ollama", label: "Ollama" },
+    { id: "openrouter", label: "OpenRouter" },
   ];
 
   return (
@@ -498,6 +554,90 @@ export default function SettingsClient({ user }: { user: UserProfile }) {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* OPENROUTER */}
+      {activeTab === "openrouter" && (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-semibold">OpenRouter API Key</h2>
+            <p className="text-sm text-muted-foreground">Dein persönlicher OpenRouter Key für LLM-Anfragen. Wird lokal im Browser gespeichert (localStorage).</p>
+          </div>
+
+          {openrouterMessage && (
+            <div className="rounded-md bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">{openrouterMessage}</div>
+          )}
+          {openrouterError && (
+            <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{openrouterError}</div>
+          )}
+
+          <form onSubmit={saveOpenrouterKey} className="rounded-lg border bg-card p-6 space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">OpenRouter API Key</label>
+              <input
+                type="password"
+                value={openrouterKey}
+                onChange={e => setOpenrouterKey(e.target.value)}
+                placeholder="sk-or-..."
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                Erstelle einen Key unter {" "}
+                <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                  openrouter.ai/keys
+                </a>
+                {" "}— kostenlos für die meisten Modelle.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Standard-Modell</label>
+              <select
+                value={openrouterModel}
+                onChange={e => setOpenrouterModel(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="claude-haiku-4.5">Claude Haiku 4.5 — schnell (1-2s)</option>
+                <option value="llama-3.1-8b">Llama 3.1 8B — Mittel (3-8s)</option>
+                <option value="claude-sonnet-3.5">Claude 3.5 Sonnet — qualitativ (3-5s)</option>
+              </select>
+              <p className="text-xs text-muted-foreground">
+                <strong>Tipp:</strong> Claude Haiku 4.5 ist am schnellsten und eignet sich am besten für Vercel (10s Timeout).
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button type="submit" className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+                Speichern
+              </button>
+              <button
+                type="button"
+                onClick={testOpenrouter}
+                disabled={!openrouterKey}
+                className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-medium hover:bg-accent disabled:opacity-50"
+              >
+                {openrouterTesting ? "Teste..." : "🔄 Verbindung testen"}
+              </button>
+              {openrouterKey && (
+                <button
+                  type="button"
+                  onClick={() => { localStorage.removeItem("openrouter_key"); localStorage.removeItem("openrouter_model"); setOpenrouterKey(""); setOpenrouterMessage("Key entfernt"); }}
+                  className="inline-flex h-10 items-center justify-center rounded-md border border-red-200 bg-red-50 px-4 text-sm font-medium text-red-600 hover:bg-red-100"
+                >
+                  Löschen
+                </button>
+              )}
+            </div>
+          </form>
+
+          {/* Test-Antwort */}
+          {openrouterTestResult && (
+            <div className="rounded-lg border bg-card p-6 space-y-3">
+              <h3 className="text-sm font-semibold">Test-Ergebnis</h3>
+              <div className="rounded-md bg-muted p-3 text-sm whitespace-pre-wrap">{openrouterTestResult}</div>
+            </div>
+          )}
         </div>
       )}
     </div>

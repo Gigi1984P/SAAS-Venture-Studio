@@ -121,14 +121,19 @@ export default function AgentDashboard() {
 
   async function runAgent(configId: string, configName: string) {
     setRunning(prev => new Set(prev).add(configId));
+    // Client-seitigen OpenRouter Key holen
+    const clientApiKey = typeof window !== "undefined" ? localStorage.getItem("openrouter_key") : null;
     try {
       const res = await fetch("/api/agent-configs/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ configId, input: "Automatischer Test-Run" }),
+        body: JSON.stringify({ configId, input: "Automatischer Test-Run", apiKey: clientApiKey }),
       });
       if (res.ok) {
         setTimeout(() => fetchData(), 500);
+      } else {
+        const data = await res.json();
+        console.error("Agent run failed:", data.error);
       }
     } catch (err) {
       console.error(err);
