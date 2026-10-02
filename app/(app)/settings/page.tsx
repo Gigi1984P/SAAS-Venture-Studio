@@ -71,6 +71,14 @@ export default function SettingsPage() {
     const time = new Date().toLocaleTimeString("de-DE", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit", fractionalSecondDigits: 3 });
     setDebugLogs(prev => [{ time, type, msg, detail }, ...prev.slice(0, 49)]);
     console.log(`[DEBUG ${type}] ${msg}`, detail || "");
+    // Persistiere in DB (fire-and-forget)
+    try {
+      fetch("/api/debug-logs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, msg, detail: detail || "" }),
+      }).catch(() => {/* ignore */});
+    } catch { /* ignore */ }
   }
 
   useEffect(() => {

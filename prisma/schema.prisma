@@ -2576,3 +2576,14 @@ model VenturePitchDeck {
   @@index([ventureId, isActive])
   @@map("venture_pitch_decks")
 }
+
+model DebugLog {
+  id        String   @id @default(cuid())
+  type      String
+  msg       String
+  detail    String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("debug_logs")
+}
