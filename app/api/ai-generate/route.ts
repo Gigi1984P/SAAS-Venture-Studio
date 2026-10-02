@@ -47,9 +47,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "Kein OpenRouter API Key konfiguriert. Bitte in den Einstellungen einen Key hinterlegen.",
+            "Kein OpenRouter API Key. Bitte in Settings → OpenRouter einen gültigen Key eintragen.",
+          hint: "https://openrouter.ai/keys",
         },
-        { status: 500 }
+        { status: 401 }
       );
     }
 
@@ -57,19 +58,17 @@ export async function POST(req: NextRequest) {
     const model =
       MODELS[modelKey as string] || MODELS["claude-haiku-4.5"];
 
-    console.log(
-      `[OPENROUTER] Modell: ${model.name} (${model.id}) | Timeout: 8s`
-    );
-
+    // Fast-Abort: Bei ungültigem Key kommt von OpenRouter sofort 401
+    // Wir setzen Timeout auf 12s um Buffer zu haben (Vercel Hobby max ~10s)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
 
     const res = await fetch(OPENROUTER_URL, {
       method: "POST",
       signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: "Bearer " + apiKey,
         "HTTP-Referer": process.env.NEXTAUTH_URL || "http://localhost:3000",
         "X-Title": "SAAS Venture Studio",
       },
@@ -89,11 +88,26 @@ export async function POST(req: NextRequest) {
     if (!res.ok) {
       const errorText = await res.text();
       console.error(`[OPENROUTER] HTTP ${res.status}: ${errorText.slice(0, 300)}`);
+      let parsed;
+      try { parsed = JSON.parse(errorText); } catch { /* ignore */ }
+      const msg = parsed?.error?.message || errorText.slice(0, 200);
+      
+      if (res.status === 401) {
+        return NextResponse.json(
+          {
+            error: "OpenRouter API Key ungültig oder abgelaufen.",
+            detail: msg,
+            hint: "Bitte unter https://openrouter.ai/keys einen neuen Key erstellen und in Settings → OpenRouter eintragen.",
+          },
+          { status: 401 }
+        );
+      }
+
       return NextResponse.json(
         {
-          error: `OpenRouter Fehler ${res.status}: ${errorText.slice(0, 200)}`,
+          error: `OpenRouter Fehler ${res.status}: ${msg}`,
         },
-        { status: res.status === 429 ? 429 : 502 }
+        { status: 502 }
       );
     }
 
@@ -124,7 +138,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "Anfrage zu langsam (\u003e8s). Empfohlen: Claude Haiku 4.5 verwenden.",
+            "Anfrage zu langsam (>12s). OpenRouter antwortet nicht.",
+          hint: "Versuche Claude Haiku 4.5 (schnellstes Modell). Falls der Fehler bleibt: Überprüfe deinen API Key unter openrouter.ai/keys.",
         },
         { status: 504 }
       );
