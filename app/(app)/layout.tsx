@@ -10,6 +10,8 @@ import {
   Target,
   Layers,
   Building2,
+  BarChart3,
+  Activity,
   Telescope,
 } from "lucide-react";
 
@@ -35,11 +37,10 @@ export default function AppLayout({
             <Building2 className="w-4 h-4 shrink-0" /> Studio OS
           </Link>
 
-          {/* IdeenScout */}
           <div className="space-y-0.5">
             <div className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-primary bg-primary/10">
               <Telescope className="w-4 h-4 shrink-0 text-primary" />
-              <span className="flex-1">🔍 IdeenScout</span>
+              <span className="flex-1">IdeenScout</span>
               <svg className="w-3 h-3 rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
@@ -47,6 +48,9 @@ export default function AppLayout({
             <div className="ml-4 pl-3 border-l border-border space-y-0.5">
               <Link href="/ideenscout" className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
                 <LayoutDashboard className="w-3 h-3 shrink-0" /> Übersicht
+              </Link>
+              <Link href="/ideenscout/heartbeat" className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
+                <Activity className="w-3 h-3 shrink-0" /> Heartbeat
               </Link>
               <Link href="/ideenscout/signal" className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
                 📡 Signals
@@ -65,6 +69,10 @@ export default function AppLayout({
               </Link>
             </div>
           </div>
+
+          <Link href="/portfolio" className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
+            <BarChart3 className="w-4 h-4 shrink-0" /> Portfolio
+          </Link>
 
           <Link href="/ideas" className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
             <Lightbulb className="w-4 h-4 shrink-0" /> Ideen
