@@ -12,27 +12,31 @@ export async function GET() {
     const processed = [];
     
     for (const run of pendingRuns) {
-      const analysis = {
-        pain: Math.floor(Math.random() * 40) + 60,
-        business: Math.floor(Math.random() * 30) + 60,
-        market: Math.floor(Math.random() * 50) + 40,
-        confidence: 0.7 + Math.random() * 0.25,
-      };
-      
-      await prisma.agentRun.update({
-        where: { id: run.id },
-        data: {
-          status: "completed",
-          output: {
-            analysis,
-            recommendations: [`${run.agentType}: Analysis complete`],
-            completed: true,
-          },
-          completedAt: new Date(),
-        }
-      });
-      
-      processed.push({ id: run.id, agent: run.agentType, status: "completed" });
+      try {
+        const analysis = {
+          pain: Math.floor(Math.random() * 40) + 60,
+          business: Math.floor(Math.random() * 30) + 60,
+          market: Math.floor(Math.random() * 50) + 40,
+          confidence: 0.7 + Math.random() * 0.25,
+        };
+        
+        await prisma.agentRun.update({
+          where: { id: run.id },
+          data: {
+            status: "completed",
+            output: {
+              analysis,
+              recommendations: [`${run.agentType}: Analysis complete`],
+              completed: true,
+            },
+            completedAt: new Date(),
+          }
+        });
+        
+        processed.push({ id: run.id, agent: run.agentType, status: "completed" });
+      } catch (updateErr: any) {
+        console.error("[Agent Update]", updateErr.message);
+      }
     }
     
     return NextResponse.json({
