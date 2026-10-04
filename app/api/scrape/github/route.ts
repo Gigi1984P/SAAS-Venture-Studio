@@ -1,18 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+/**
+ * METHODE 1: GitHub Issues Scraper
+ * Sucht nach echten Issues mit Pain-Keywords
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const queries = body.queries || ["feature request automation"];
-    const maxResults = body.maxResults || 20;
+    const queries = body.queries || [
+      "feature request automation",
+      "manual process pain",
+      "need workflow tool",
+      "currently using excel",
+      "boring repetitive task",
+      "error-prone manual",
+    ];
+    const maxResults = body.maxResults || 15;
     
     const results = [];
-    const painKeywords = ["pain", "problem", "struggle", "frustrating", "difficult", "manual", "tedious", "waste", "broken", "slow"];
+    const painKeywords = ["pain", "problem", "struggle", "frustrating", "difficult", "manual", "tedious", "waste", "error-prone", "broken", "slow", "boring", "repetitive"];
     
     for (const query of queries) {
       try {
-        const url = `https://api.github.com/search/issues?q=${encodeURIComponent(query)}+is:issue+state:open\u0026sort=comments\u0026order=desc\u0026per_page=${maxResults}`;
+        const url = `https://api.github.com/search/issues?q=${encodeURIComponent(query)}+is:issue+state:open&sort=comments&order=desc&per_page=${maxResults}`;
         const response = await fetch(url, {
           headers: { 
             "Accept": "application/vnd.github.v3+json",
@@ -21,47 +32,57 @@ export async function POST(req: NextRequest) {
           next: { revalidate: 0 }
         });
         
-        if (!response.ok) continue;
+        if (!response.ok) {
+          console.log(`GitHub ${query}: HTTP ${response.status}`);
+          continue;
+        }
+        
         const data = await response.json();
         const items = data.items || [];
         
         for (const item of items) {
           const title = item.title || "";
-          const body = item.body || "";
+          const bodyText = item.body || "";
           const comments = item.comments || 0;
           const url = item.html_url || "";
-          const repo = item.repository?.full_name || "";
+          const repo = item.repository?.full_name || "unknown";
           
-          const combined = (title + " " + body).toLowerCase();
+          const combined = (title + " " + bodyText).toLowerCase();
           const painMatches = painKeywords.filter(kw => combined.includes(kw));
           const painScore = Math.min(painMatches.length * 15 + (comments > 10 ? 20 : 0), 100);
           
-          if (painScore > 20 || comments > 5) {
+          if (painScore > 15 || comments > 3) {
             try {
               await prisma.$executeRaw`
                 INSERT INTO business_ideas (
                   id, scout_run_id, title, description, category,
-                  target_audience, revenue_model, mvp_effort, potential, created_at
+                  target_audience, revenue_model, mvp_effort, potential,
+                  source, source_url, pain_score, pain_signals, engagement, created_at
                 ) VALUES (
                   gen_random_uuid(),
                   'github',
                   ${title.substring(0, 200)},
-                  ${(body + " | Comments: " + comments + " | URL: " + url).substring(0, 2000)},
+                  ${(bodyText + "\n\nRepo: " + repo + " | Comments: " + comments).substring(0, 2000)},
                   ${repo},
                   'GitHub Developers',
                   'Open Source Pain',
                   'medium',
                   ${painScore > 60 ? 'high' : painScore > 30 ? 'medium' : 'low'},
+                  'github',
+                  ${url},
+                  ${painScore},
+                  ${JSON.stringify(painMatches)},
+                  ${comments},
                   ${new Date(item.created_at || Date.now())}
                 )
                 ON CONFLICT DO NOTHING
               `;
             } catch (e) {}
             
-            results.push({ title: title.substring(0, 80), painScore, repo });
+            results.push({ title: title.substring(0, 80), painScore, repo, comments });
           }
         }
-      } catch (qErr) { console.error("GitHub error:", qErr); }
+      } catch (qErr) {}
     }
     
     return NextResponse.json({
@@ -70,7 +91,7 @@ export async function POST(req: NextRequest) {
       scraped: results.length,
       issues: results,
     });
-  } catch (error) {
+  } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
