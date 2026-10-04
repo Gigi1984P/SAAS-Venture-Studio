@@ -60,6 +60,13 @@ export async function middleware(request: NextRequest) {
   const response = NextResponse.next();
   const now = Date.now();
 
+  // Locale Redirect: /de/* oder /en/* -> /*
+  if (pathname.startsWith("/de/") || pathname.startsWith("/en/")) {
+    const newUrl = request.nextUrl.clone();
+    newUrl.pathname = pathname.replace(/^\/(de|en)\//, "/");
+    return NextResponse.redirect(newUrl, 308);
+  }
+
   // HTTPS Redirect (Production)
   if (
     process.env.NODE_ENV === "production" &&
