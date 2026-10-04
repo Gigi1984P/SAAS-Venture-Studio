@@ -21,10 +21,12 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 
 export function SidebarNav({ roleName }: { roleName?: string }) {
   const pathname = usePathname() || "";
   const [scoutOpen, setScoutOpen] = useState(true);
+  const { data: session } = useSession();
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === href;
@@ -124,6 +126,11 @@ export function SidebarNav({ roleName }: { roleName?: string }) {
       </nav>
 
       <div className="border-t p-3 space-y-3">
+        {session?.user?.name && (
+          <div className="px-3 py-2 text-sm font-medium text-muted-foreground">
+            👤 {session.user.name}
+          </div>
+        )}
         <div className="text-xs text-muted-foreground">🇩🇪 DE</div>
         <form action="/api/auth/signout" method="POST">
           <button type="submit" className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
