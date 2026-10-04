@@ -58,6 +58,7 @@ export async function POST() {
     await prisma.venture.create({
       data: {
         name: "DocuMind AI",
+        slug: "documind-ai",
         description: "Intelligente Dokumentenverarbeitung für Rechtsabteilungen",
         status: "mvp",
         category: "LegalTech",
