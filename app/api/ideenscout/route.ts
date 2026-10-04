@@ -40,9 +40,9 @@ export async function GET(req: NextRequest) {
     }
 
     // Build WHERE clause
-    const whereParts: string[] = [`scout_run_id = $1`];
-    const whereValues: any[] = [run?.id];
-    let paramIdx = 2;
+    const whereParts: string[] = [`scout_run_id IS NOT NULL`];
+    const whereValues: any[] = [];
+    let paramIdx = 1;
 
     if (filterSaved) {
       whereParts.push(`is_saved = true`);
@@ -84,12 +84,11 @@ export async function GET(req: NextRequest) {
 
     // Get available categories for filter dropdown
     const categories = await queryRaw(
-      `SELECT DISTINCT category FROM business_ideas WHERE scout_run_id = $1 AND category IS NOT NULL ORDER BY category`,
-      run?.id
+      `SELECT DISTINCT category FROM business_ideas WHERE scout_run_id IS NOT NULL AND category IS NOT NULL ORDER BY category`
     );
 
     return NextResponse.json({
-      run: run || { status: "stopped", total_ideas: 0 },
+      run: run || { status: "running", total_ideas: totalCount, agent_id: "multi-source-scraper" },
       ideas: ideas || [],
       pagination: {
         page,
