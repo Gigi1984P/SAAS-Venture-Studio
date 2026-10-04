@@ -6,38 +6,37 @@ export async function POST() {
     const user = await prisma.user.findFirst({ where: { email: "gianluigi.plantone@googlemail.com" } });
     const userId = user?.id;
 
-    const existing = await prisma.opportunity.findFirst({ where: { title: "Compliance Monitoring Dashboard" } });
-    if (existing) {
-      // Update mit Business-Dimensionen
+    // Update existing opportunities with business dimensions
+    const opps = await prisma.opportunity.findMany();
+    
+    for (const opp of opps) {
       await prisma.opportunity.update({
-        where: { id: existing.id },
+        where: { id: opp.id },
         data: {
-          reachability: 75,
-          competitionGap: 60,
-          switchingMotivation: 80,
-          recurringNature: 90,
-          evidenceQuality: 85,
-          mvpSimplicity: 70,
-          aiLeverage: 80,
-          grossMargin: 85,
-          distributionAdvantage: 65,
-          defensibility: 70,
-          painSeverity: 95,
-          frequency: 85,
-          economicImpact: 90,
+          reachability: opp.reachability || 70 + Math.floor(Math.random() * 20),
+          competitionGap: opp.competitionGap || 60 + Math.floor(Math.random() * 25),
+          switchingMotivation: opp.switchingMotivation || 75 + Math.floor(Math.random() * 15),
+          recurringNature: opp.recurringNature || 80 + Math.floor(Math.random() * 15),
+          evidenceQuality: opp.evidenceQuality || 70 + Math.floor(Math.random() * 20),
+          mvpSimplicity: opp.mvpSimplicity || 65 + Math.floor(Math.random() * 25),
+          aiLeverage: opp.aiLeverage || 75 + Math.floor(Math.random() * 20),
+          grossMargin: opp.grossMargin || 80 + Math.floor(Math.random() * 15),
+          distributionAdvantage: opp.distributionAdvantage || 60 + Math.floor(Math.random() * 25),
+          defensibility: opp.defensibility || 65 + Math.floor(Math.random() * 25),
         }
       });
       
-      // Auto-Score triggern
-      await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ""}/api/opportunities/${existing.id}/auto-score`, {
+      // Trigger auto-score
+      await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ""}/api/opportunities/${opp.id}/auto-score`, {
         method: "POST",
       }).catch(() => {});
-      
-      return NextResponse.json({ success: true, action: "updated_with_business_dims", opportunities: 1 });
     }
-
-    // ... existing seed logic ...
-    return NextResponse.json({ success: true, action: "seeded" });
+    
+    return NextResponse.json({ 
+      success: true, 
+      action: "business_dimensions_updated",
+      opportunitiesUpdated: opps.length 
+    });
   } catch (error: any) {
     console.error("[SEED]", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
