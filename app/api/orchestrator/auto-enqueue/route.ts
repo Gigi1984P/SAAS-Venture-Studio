@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// Orchestrator: Auto-Enqueue basierend auf Opportunity-Status
-
 const AGENT_WORKFLOWS: Record<string, string[]> = {
   discovered: ["signal_discovery"],
   clustered: ["pain_analysis"],
@@ -17,15 +15,9 @@ const AGENT_WORKFLOWS: Record<string, string[]> = {
 
 export async function POST() {
   try {
-    // Finde alle Opportunities die Agenten brauchen
     const opportunities = await prisma.opportunity.findMany({
       where: {
-        status: {
-          in: Object.keys(AGENT_WORKFLOWS)
-        }
-      },
-      include: {
-        _count: { select: { agentRuns: true } }
+        status: { in: Object.keys(AGENT_WORKFLOWS) }
       }
     });
     
@@ -34,39 +26,33 @@ export async function POST() {
     for (const opp of opportunities) {
       const agents = AGENT_WORKFLOWS[opp.status] || [];
       
-      // Erstelle Task für jeden Agenten
       for (const agentType of agents) {
-        // Erstelle zuerst Task
         const task = await prisma.task.create({
           data: {
             title: `${agentType} für ${opp.title}`,
-            description: `Automatisch erstellt für Opportunity ${opp.id}`,
+            description: `Auto für Opportunity ${opp.id}`,
             status: "PENDING",
             priority: "medium",
           }
         }).catch(() => null);
         
         if (task) {
-          // Erstelle AgentRun mit taskId
           await prisma.agentRun.create({
             data: {
               taskId: task.id,
               agentType,
-              input: JSON.stringify({ opportunityId: opp.id, status: opp.status }),
+              input: { opportunityId: opp.id, status: opp.status },
             }
           }).catch(() => {});
           
-          results.push({ opportunity: opp.title, agent: agentType, status: "enqueued" });
+          results.push({ opportunity: opp.title, agent: agentType });
         }
       }
       
-      // Auto-Score bei jedem Durchlauf
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "";
-      if (baseUrl) {
-        await fetch(`${baseUrl}/api/opportunities/${opp.id}/auto-score`, {
-          method: "POST",
-        }).catch(() => {});
-      }
+      // Auto-Score
+      await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ""}/api/opportunities/${opp.id}/auto-score`, {
+        method: "POST",
+      }).catch(() => {});
     }
     
     return NextResponse.json({

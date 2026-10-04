@@ -1,16 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// Läuft alle 12 Stunden: Scrape aktive Sources
 export async function GET() {
   try {
-    // Aktiviere alle Sources
-    await prisma.researchSource.updateMany({
-      where: { active: false },
-      data: { active: true }
-    });
-    
-    // Erstelle Signals für Opportunities ohne genug Daten
     const opportunities = await prisma.opportunity.findMany({
       include: {
         _count: { select: { signals: true } }
@@ -29,7 +21,7 @@ export async function GET() {
             opportunityId: opp.id,
             type: types[i % types.length],
             title: `Auto-Signal ${i + 1}: ${opp.title?.substring(0, 30)}`,
-            description: `Automatisch erkanntes Signal aus ${sources[i % sources.length]}`,
+            description: `Auto-erkannt aus ${sources[i % sources.length]}`,
             source: sources[i % sources.length],
             confidence: 0.5 + Math.random() * 0.4,
             verified: Math.random() > 0.3,
@@ -46,8 +38,8 @@ export async function GET() {
     
     return NextResponse.json({
       success: true,
-      sourcesActivated: true,
       signalsCreated: created,
+      opportunities: opportunities.length,
     });
   } catch (error: any) {
     console.error("[CRON SCRAPE]", error);
