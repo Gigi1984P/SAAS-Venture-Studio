@@ -7,15 +7,11 @@ export async function GET() {
       where: { status: "running" },
       orderBy: { createdAt: "asc" },
       take: 10,
-      include: { task: true }
     });
     
     const processed = [];
     
     for (const run of pendingRuns) {
-      const input = run.input as any || {};
-      
-      // Simulate intelligent analysis
       const analysis = {
         pain: Math.floor(Math.random() * 40) + 60,
         business: Math.floor(Math.random() * 30) + 60,
@@ -35,14 +31,6 @@ export async function GET() {
           completedAt: new Date(),
         }
       });
-      
-      // Update task status
-      if (run.task) {
-        await prisma.task.update({
-          where: { id: run.taskId },
-          data: { status: "completed" }
-        }).catch(() => {});
-      }
       
       processed.push({ id: run.id, agent: run.agentType, status: "completed" });
     }

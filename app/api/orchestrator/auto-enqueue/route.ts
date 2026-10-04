@@ -19,9 +19,7 @@ const AGENT_WORKFLOWS: Record<string, string[]> = {
 export async function POST() {
   try {
     const opportunities = await prisma.opportunity.findMany({
-      where: {
-        status: { in: Object.keys(AGENT_WORKFLOWS) }
-      }
+      where: { status: { in: Object.keys(AGENT_WORKFLOWS) } }
     });
     
     const results = [];
@@ -30,34 +28,13 @@ export async function POST() {
       const agents = AGENT_WORKFLOWS[opp.status] || [];
       
       for (const agentType of agents) {
-        try {
-          // Create Task with ALL required fields
-          const task = await prisma.task.create({
-            data: {
-              type: agentType,
-              entityId: opp.id,
-              entityType: "opportunity",
-              agent: agentType,
-              priority: 5,
-              status: "queued",
-              attempts: 0,
-              maxAttempts: 3,
-            }
-          });
-          
-          // Create AgentRun with taskId
-          await prisma.agentRun.create({
-            data: {
-              taskId: task.id,
-              agentType,
-              input: { opportunityId: opp.id, status: opp.status, title: opp.title },
-            }
-          });
-          
-          results.push({ opportunity: opp.title, agent: agentType, taskId: task.id });
-        } catch (err: any) {
-          console.error(`[ORCH] Agent ${agentType} failed:`, err.message);
-        }
+        await prisma.agentRun.create({
+          data: {
+            agentType,
+            input: { opportunityId: opp.id, status: opp.status, title: opp.title },
+          }
+        });
+        results.push({ opportunity: opp.title, agent: agentType });
       }
       
       // Auto-Score
@@ -86,7 +63,6 @@ export async function GET() {
     const runs = await prisma.agentRun.findMany({
       orderBy: { startedAt: "desc" },
       take: 20,
-      include: { task: true }
     });
     
     return NextResponse.json({

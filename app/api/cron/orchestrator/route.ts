@@ -16,35 +16,15 @@ export async function GET() {
     for (const opp of opportunities) {
       const agentType = getAgentForStatus(opp.status);
       if (agentType) {
-        try {
-          const task = await prisma.task.create({
-            data: {
-              type: agentType,
-              entityId: opp.id,
-              entityType: "opportunity",
-              agent: agentType,
-              priority: 5,
-              status: "queued",
-              attempts: 0,
-              maxAttempts: 3,
-            }
-          });
-          
-          await prisma.agentRun.create({
-            data: {
-              taskId: task.id,
-              agentType,
-              input: { opportunityId: opp.id, status: opp.status, title: opp.title },
-            }
-          });
-          
-          agentRuns.push({ opp: opp.title, agent: agentType });
-        } catch (err: any) {
-          console.error("[CRON] Task creation failed:", err.message);
-        }
+        await prisma.agentRun.create({
+          data: {
+            agentType,
+            input: { opportunityId: opp.id, status: opp.status, title: opp.title },
+          }
+        });
+        agentRuns.push({ opp: opp.title, agent: agentType });
       }
       
-      // Auto-Score
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "";
       if (baseUrl) {
         await fetch(`${baseUrl}/api/opportunities/${opp.id}/auto-score`, {
