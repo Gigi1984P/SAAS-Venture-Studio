@@ -6,9 +6,13 @@ export async function GET() {
   try {
     const features = await prisma.feature.findMany({ orderBy: { category: "asc", name: "asc" } });
     return NextResponse.json(features);
-  } catch (error) {
+  } catch (error: any) {
     console.error("[FEATURES GET]", error);
-    return NextResponse.json({ message: "Interner Fehler" }, { status: 500 });
+    // Return empty if table doesn't exist yet
+    if (error?.message?.includes("does not exist")) {
+      return NextResponse.json([]);
+    }
+    return NextResponse.json({ message: "Interner Fehler", error: error.message }, { status: 500 });
   }
 }
 
@@ -20,8 +24,8 @@ export async function POST(req: NextRequest) {
       data: { slug, name, category, icon: icon || null, description: description || null },
     });
     return NextResponse.json(feature, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("[FEATURES POST]", error);
-    return NextResponse.json({ message: "Interner Fehler" }, { status: 500 });
+    return NextResponse.json({ message: "Interner Fehler", error: error.message }, { status: 500 });
   }
 }

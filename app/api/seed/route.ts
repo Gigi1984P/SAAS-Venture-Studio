@@ -9,10 +9,13 @@ export async function POST() {
       return NextResponse.json({ message: "Bereits geseedet", opportunities: oppCount });
     }
 
-    // Create Organization for demo data
-    const org = await prisma.organization.create({
-      data: { name: "Demo Studio", slug: "demo-studio" }
-    });
+    // Create Organization for demo data (or use existing)
+    let org = await prisma.organization.findFirst({ where: { slug: "demo-studio" } });
+    if (!org) {
+      org = await prisma.organization.create({
+        data: { name: "Demo Studio", slug: "demo-studio" }
+      });
+    }
 
     // Create Demo Opportunities
     const opps = await prisma.$transaction([
