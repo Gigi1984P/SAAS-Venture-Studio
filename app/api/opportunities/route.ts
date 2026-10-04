@@ -6,8 +6,9 @@ import { prisma } from "@/lib/prisma";
 // GET /api/opportunities
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) return NextResponse.json([]);
+    // Solo-Modus: Session optional
+    // const session = await getServerSession(authOptions);
+    // if (!session?.user?.id) return NextResponse.json([]);
 
     const { searchParams } = new URL(req.url);
     const limit = parseInt(searchParams.get("limit") || "100");
