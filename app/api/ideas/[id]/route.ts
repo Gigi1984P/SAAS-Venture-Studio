@@ -1,22 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function PUT(
+export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const body = await req.json();
-    const updated = await prisma.idea.update({
+    await prisma.idea.delete({
       where: { id: params.id },
-      data: {
-        ...body,
-        updatedAt: new Date(),
-      },
     });
-    return NextResponse.json(updated);
+    return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error("[IDEA PUT]", error);
+    console.error("[IDEA DELETE]", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
