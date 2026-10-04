@@ -113,6 +113,14 @@ type PainCluster = { id: string; label: string; description: string | null; sign
 type Claim = { id: string; claim: string; category: string; confidence: number; status: string; sourceSignalIds: string | null; sourceUrls: string | null; createdAt: string; };
 type Artifact = { id: string; type: string; title: string; content: string | null; summary: string | null; status: string; createdAt: string; };
 
+
+import PainGraphVisualization from "@/components/pain-graph-visualization";
+import ValidationStagesWidget from "@/components/validation-stages-widget";
+import EvidenceFunnelWidget from "@/components/evidence-funnel-widget";
+import StageGateWidget from "@/components/stage-gate-widget";
+import AssumptionExperimentLinker from "@/components/assumption-experiment-linker";
+import ResearchBudgetWidget from "@/components/research-budget-widget";
+import CompetitorResearcherTrigger from "@/components/competitor-researcher-trigger";
 export default function OpportunityDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -446,6 +454,13 @@ export default function OpportunityDetailPage() {
             { id: "ai-rec", label: "AI Rec" },
             { id: "gantt", label: "Gantt" },
             { id: "external", label: "Extern" },
+            { id: "pain-graph", label: "Pain Graph" },
+            { id: "validation-stages", label: "7-Stufen" },
+            { id: "evidence-funnel", label: "Funnel" },
+            { id: "stage-gate", label: "Gate" },
+            { id: "assumption-linker", label: "A→E Link" },
+            { id: "budget-check", label: "Budget" },
+            { id: "competitor-research", label: "Auto-Comp" },
           ].map(tab => (
             <button
               key={tab.id}
@@ -1905,6 +1920,55 @@ function EvidenceTab({ opp, id, fetchOpp }: { opp: Opp; id: string; fetchOpp: ()
       {/* EXTERNAL DATA SOURCES */}
       {activeTab === "external" && (
         <ExternalDataSources opportunityId={id} />
+      )}
+
+      {/* PAIN GRAPH */}
+      {activeTab === "pain-graph" && (
+        <div className="rounded-lg border border-border bg-card p-6">
+          <PainGraphVisualization opportunityId={id} />
+        </div>
+      )}
+
+      {/* VALIDATION STAGES */}
+      {activeTab === "validation-stages" && (
+        <div className="rounded-lg border border-border bg-card p-6">
+          <ValidationStagesWidget opportunityId={id} />
+        </div>
+      )}
+
+      {/* EVIDENCE FUNNEL */}
+      {activeTab === "evidence-funnel" && (
+        <div className="rounded-lg border border-border bg-card p-6">
+          <EvidenceFunnelWidget opportunityId={id} />
+        </div>
+      )}
+
+      {/* STAGE GATE */}
+      {activeTab === "stage-gate" && (
+        <div className="rounded-lg border border-border bg-card p-6">
+          <StageGateWidget opportunityId={id} />
+        </div>
+      )}
+
+      {/* ASSUMPTION LINKER */}
+      {activeTab === "assumption-linker" && (
+        <div className="rounded-lg border border-border bg-card p-6">
+          <AssumptionExperimentLinker opportunityId={id} />
+        </div>
+      )}
+
+      {/* BUDGET CHECK */}
+      {activeTab === "budget-check" && (
+        <div className="rounded-lg border border-border bg-card p-6">
+          <ResearchBudgetWidget opportunityId={id} />
+        </div>
+      )}
+
+      {/* COMPETITOR RESEARCH */}
+      {activeTab === "competitor-research" && (
+        <div className="rounded-lg border border-border bg-card p-6">
+          <CompetitorResearcherTrigger opportunityId={id} />
+        </div>
       )}
 
       {/* PDF EXPORTS */}
