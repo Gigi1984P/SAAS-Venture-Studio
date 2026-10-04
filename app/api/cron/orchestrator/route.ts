@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// Läuft stündlich: Triggere Orchestrator
 export async function GET() {
   try {
     const opportunities = await prisma.opportunity.findMany({
       where: {
         status: {
-          in: ["discovered", "clustered", "pain_verified", "market_research", "competition_research", "business_analysis", "scored", "experiment"]
+          in: ["discovered", "clustered", "pain_verified", "market_research", "competition_research", "business_analysis", "scored", "experiment", "validating", "building", "validated"]
         }
       }
     });
@@ -23,7 +22,7 @@ export async function GET() {
         }).catch(() => {});
       }
       
-      // Erstelle Task + AgentRun
+      // Create Task + AgentRun with required fields
       const agentType = getAgentForStatus(opp.status);
       if (agentType) {
         const task = await prisma.task.create({
@@ -32,19 +31,26 @@ export async function GET() {
             description: `Cron-Trigger für Opportunity ${opp.id}`,
             status: "PENDING",
             priority: "medium",
+            type: agentType,
+            entityId: opp.id,
+            entityType: "opportunity",
+            agent: agentType,
           }
-        }).catch(() => null);
+        }).catch((err: any) => {
+          console.error("[CRON TASK ERROR]", err.message);
+          return null;
+        });
         
         if (task) {
           await prisma.agentRun.create({
             data: {
               taskId: task.id,
               agentType,
-              input: JSON.stringify({ opportunityId: opp.id, status: opp.status }),
+              input: { opportunityId: opp.id, status: opp.status },
             }
           }).catch(() => {});
           
-          agentRuns.push({ opp: opp.title, agent: agentType });
+          agentRuns.push({ opp: opp.title, agent: agentType, taskId: task.id });
         }
       }
     }
@@ -71,6 +77,9 @@ function getAgentForStatus(status: string): string | null {
     business_analysis: "scoring",
     scored: "experiment_design",
     experiment: "validation_monitor",
+    validating: "build_gate_review",
+    building: "progress_tracker",
+    validated: "growth_strategist",
   };
   return map[status] || null;
 }

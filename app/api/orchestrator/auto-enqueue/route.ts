@@ -30,16 +30,26 @@ export async function POST() {
       const agents = AGENT_WORKFLOWS[opp.status] || [];
       
       for (const agentType of agents) {
+        // Create Task with ALL required fields
         const task = await prisma.task.create({
           data: {
             title: `${agentType} für ${opp.title}`,
             description: `Auto für Opportunity ${opp.id}`,
             status: "PENDING",
             priority: "medium",
+            // Required fields
+            type: agentType,
+            entityId: opp.id,
+            entityType: "opportunity",
+            agent: agentType,
           }
-        }).catch(() => null);
+        }).catch((err: any) => {
+          console.error("[TASK CREATE ERROR]", err.message);
+          return null;
+        });
         
         if (task) {
+          // Create AgentRun with taskId
           await prisma.agentRun.create({
             data: {
               taskId: task.id,
@@ -48,14 +58,17 @@ export async function POST() {
             }
           }).catch(() => {});
           
-          results.push({ opportunity: opp.title, agent: agentType });
+          results.push({ opportunity: opp.title, agent: agentType, taskId: task.id });
         }
       }
       
       // Auto-Score
-      await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ""}/api/opportunities/${opp.id}/auto-score`, {
-        method: "POST",
-      }).catch(() => {});
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+      if (baseUrl) {
+        await fetch(`${baseUrl}/api/opportunities/${opp.id}/auto-score`, {
+          method: "POST",
+        }).catch(() => {});
+      }
     }
     
     return NextResponse.json({
