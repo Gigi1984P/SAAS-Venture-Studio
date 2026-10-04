@@ -12,8 +12,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Solo-Modus: keine Owner-Filterung
     const ventures = await prisma.venture.findMany({
-      where: { ownerId: session.user.id },
       orderBy: { updatedAt: "desc" },
     });
 

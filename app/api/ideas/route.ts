@@ -5,10 +5,11 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const ideas = await prisma.idea.findMany({ orderBy: { createdAt: "desc" } });
-  return NextResponse.json(ideas);
+    // Solo-Modus: Session optional
+    // const session = await getServerSession(authOptions);
+    // if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const ideas = await prisma.idea.findMany({ orderBy: { createdAt: "desc" } });
+    return NextResponse.json(ideas);
   } catch (error) {
     console.error("[IDEAS GET]", error);
     return NextResponse.json([]);

@@ -21,8 +21,6 @@ export async function GET(req: NextRequest) {
         },
       },
       orderBy: [
-        { totalScore: "desc" },
-        { priority: "desc" },
         { createdAt: "desc" },
       ],
     });
