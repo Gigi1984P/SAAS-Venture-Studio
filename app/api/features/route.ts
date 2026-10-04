@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 // GET /api/features
 export async function GET() {
   try {
-    const features = await prisma.feature.findMany({ orderBy: { category: "asc", name: "asc" } });
+    const features = await prisma.feature.findMany({ orderBy: [{ category: "asc" }, { name: "asc" }] });
     return NextResponse.json(features);
   } catch (error: any) {
     console.error("[FEATURES GET]", error);
