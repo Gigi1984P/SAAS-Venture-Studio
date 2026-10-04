@@ -1298,7 +1298,7 @@ model Task {
 
 model AgentRun {
   id             String         @id @default(cuid())
-  taskId         String         @map("task_id")
+  taskId         String?        @map("task_id")
   agentType      String         @map("agent_type")
   input          Json?
   output         Json?
@@ -1308,7 +1308,7 @@ model AgentRun {
   cost           Float?
   startedAt      DateTime       @default(now()) @map("started_at")
   completedAt    DateTime?      @map("completed_at")
-  task           Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  task           Task?          @relation(fields: [taskId], references: [id], onDelete: Cascade)
   messages       AgentMessage[]
 
   @@map("agent_runs")

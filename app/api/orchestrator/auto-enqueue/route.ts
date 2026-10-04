@@ -30,38 +30,15 @@ export async function POST() {
       const agents = AGENT_WORKFLOWS[opp.status] || [];
       
       for (const agentType of agents) {
-        // Create a dummy task first (minimal required fields)
-        let taskId = "direct-run";
-        try {
-          const task = await prisma.task.create({
-            data: {
-              type: agentType,
-              entityId: opp.id,
-              entityType: "opportunity",
-              agent: agentType,
-            }
-          });
-          taskId = task.id;
-        } catch (taskErr: any) {
-          console.log("[TASK SKIP]", taskErr.message);
-          // Continue without task
-        }
-        
-        // Create AgentRun (with or without task)
-        try {
-          const runData: any = {
+        // Create AgentRun WITHOUT Task (taskId is now optional)
+        await prisma.agentRun.create({
+          data: {
             agentType,
-            input: { opportunityId: opp.id, status: opp.status },
-          };
-          if (taskId !== "direct-run") {
-            runData.taskId = taskId;
+            input: { opportunityId: opp.id, status: opp.status, title: opp.title },
           }
-          
-          await prisma.agentRun.create({ data: runData });
-          results.push({ opportunity: opp.title, agent: agentType });
-        } catch (runErr: any) {
-          console.log("[AGENT RUN SKIP]", runErr.message);
-        }
+        });
+        
+        results.push({ opportunity: opp.title, agent: agentType });
       }
       
       // Auto-Score

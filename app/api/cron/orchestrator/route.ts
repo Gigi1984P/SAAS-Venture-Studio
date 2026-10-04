@@ -14,44 +14,24 @@ export async function GET() {
     const agentRuns = [];
     
     for (const opp of opportunities) {
+      const agentType = getAgentForStatus(opp.status);
+      if (agentType) {
+        await prisma.agentRun.create({
+          data: {
+            agentType,
+            input: { opportunityId: opp.id, status: opp.status, title: opp.title },
+          }
+        });
+        
+        agentRuns.push({ opp: opp.title, agent: agentType });
+      }
+      
       // Auto-Score
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "";
       if (baseUrl) {
         await fetch(`${baseUrl}/api/opportunities/${opp.id}/auto-score`, {
           method: "POST",
         }).catch(() => {});
-      }
-      
-      // Create Task + AgentRun with required fields
-      const agentType = getAgentForStatus(opp.status);
-      if (agentType) {
-        const task = await prisma.task.create({
-          data: {
-            title: `${agentType} für ${opp.title}`,
-            description: `Cron-Trigger für Opportunity ${opp.id}`,
-            status: "PENDING",
-            priority: "medium",
-            type: agentType,
-            entityId: opp.id,
-            entityType: "opportunity",
-            agent: agentType,
-          }
-        }).catch((err: any) => {
-          console.error("[CRON TASK ERROR]", err.message);
-          return null;
-        });
-        
-        if (task) {
-          await prisma.agentRun.create({
-            data: {
-              taskId: task.id,
-              agentType,
-              input: { opportunityId: opp.id, status: opp.status },
-            }
-          }).catch(() => {});
-          
-          agentRuns.push({ opp: opp.title, agent: agentType, taskId: task.id });
-        }
       }
     }
     
