@@ -7,13 +7,26 @@ export async function GET() {
     const opportunities = await prisma.opportunity.findMany();
     const ideas = await prisma.idea.findMany();
     const ventures = await prisma.venture.findMany();
-    const tasks = await prisma.task.findMany();
+    
+    // Echte Scraping-Daten aus business_ideas
+    const scrapedCount = await prisma.$queryRaw`
+      SELECT COUNT(*) as count FROM business_ideas
+    `;
+    const scrapedTotal = Number((scrapedCount as any[])?.[0]?.count) || 0;
+    
+    const highPainCount = await prisma.$queryRaw`
+      SELECT COUNT(*) as count FROM business_ideas WHERE pain_score > 50
+    `;
+    const highPain = Number((highPainCount as any[])?.[0]?.count) || 0;
+    
+    // Sources breakdown
+    const sources = await prisma.$queryRaw`
+      SELECT source, COUNT(*) as count 
+      FROM business_ideas 
+      WHERE source IS NOT NULL
+      GROUP BY source
+    `;
 
-    // Also count business_ideas (IdeenScout signals)
-    const scoutIdeasResult = await prisma.$queryRaw`SELECT COUNT(*) as count FROM business_ideas`;
-    const scoutIdeasCount = Number((scoutIdeasResult as any[])?.[0]?.count) || 0;
-
-    // Calculate stats
     let totalMRR = 0;
     let scoreASum = 0;
     let scoreBSum = 0;
@@ -34,12 +47,18 @@ export async function GET() {
       opportunityCount: opportunities.length,
       ventureCount: ventures.length,
       ideaCount: ideas.length,
-      scoutIdeasCount,
-      totalIdeas: ideas.length + scoutIdeasCount,
-      taskCount: tasks.length,
+      // Echte Scraping-Metriken
+      scrapedTotal,
+      highPainSignals: highPain,
+      sources: sources as any[],
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("[STATS]", error);
-    return NextResponse.json({ error: "Interner Fehler" }, { status: 500 });
+    return NextResponse.json({ 
+      totalMRR: 0, avgScoreA: 0, avgScoreB: 0,
+      opportunityCount: 0, ventureCount: 0, ideaCount: 0,
+      scrapedTotal: 0, highPainSignals: 0, sources: [],
+      error: error.message 
+    });
   }
 }
