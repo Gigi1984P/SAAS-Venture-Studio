@@ -3,73 +3,100 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST() {
   try {
-    // Check if already seeded
-    const oppCount = await prisma.opportunity.count();
-    if (oppCount > 0) {
-      return NextResponse.json({ message: "Bereits geseedet", opportunities: oppCount });
-    }
-
     // Find user
     const user = await prisma.user.findFirst({ where: { email: "gianluigi.plantone@googlemail.com" } });
     if (!user) {
       return NextResponse.json({ message: "Kein User gefunden" }, { status: 400 });
     }
 
-    // Create Organization
-    let org = await prisma.organization.findFirst({ where: { slug: "demo-studio" } });
-    if (!org) {
-      org = await prisma.organization.create({
-        data: { name: "Demo Studio", slug: "demo-studio" }
-      });
-    }
+    // Delete old demo data (keep user)
+    await prisma.idea.deleteMany();
+    await prisma.venture.deleteMany();
+    await prisma.opportunity.deleteMany();
 
-    // Create Demo Opportunities
-    const opp1 = await prisma.opportunity.create({
+    // Create Demo Opportunities WITH scores and MRR
+    await prisma.opportunity.create({
       data: {
         title: "AI-Powered Document Processing",
         description: "Automatisierte Dokumentenverarbeitung für Rechtsabteilungen mittels GPT-4 Vision.",
         status: "validated",
         priority: "high",
         createdBy: user.id,
+        scoreA: 78,
+        scoreB: 72,
+        mrrEstimate: 15000,
+        marketSize: "$2.3B",
+        competition: "mittel",
+        confidence: 0.85,
+        painSeverity: 90,
+        frequency: 80,
+        economicImpact: 85,
       }
     });
 
-    const opp2 = await prisma.opportunity.create({
+    await prisma.opportunity.create({
       data: {
         title: "No-Code Workflow Automation",
         description: "Drag-and-drop Workflow Builder für Mittelstand ohne IT-Abteilung.",
         status: "discovered",
         priority: "medium",
         createdBy: user.id,
+        scoreA: 65,
+        scoreB: 60,
+        mrrEstimate: 8000,
+        marketSize: "$5.1B",
+        competition: "hoch",
+        confidence: 0.45,
+        painSeverity: 70,
+        frequency: 65,
+        economicImpact: 60,
       }
     });
 
-    const opp3 = await prisma.opportunity.create({
+    await prisma.opportunity.create({
       data: {
         title: "Compliance Monitoring Dashboard",
         description: "DSGVO-konformes Monitoring mit automatisierten Berichten für Datenschutzbeauftragte.",
         status: "building",
         priority: "urgent",
         createdBy: user.id,
+        scoreA: 82,
+        scoreB: 78,
+        mrrEstimate: 22000,
+        marketSize: "$890M",
+        competition: "niedrig",
+        confidence: 0.92,
+        painSeverity: 95,
+        frequency: 85,
+        economicImpact: 90,
       }
     });
 
-    // Create Demo Venture
+    // Create Demo Venture (with ownerId)
     await prisma.venture.create({
       data: {
         name: "DocuMind AI",
         slug: "documind-ai",
         description: "Intelligente Dokumentenverarbeitung für Rechtsabteilungen",
         status: "mvp",
-        category: "LegalTech",
-        createdBy: user.id,
+        ownerId: user.id,
       }
     });
 
+    // Create Ideas
+    await prisma.idea.createMany({
+      data: [
+        { title: "Smart Contract Analyzer", description: "KI-gestützte Vertragsanalyse", status: "new" },
+        { title: "Meeting Minutes Auto-Gen", description: "Automatische Protokollerstellung", status: "new" },
+        { title: "Customer Churn Predictor", description: "ML-Modell zur Kündigungsvorhersage", status: "in_progress" },
+      ]
+    });
+
     return NextResponse.json({
-      message: "Demo-Daten erstellt",
+      message: "Demo-Daten neu erstellt",
       opportunities: 3,
       ventures: 1,
+      ideas: 3,
     }, { status: 201 });
   } catch (error: any) {
     console.error("[SEED]", error);
