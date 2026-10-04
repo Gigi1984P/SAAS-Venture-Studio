@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Statische Features (kein DB-Zugriff nötig)
+// Statische Features — kein DB-Zugriff nötig
 const FEATURES = [
   { id: "1", slug: "research_sources", name: "Research Sources", category: "research", description: "Konfigurierte Research Sources", icon: null },
   { id: "2", slug: "auto_discovery", name: "Auto-Discovery", category: "research", description: "Automatische Signal-Erkennung", icon: null },

@@ -9,10 +9,10 @@ export async function POST() {
       return NextResponse.json({ message: "Bereits geseedet", opportunities: oppCount });
     }
 
-    // Find or create user
-    let user = await prisma.user.findFirst({ where: { email: "gianluigi.plantone@googlemail.com" } });
+    // Find user
+    const user = await prisma.user.findFirst({ where: { email: "gianluigi.plantone@googlemail.com" } });
     if (!user) {
-      return NextResponse.json({ message: "Kein User gefunden. Bitte erst registrieren." }, { status: 400 });
+      return NextResponse.json({ message: "Kein User gefunden" }, { status: 400 });
     }
 
     // Create Organization
@@ -23,79 +23,52 @@ export async function POST() {
       });
     }
 
-    // Create Demo Opportunities (only required fields + some scores)
-    const opps = await prisma.$transaction([
-      prisma.opportunity.create({
-        data: {
-          title: "AI-Powered Document Processing",
-          description: "Automatisierte Dokumentenverarbeitung für Rechtsabteilungen mittels GPT-4 Vision.",
-          status: "validated",
-          priority: "high",
-          marketSize: "$2.3B",
-          competition: "mittel",
-          mrrEstimate: 15000,
-          scoreA: 78,
-          scoreB: 72,
-          createdBy: user.id,
-        }
-      }),
-      prisma.opportunity.create({
-        data: {
-          title: "No-Code Workflow Automation",
-          description: "Drag-and-drop Workflow Builder für Mittelstand ohne IT-Abteilung.",
-          status: "discovered",
-          priority: "medium",
-          marketSize: "$5.1B",
-          competition: "hoch",
-          mrrEstimate: 8000,
-          scoreA: 65,
-          scoreB: 60,
-          createdBy: user.id,
-        }
-      }),
-      prisma.opportunity.create({
-        data: {
-          title: "Compliance Monitoring Dashboard",
-          description: "DSGVO-konformes Monitoring mit automatisierten Berichten für Datenschutzbeauftragte.",
-          status: "building",
-          priority: "urgent",
-          marketSize: "$890M",
-          competition: "niedrig",
-          mrrEstimate: 22000,
-          scoreA: 82,
-          scoreB: 78,
-          createdBy: user.id,
-        }
-      }),
-    ]);
+    // Create Demo Opportunities
+    const opp1 = await prisma.opportunity.create({
+      data: {
+        title: "AI-Powered Document Processing",
+        description: "Automatisierte Dokumentenverarbeitung für Rechtsabteilungen mittels GPT-4 Vision.",
+        status: "validated",
+        priority: "high",
+        createdBy: user.id,
+      }
+    });
+
+    const opp2 = await prisma.opportunity.create({
+      data: {
+        title: "No-Code Workflow Automation",
+        description: "Drag-and-drop Workflow Builder für Mittelstand ohne IT-Abteilung.",
+        status: "discovered",
+        priority: "medium",
+        createdBy: user.id,
+      }
+    });
+
+    const opp3 = await prisma.opportunity.create({
+      data: {
+        title: "Compliance Monitoring Dashboard",
+        description: "DSGVO-konformes Monitoring mit automatisierten Berichten für Datenschutzbeauftragte.",
+        status: "building",
+        priority: "urgent",
+        createdBy: user.id,
+      }
+    });
 
     // Create Demo Venture
-    const venture = await prisma.venture.create({
+    await prisma.venture.create({
       data: {
         name: "DocuMind AI",
         description: "Intelligente Dokumentenverarbeitung für Rechtsabteilungen",
         status: "mvp",
         category: "LegalTech",
-        targetMarket: "Mittelstand > 500 Mitarbeiter",
-        mrrEstimate: 15000,
         createdBy: user.id,
       }
     });
 
-    // Create Ideas
-    await prisma.idea.createMany({
-      data: [
-        { title: "Smart Contract Analyzer", description: "KI-gestützte Vertragsanalyse", category: "LegalTech", status: "new", createdBy: user.id },
-        { title: "Meeting Minutes Auto-Gen", description: "Automatische Protokollerstellung", category: "Productivity", status: "new", createdBy: user.id },
-        { title: "Customer Churn Predictor", description: "ML-Modell zur Kündigungsvorhersage", category: "Analytics", status: "in_progress", createdBy: user.id },
-      ]
-    });
-
     return NextResponse.json({
       message: "Demo-Daten erstellt",
-      opportunities: opps.length,
+      opportunities: 3,
       ventures: 1,
-      ideas: 3,
     }, { status: 201 });
   } catch (error: any) {
     console.error("[SEED]", error);
