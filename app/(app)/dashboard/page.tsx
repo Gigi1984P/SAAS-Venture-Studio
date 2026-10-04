@@ -304,7 +304,7 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Dashboard v2</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Übersicht über alle Ventures und Opportunities
           </p>
