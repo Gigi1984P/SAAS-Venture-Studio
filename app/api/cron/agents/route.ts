@@ -4,43 +4,34 @@ import { prisma } from "@/lib/prisma";
 // Läuft alle 6 Stunden: Verarbeite pending Agent Runs
 export async function GET() {
   try {
-    const pendingRuns = await prisma.agentRun?.findMany({
-      where: { status: "pending" },
+    const pendingRuns = await prisma.agentRun.findMany({
+      where: { status: "running" },
       take: 10,
-      orderBy: { createdAt: "asc" }
-    }).catch(() => []);
+      orderBy: { startedAt: "asc" }
+    });
     
     const results = [];
     
-    for (const run of pendingRuns || []) {
-      // Markiere als running
-      await prisma.agentRun?.update({
-        where: { id: run.id },
-        data: {
-          status: "running",
-          startedAt: new Date(),
-        }
-      }).catch(() => {});
+    for (const run of pendingRuns) {
+      // Simuliere Agent-Arbeit
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Simuliere Agent-Arbeit (3-5 Sekunden)
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Erstelle Ergebnis
+      // Update mit Ergebnis
       const result = {
         findings: `Automatisierte Analyse für ${run.agentType}`,
         confidence: 0.7 + Math.random() * 0.2,
         recommendations: ["Weiterführende Recherche", "Experiment starten"],
       };
       
-      // Markiere als completed
-      await prisma.agentRun?.update({
+      await prisma.agentRun.update({
         where: { id: run.id },
         data: {
+          output: result,
           status: "completed",
           completedAt: new Date(),
-          result: JSON.stringify(result),
+          runtimeSeconds: Math.floor(Math.random() * 30) + 5,
         }
-      }).catch(() => {});
+      });
       
       results.push({ id: run.id, agent: run.agentType, status: "completed" });
     }

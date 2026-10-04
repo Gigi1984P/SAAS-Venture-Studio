@@ -25,9 +25,7 @@ export async function POST() {
         }
       },
       include: {
-        _count: {
-          select: { agentRuns: true }
-        }
+        _count: { select: { agentRuns: true } }
       }
     });
     
@@ -36,37 +34,39 @@ export async function POST() {
     for (const opp of opportunities) {
       const agents = AGENT_WORKFLOWS[opp.status] || [];
       
+      // Erstelle Task für jeden Agenten
       for (const agentType of agents) {
-        // Prüfe ob Agent bereits läuft
-        const existing = await prisma.agentRun?.findFirst({
-          where: {
-            opportunityId: opp.id,
-            agentType,
-            status: { in: ["pending", "running"] }
+        // Erstelle zuerst Task
+        const task = await prisma.task.create({
+          data: {
+            title: `${agentType} für ${opp.title}`,
+            description: `Automatisch erstellt für Opportunity ${opp.id}`,
+            status: "PENDING",
+            priority: "medium",
           }
         }).catch(() => null);
         
-        if (!existing) {
-          // Erstelle Agent Run
-          const run = await prisma.agentRun?.create({
+        if (task) {
+          // Erstelle AgentRun mit taskId
+          await prisma.agentRun.create({
             data: {
-              opportunityId: opp.id,
+              taskId: task.id,
               agentType,
-              status: "pending",
-              config: JSON.stringify({ trigger: "orchestrator", status: opp.status }),
+              input: JSON.stringify({ opportunityId: opp.id, status: opp.status }),
             }
-          }).catch(() => null);
+          }).catch(() => {});
           
-          if (run) {
-            results.push({ opportunity: opp.title, agent: agentType, status: "enqueued" });
-          }
+          results.push({ opportunity: opp.title, agent: agentType, status: "enqueued" });
         }
       }
       
       // Auto-Score bei jedem Durchlauf
-      await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ""}/api/opportunities/${opp.id}/auto-score`, {
-        method: "POST",
-      }).catch(() => {});
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+      if (baseUrl) {
+        await fetch(`${baseUrl}/api/opportunities/${opp.id}/auto-score`, {
+          method: "POST",
+        }).catch(() => {});
+      }
     }
     
     return NextResponse.json({
@@ -83,10 +83,11 @@ export async function POST() {
 
 export async function GET() {
   try {
-    const runs = await prisma.agentRun?.findMany({
-      orderBy: { createdAt: "desc" },
+    const runs = await prisma.agentRun.findMany({
+      orderBy: { startedAt: "desc" },
       take: 20,
-    }).catch(() => []);
+      include: { task: true }
+    });
     
     return NextResponse.json({
       runs: runs || [],

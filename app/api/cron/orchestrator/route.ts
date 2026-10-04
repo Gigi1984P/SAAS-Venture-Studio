@@ -4,15 +4,6 @@ import { prisma } from "@/lib/prisma";
 // Läuft stündlich: Triggere Orchestrator
 export async function GET() {
   try {
-    // Rufe Orchestrator API auf
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || "";
-    if (baseUrl) {
-      await fetch(`${baseUrl}/api/orchestrator/auto-enqueue`, {
-        method: "POST",
-      }).catch(() => {});
-    }
-    
-    // Direkte Orchestrator-Logik
     const opportunities = await prisma.opportunity.findMany({
       where: {
         status: {
@@ -24,26 +15,37 @@ export async function GET() {
     const agentRuns = [];
     
     for (const opp of opportunities) {
-      // Prüfe ob Auto-Score nötig
-      if (!opp.scoreA || opp.scoreA === 0) {
+      // Auto-Score
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+      if (baseUrl) {
         await fetch(`${baseUrl}/api/opportunities/${opp.id}/auto-score`, {
           method: "POST",
         }).catch(() => {});
       }
       
-      // Erstelle Agent Run basierend auf Status
+      // Erstelle Task + AgentRun
       const agentType = getAgentForStatus(opp.status);
       if (agentType) {
-        const run = await prisma.agentRun?.create({
+        const task = await prisma.task.create({
           data: {
-            opportunityId: opp.id,
-            agentType,
-            status: "pending",
-            config: JSON.stringify({ source: "cron", status: opp.status }),
+            title: `${agentType} für ${opp.title}`,
+            description: `Cron-Trigger für Opportunity ${opp.id}`,
+            status: "PENDING",
+            priority: "medium",
           }
         }).catch(() => null);
         
-        if (run) agentRuns.push({ opp: opp.title, agent: agentType });
+        if (task) {
+          await prisma.agentRun.create({
+            data: {
+              taskId: task.id,
+              agentType,
+              input: JSON.stringify({ opportunityId: opp.id, status: opp.status }),
+            }
+          }).catch(() => {});
+          
+          agentRuns.push({ opp: opp.title, agent: agentType });
+        }
       }
     }
     
