@@ -7,6 +7,7 @@ export async function GET() {
       where: { status: "running" },
       orderBy: { createdAt: "asc" },
       take: 10,
+      include: { task: true }
     });
     
     const processed = [];
@@ -34,6 +35,14 @@ export async function GET() {
           completedAt: new Date(),
         }
       });
+      
+      // Update task status
+      if (run.task) {
+        await prisma.task.update({
+          where: { id: run.taskId },
+          data: { status: "completed" }
+        }).catch(() => {});
+      }
       
       processed.push({ id: run.id, agent: run.agentType, status: "completed" });
     }
