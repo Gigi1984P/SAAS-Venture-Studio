@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 
 /**
  * METHODE 1: GitHub Issues Scraper
- * Sucht nach echten Issues mit Pain-Keywords
  */
 export async function POST(req: NextRequest) {
   try {
@@ -32,10 +31,7 @@ export async function POST(req: NextRequest) {
           next: { revalidate: 0 }
         });
         
-        if (!response.ok) {
-          console.log(`GitHub ${query}: HTTP ${response.status}`);
-          continue;
-        }
+        if (!response.ok) continue;
         
         const data = await response.json();
         const items = data.items || [];
@@ -56,23 +52,17 @@ export async function POST(req: NextRequest) {
               await prisma.$executeRaw`
                 INSERT INTO business_ideas (
                   id, scout_run_id, title, description, category,
-                  target_audience, revenue_model, mvp_effort, potential,
-                  source, source_url, pain_score, pain_signals, engagement, created_at
+                  target_audience, revenue_model, mvp_effort, potential, created_at
                 ) VALUES (
                   gen_random_uuid(),
                   'github',
                   ${title.substring(0, 200)},
-                  ${(bodyText + "\n\nRepo: " + repo + " | Comments: " + comments).substring(0, 2000)},
+                  ${(bodyText + "\n\nRepo: " + repo + " | Comments: " + comments + " | PainScore: " + painScore + " | URL: " + url).substring(0, 2000)},
                   ${repo},
                   'GitHub Developers',
                   'Open Source Pain',
                   'medium',
                   ${painScore > 60 ? 'high' : painScore > 30 ? 'medium' : 'low'},
-                  'github',
-                  ${url},
-                  ${painScore},
-                  ${JSON.stringify(painMatches)},
-                  ${comments},
                   ${new Date(item.created_at || Date.now())}
                 )
                 ON CONFLICT DO NOTHING
