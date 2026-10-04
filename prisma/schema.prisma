@@ -2618,20 +2618,11 @@ model BusinessIdea {
   mvpEffort     String?  @map("mvp_effort") // low, medium, high
   potential     String?  // low, medium, high
   isSaved       Boolean  @default(false) @map("is_saved")
-  
-  // Echte Scraping-Metriken
-  source        String?  // reddit-r/SaaS, hackernews, github
-  sourceUrl     String?  @map("source_url") // Direktlink zum Post
-  painScore     Int?     @map("pain_score") // 0-100, automatisch berechnet
-  painSignals   String?  @map("pain_signals") // JSON: ["Zeitverschwendung", "Manuelle Arbeit"]
-  engagement    Int?     // Upvotes + Comments
   createdAt     DateTime @default(now()) @map("created_at")
 
   @@index([scoutRunId])
   @@index([isSaved])
   @@index([createdAt])
-  @@index([painScore])
-  @@index([source])
   @@map("business_ideas")
 }
 

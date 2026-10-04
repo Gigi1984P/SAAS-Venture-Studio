@@ -1,21 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-/**
- * HackerNews Scraping - Holt echte Show HN und Ask HN Posts
- */
 export async function POST() {
   try {
     const results = [];
-    const painKeywords = ["problem", "pain", "struggle", "frustrating", "difficult", "challenging", "annoying", "slow", "broken", "manual"];
-    
-    const queries = [
-      "SaaS problem",
-      "startup pain",
-      "workflow automation",
-      "customer churn",
-      "billing problem",
-    ];
+    const queries = ["SaaS problem", "startup pain", "workflow automation"];
     
     for (const query of queries) {
       try {
@@ -26,21 +15,21 @@ export async function POST() {
         });
         
         if (!response.ok) continue;
-        
         const data = await response.json();
         const hits = data.hits || [];
         
         for (const hit of hits) {
           const title = hit.title || "";
-          const text = hit.story_text || hit.comment_text || "";
+          const text = hit.story_text || "";
           const points = hit.points || 0;
-          const created = new Date(hit.created_at);
           
           const combined = (title + " " + text).toLowerCase();
-          const painMatches = painKeywords.filter(kw => combined.includes(kw));
-          const painScore = painMatches.length;
+          const hasPain = combined.includes("problem") || combined.includes("pain") || 
+                         combined.includes("struggle") || combined.includes("frustrating") ||
+                         combined.includes("difficult") || combined.includes("manual") ||
+                         combined.includes("tedious");
           
-          if (painScore > 0 || points > 30) {
+          if (hasPain || points > 20) {
             try {
               await prisma.$executeRaw`
                 INSERT INTO business_ideas (
@@ -50,29 +39,22 @@ export async function POST() {
                   gen_random_uuid(),
                   'hackernews',
                   ${title.substring(0, 200)},
-                  ${text.substring(0, 2000)},
+                  ${(text + " | HN Score: " + points + " points").substring(0, 2000)},
                   'HackerNews',
                   'HN Community',
-                  'Pain Signal (HN: ${points}p)',
+                  ${"Pain Signal (HN: " + points + "p)"},
                   'unknown',
-                  ${painScore > 1 ? 'high' : 'medium'},
-                  ${created}
+                  ${points > 50 ? 'high' : 'medium'},
+                  ${new Date(hit.created_at || Date.now())}
                 )
                 ON CONFLICT DO NOTHING
               `;
             } catch (e) {}
             
-            results.push({
-              source: "hackernews",
-              title: title.substring(0, 100),
-              painScore,
-              points,
-            });
+            results.push({ title: title.substring(0, 80), points });
           }
         }
-      } catch (qErr) {
-        console.error(`HN query error:`, qErr);
-      }
+      } catch (qErr) {}
     }
     
     return NextResponse.json({
@@ -81,8 +63,7 @@ export async function POST() {
       scraped: results.length,
       posts: results,
     });
-  } catch (error: any) {
-    console.error("[HN SCRAPE]", error);
+  } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
