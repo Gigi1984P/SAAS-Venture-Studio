@@ -9,7 +9,13 @@ export async function POST() {
       return NextResponse.json({ message: "Bereits geseedet", opportunities: oppCount });
     }
 
-    // Create Organization for demo data (or use existing)
+    // Find or create user
+    let user = await prisma.user.findFirst({ where: { email: "gianluigi.plantone@googlemail.com" } });
+    if (!user) {
+      return NextResponse.json({ message: "Kein User gefunden. Bitte erst registrieren." }, { status: 400 });
+    }
+
+    // Create Organization
     let org = await prisma.organization.findFirst({ where: { slug: "demo-studio" } });
     if (!org) {
       org = await prisma.organization.create({
@@ -17,7 +23,7 @@ export async function POST() {
       });
     }
 
-    // Create Demo Opportunities
+    // Create Demo Opportunities (only required fields + some scores)
     const opps = await prisma.$transaction([
       prisma.opportunity.create({
         data: {
@@ -25,15 +31,12 @@ export async function POST() {
           description: "Automatisierte Dokumentenverarbeitung für Rechtsabteilungen mittels GPT-4 Vision.",
           status: "validated",
           priority: "high",
-          totalScore: 78,
-          painScore: 85,
-          marketScore: 72,
-          feasScore: 80,
-          timingScore: 75,
           marketSize: "$2.3B",
           competition: "mittel",
           mrrEstimate: 15000,
-          organizationId: org.id,
+          scoreA: 78,
+          scoreB: 72,
+          createdBy: user.id,
         }
       }),
       prisma.opportunity.create({
@@ -42,15 +45,12 @@ export async function POST() {
           description: "Drag-and-drop Workflow Builder für Mittelstand ohne IT-Abteilung.",
           status: "discovered",
           priority: "medium",
-          totalScore: 65,
-          painScore: 70,
-          marketScore: 60,
-          feasScore: 75,
-          timingScore: 55,
           marketSize: "$5.1B",
           competition: "hoch",
           mrrEstimate: 8000,
-          organizationId: org.id,
+          scoreA: 65,
+          scoreB: 60,
+          createdBy: user.id,
         }
       }),
       prisma.opportunity.create({
@@ -59,15 +59,12 @@ export async function POST() {
           description: "DSGVO-konformes Monitoring mit automatisierten Berichten für Datenschutzbeauftragte.",
           status: "building",
           priority: "urgent",
-          totalScore: 82,
-          painScore: 90,
-          marketScore: 78,
-          feasScore: 85,
-          timingScore: 75,
           marketSize: "$890M",
           competition: "niedrig",
           mrrEstimate: 22000,
-          organizationId: org.id,
+          scoreA: 82,
+          scoreB: 78,
+          createdBy: user.id,
         }
       }),
     ]);
@@ -81,16 +78,16 @@ export async function POST() {
         category: "LegalTech",
         targetMarket: "Mittelstand > 500 Mitarbeiter",
         mrrEstimate: 15000,
-        organizationId: org.id,
+        createdBy: user.id,
       }
     });
 
     // Create Ideas
     await prisma.idea.createMany({
       data: [
-        { title: "Smart Contract Analyzer", description: "KI-gestützte Vertragsanalyse", category: "LegalTech", status: "new", organizationId: org.id },
-        { title: "Meeting Minutes Auto-Gen", description: "Automatische Protokollerstellung", category: "Productivity", status: "new", organizationId: org.id },
-        { title: "Customer Churn Predictor", description: "ML-Modell zur Kündigungsvorhersage", category: "Analytics", status: "in_progress", organizationId: org.id },
+        { title: "Smart Contract Analyzer", description: "KI-gestützte Vertragsanalyse", category: "LegalTech", status: "new", createdBy: user.id },
+        { title: "Meeting Minutes Auto-Gen", description: "Automatische Protokollerstellung", category: "Productivity", status: "new", createdBy: user.id },
+        { title: "Customer Churn Predictor", description: "ML-Modell zur Kündigungsvorhersage", category: "Analytics", status: "in_progress", createdBy: user.id },
       ]
     });
 
@@ -100,8 +97,8 @@ export async function POST() {
       ventures: 1,
       ideas: 3,
     }, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("[SEED]", error);
-    return NextResponse.json({ message: "Seed fehlgeschlagen", error: String(error) }, { status: 500 });
+    return NextResponse.json({ message: "Seed fehlgeschlagen", error: error.message }, { status: 500 });
   }
 }
