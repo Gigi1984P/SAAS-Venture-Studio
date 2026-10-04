@@ -54,6 +54,8 @@ interface DashboardStats {
   opportunityCount: number;
   ventureCount: number;
   ideaCount: number;
+  scoutIdeasCount: number;
+  totalIdeas: number;
   taskCount: number;
   taskPending: number;
   scoreTrend: number;
@@ -267,7 +269,8 @@ export default function DashboardPage() {
   const statCards = [
     {
       label: "Ideen",
-      value: stats?.ideaCount || 0,
+      value: stats?.totalIdeas || 0,
+      subtitle: `${stats?.ideaCount || 0} gespeichert + ${stats?.scoutIdeasCount || 0} gefunden`,
       href: "/ideenscout",
       icon: Lightbulb,
       color: "text-amber-400",
@@ -332,6 +335,9 @@ export default function DashboardPage() {
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">{card.label}</p>
               <p className="text-2xl font-bold">{card.value}</p>
+              {card.subtitle && (
+                <p className="text-xs text-muted-foreground">{card.subtitle}</p>
+              )}
             </div>
             <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground group-hover:text-primary transition-colors">
               <span>Ansehen</span>
@@ -362,8 +368,8 @@ export default function DashboardPage() {
             <div className="text-center">
               <p className="text-2xl font-bold text-blue-400">
                 {pipeline?.conversions?.ideaToOpportunity ||
-                  (stats?.opportunityCount && stats?.ideaCount
-                    ? Math.round((stats.opportunityCount / stats.ideaCount) * 100)
+                  (stats?.opportunityCount && stats?.totalIdeas
+                    ? Math.round((stats.opportunityCount / stats.totalIdeas) * 100)
                     : 0)}%
               </p>
               <p className="text-xs text-muted-foreground">Idee → Opportunity</p>

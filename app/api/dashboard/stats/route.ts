@@ -9,6 +9,10 @@ export async function GET() {
     const ventures = await prisma.venture.findMany();
     const tasks = await prisma.task.findMany();
 
+    // Also count business_ideas (IdeenScout signals)
+    const scoutIdeasResult = await prisma.$queryRaw`SELECT COUNT(*) as count FROM business_ideas`;
+    const scoutIdeasCount = Number((scoutIdeasResult as any[])?.[0]?.count) || 0;
+
     // Calculate stats
     let totalMRR = 0;
     let scoreASum = 0;
@@ -30,6 +34,8 @@ export async function GET() {
       opportunityCount: opportunities.length,
       ventureCount: ventures.length,
       ideaCount: ideas.length,
+      scoutIdeasCount,
+      totalIdeas: ideas.length + scoutIdeasCount,
       taskCount: tasks.length,
     });
   } catch (error) {
