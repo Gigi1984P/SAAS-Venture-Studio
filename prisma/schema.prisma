@@ -2625,3 +2625,59 @@ model BusinessIdea {
   @@index([createdAt])
   @@map("business_ideas")
 }
+
+// ─── Feature-Gating / Pricing Plans ───
+
+model Plan {
+  id            String        @id @default(cuid())
+  slug          String        @unique
+  name          String
+  description   String?
+  priceMonthly  Decimal       @map("price_monthly")
+  priceYearly   Decimal?      @map("price_yearly")
+  isPublic      Boolean       @default(true) @map("is_public")
+  isActive      Boolean       @default(true) @map("is_active")
+  planFeatures  PlanFeature[]
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+model Feature {
+  id           String        @id @default(cuid())
+  slug         String        @unique
+  name         String
+  category     String
+  icon         String?
+  description  String?
+  isActive     Boolean       @default(true) @map("is_active")
+  planFeatures PlanFeature[]
+
+  @@map("features")
+}
+
+model PlanFeature {
+  id        String  @id @default(cuid())
+  planId    String  @map("plan_id")
+  featureId String  @map("feature_id")
+  isEnabled Boolean @default(true) @map("is_enabled")
+  plan      Plan    @relation(fields: [planId], references: [id], onDelete: Cascade)
+  feature   Feature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, featureId])
+  @@map("plan_features")
+}
+
+model Subscription {
+  id             String       @id @default(cuid())
+  userId         String?      @map("user_id")
+  organizationId String?      @map("organization_id")
+  planId         String       @map("plan_id")
+  status         String       @default("active") // active | trialing | canceled | past_due
+  currentPeriodEnd DateTime?  @map("current_period_end")
+  plan           Plan         @relation(fields: [planId], references: [id])
+
+  @@index([userId, status])
+  @@index([organizationId, status])
+  @@map("subscriptions")
+}

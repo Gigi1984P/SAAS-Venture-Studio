@@ -13,6 +13,7 @@ import {
   BarChart3,
   Activity,
   Telescope,
+  Diamond,
 } from "lucide-react";
 
 export default function AppLayout({
@@ -97,7 +98,9 @@ export default function AppLayout({
           <Link href="/settings" className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
             <Settings className="w-4 h-4 shrink-0" /> Einstellungen
           </Link>
-
+          <Link href="/plans" className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
+            <Diamond className="w-4 h-4 shrink-0" /> Plaene
+          </Link>
           <Link href="/admin/users" className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors">
             <ShieldAlert className="w-4 h-4 shrink-0" /> Admin
           </Link>
