@@ -21,6 +21,7 @@ function calculateScoreA(opp: any): number {
 }
 
 function calculateScoreB(opp: any): number {
+  // Wenn Business-Dimensionen gesetzt sind, berechne dynamisch
   const dimensions = [
     opp.reachability || 0,
     opp.competitionGap || 0,
@@ -34,9 +35,12 @@ function calculateScoreB(opp: any): number {
     opp.defensibility || 0,
   ];
   const valid = dimensions.filter((v) => v > 0);
-  if (valid.length === 0) return 0;
-  const avg = valid.reduce((a, b) => a + b, 0) / valid.length;
-  return Math.min(100, Math.round(avg));
+  if (valid.length > 0) {
+    const avg = valid.reduce((a, b) => a + b, 0) / valid.length;
+    return Math.min(100, Math.round(avg));
+  }
+  // Fallback: Nutze existierendes scoreB Feld
+  return opp.scoreB || 0;
 }
 
 function calculateConfidence(opp: any): number {
