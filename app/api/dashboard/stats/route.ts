@@ -3,30 +3,27 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    // Get all data
     const opportunities = await prisma.opportunity.findMany();
     const ideas = await prisma.idea.findMany();
     const ventures = await prisma.venture.findMany();
     
-    // Echte Scraping-Daten aus business_ideas (ohne neue Spalten, nur existierende)
+    // CAST to integer to avoid BigInt serialization issues
     const scrapedCount = await prisma.$queryRaw`
-      SELECT COUNT(*) as count FROM business_ideas WHERE scout_run_id IS NOT NULL
+      SELECT COUNT(*)::int as count FROM business_ideas WHERE scout_run_id IS NOT NULL
     `;
-    const scrapedTotal = Number((scrapedCount as any[])?.[0]?.count) || 0;
+    const scrapedTotal = (scrapedCount as any[])?.[0]?.count || 0;
     
-    // Sources aus scout_run_id (da source Spalte nicht existiert)
     const sourcesRaw = await prisma.$queryRaw`
-      SELECT scout_run_id as source, COUNT(*) as count 
+      SELECT scout_run_id as source, COUNT(*)::int as count 
       FROM business_ideas 
       WHERE scout_run_id IS NOT NULL
       GROUP BY scout_run_id
     `;
     
-    // Pain Score nicht verfügbar, nutze potential als Proxy
     const highPainCount = await prisma.$queryRaw`
-      SELECT COUNT(*) as count FROM business_ideas WHERE potential = 'high'
+      SELECT COUNT(*)::int as count FROM business_ideas WHERE potential = 'high'
     `;
-    const highPain = Number((highPainCount as any[])?.[0]?.count) || 0;
+    const highPain = (highPainCount as any[])?.[0]?.count || 0;
 
     let totalMRR = 0;
     let scoreASum = 0;
@@ -48,10 +45,9 @@ export async function GET() {
       opportunityCount: opportunities.length,
       ventureCount: ventures.length,
       ideaCount: ideas.length,
-      // Echte Scraping-Metriken
       scrapedTotal,
       highPainSignals: highPain,
-      sources: sourcesRaw as any[],
+      sources: sourcesRaw,
     });
   } catch (error: any) {
     console.error("[STATS]", error);
