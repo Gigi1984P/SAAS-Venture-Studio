@@ -1,55 +1,90 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-/**
- * Automatische Task-Erstellung basierend auf Orchestrator Rules.
- * Wird bei Opportunity Status-Change aufgerufen.
- */
-export async function POST(req: NextRequest) {
+const AGENT_WORKFLOWS: Record<string, string[]> = {
+  discovered: ["signal_discovery"],
+  clustered: ["pain_analysis"],
+  pain_verified: ["market_research", "competitor_research"],
+  market_research: ["business_analysis"],
+  competition_research: ["fact_check", "critic_review"],
+  business_analysis: ["scoring"],
+  scored: ["experiment_design"],
+  experiment: ["validation_monitor"],
+  validating: ["build_gate_review"],
+  build_approved: ["build_monitor", "mvp_architect"],
+  building: ["progress_tracker", "risk_monitor"],
+  validated: ["growth_strategist"],
+};
+
+export async function POST() {
   try {
-    const { opportunityId, status } = await req.json();
-    if (!opportunityId || !status) {
-      return NextResponse.json({ message: "opportunityId und status erforderlich" }, { status: 400 });
-    }
-
-    // Lade alle aktiven Rules fuer diesen Trigger-Status
-    const rules = await prisma.orchestratorRule.findMany({
-      where: { triggerStatus: status, isActive: true },
-      orderBy: { priority: "desc" },
+    const opportunities = await prisma.opportunity.findMany({
+      where: { status: { in: Object.keys(AGENT_WORKFLOWS) } }
     });
-
-    const createdTasks: any[] = [];
-
-    for (const rule of rules) {
-      // Pruefe minEvidence
-      if (rule.minEvidence > 0) {
-        const evidenceCount = await prisma.signal.count({
-          where: { opportunityId, verified: true },
-        });
-        if (evidenceCount < rule.minEvidence) continue;
+    
+    const results = [];
+    const errors = [];
+    
+    for (const opp of opportunities) {
+      const agents = AGENT_WORKFLOWS[opp.status] || [];
+      
+      for (const agentType of agents) {
+        try {
+          // Try to create AgentRun (may fail due to schema mismatch)
+          await prisma.agentRun.create({
+            data: {
+              agentType,
+              input: { opportunityId: opp.id, status: opp.status, title: opp.title },
+            }
+          });
+          results.push({ opportunity: opp.title, agent: agentType });
+        } catch (runErr: any) {
+          errors.push({ agent: agentType, error: runErr.message });
+          // Continue with other agents
+        }
       }
-
-      // Erstelle Task
-      const task = await prisma.task.create({
-        data: {
-          type: rule.taskType,
-          entityId: opportunityId,
-          entityType: "opportunity",
-          agent: rule.agentType,
-          priority: rule.priority,
-          status: "queued",
-        },
-      });
-      createdTasks.push({ taskId: task.id, ruleName: rule.name, agentType: rule.agentType });
+      
+      // Auto-Score (best effort)
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+        if (baseUrl) {
+          await fetch(`${baseUrl}/api/opportunities/${opp.id}/auto-score`, {
+            method: "POST",
+          }).catch(() => {});
+        }
+      } catch (e) {}
     }
-
+    
     return NextResponse.json({
-      triggered: createdTasks.length > 0,
-      tasksCreated: createdTasks.length,
-      tasks: createdTasks,
+      success: true,
+      processed: opportunities.length,
+      enqueued: results.length,
+      runs: results,
+      errors: errors.length > 0 ? errors : undefined,
     });
-  } catch (error) {
-    console.error("[ORCHESTRATOR AUTO-ENQUEUE]", error);
-    return NextResponse.json({ message: "Interner Fehler" }, { status: 500 });
+  } catch (error: any) {
+    console.error("[ORCHESTRATOR] Fatal:", error);
+    return NextResponse.json({ 
+      error: error.message,
+      processed: 0,
+      enqueued: 0,
+    }, { status: 500 });
+  }
+}
+
+export async function GET() {
+  try {
+    const runs = await prisma.agentRun.findMany({
+      orderBy: { startedAt: "desc" },
+      take: 20,
+    });
+    
+    return NextResponse.json({
+      runs: runs || [],
+      workflows: AGENT_WORKFLOWS,
+    });
+  } catch (error: any) {
+    console.error("[ORCHESTRATOR GET]", error);
+    return NextResponse.json({ runs: [], workflows: AGENT_WORKFLOWS });
   }
 }
