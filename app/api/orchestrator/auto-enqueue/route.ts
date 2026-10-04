@@ -11,6 +11,9 @@ const AGENT_WORKFLOWS: Record<string, string[]> = {
   scored: ["experiment_design"],
   experiment: ["validation_monitor"],
   validating: ["build_gate_review"],
+  build_approved: ["build_monitor", "mvp_architect"],
+  building: ["progress_tracker", "risk_monitor"],
+  validated: ["growth_strategist"],
 };
 
 export async function POST() {
