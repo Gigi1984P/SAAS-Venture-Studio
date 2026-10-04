@@ -30,35 +30,37 @@ export async function POST() {
       const agents = AGENT_WORKFLOWS[opp.status] || [];
       
       for (const agentType of agents) {
-        // Create Task with ALL required fields
-        const task = await prisma.task.create({
-          data: {
-            title: `${agentType} für ${opp.title}`,
-            description: `Auto für Opportunity ${opp.id}`,
-            status: "PENDING",
-            priority: "medium",
-            // Required fields
-            type: agentType,
-            entityId: opp.id,
-            entityType: "opportunity",
-            agent: agentType,
-          }
-        }).catch((err: any) => {
-          console.error("[TASK CREATE ERROR]", err.message);
-          return null;
-        });
-        
-        if (task) {
-          // Create AgentRun with taskId
-          await prisma.agentRun.create({
+        // Create a dummy task first (minimal required fields)
+        let taskId = "direct-run";
+        try {
+          const task = await prisma.task.create({
             data: {
-              taskId: task.id,
-              agentType,
-              input: { opportunityId: opp.id, status: opp.status },
+              type: agentType,
+              entityId: opp.id,
+              entityType: "opportunity",
+              agent: agentType,
             }
-          }).catch(() => {});
+          });
+          taskId = task.id;
+        } catch (taskErr: any) {
+          console.log("[TASK SKIP]", taskErr.message);
+          // Continue without task
+        }
+        
+        // Create AgentRun (with or without task)
+        try {
+          const runData: any = {
+            agentType,
+            input: { opportunityId: opp.id, status: opp.status },
+          };
+          if (taskId !== "direct-run") {
+            runData.taskId = taskId;
+          }
           
-          results.push({ opportunity: opp.title, agent: agentType, taskId: task.id });
+          await prisma.agentRun.create({ data: runData });
+          results.push({ opportunity: opp.title, agent: agentType });
+        } catch (runErr: any) {
+          console.log("[AGENT RUN SKIP]", runErr.message);
         }
       }
       
@@ -88,7 +90,6 @@ export async function GET() {
     const runs = await prisma.agentRun.findMany({
       orderBy: { startedAt: "desc" },
       take: 20,
-      include: { task: true }
     });
     
     return NextResponse.json({
