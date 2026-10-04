@@ -8,24 +8,25 @@ export async function GET() {
     const ideas = await prisma.idea.findMany();
     const ventures = await prisma.venture.findMany();
     
-    // Echte Scraping-Daten aus business_ideas
+    // Echte Scraping-Daten aus business_ideas (ohne neue Spalten, nur existierende)
     const scrapedCount = await prisma.$queryRaw`
-      SELECT COUNT(*) as count FROM business_ideas
+      SELECT COUNT(*) as count FROM business_ideas WHERE scout_run_id IS NOT NULL
     `;
     const scrapedTotal = Number((scrapedCount as any[])?.[0]?.count) || 0;
     
+    // Sources aus scout_run_id (da source Spalte nicht existiert)
+    const sourcesRaw = await prisma.$queryRaw`
+      SELECT scout_run_id as source, COUNT(*) as count 
+      FROM business_ideas 
+      WHERE scout_run_id IS NOT NULL
+      GROUP BY scout_run_id
+    `;
+    
+    // Pain Score nicht verfügbar, nutze potential als Proxy
     const highPainCount = await prisma.$queryRaw`
-      SELECT COUNT(*) as count FROM business_ideas WHERE pain_score > 50
+      SELECT COUNT(*) as count FROM business_ideas WHERE potential = 'high'
     `;
     const highPain = Number((highPainCount as any[])?.[0]?.count) || 0;
-    
-    // Sources breakdown
-    const sources = await prisma.$queryRaw`
-      SELECT source, COUNT(*) as count 
-      FROM business_ideas 
-      WHERE source IS NOT NULL
-      GROUP BY source
-    `;
 
     let totalMRR = 0;
     let scoreASum = 0;
@@ -50,7 +51,7 @@ export async function GET() {
       // Echte Scraping-Metriken
       scrapedTotal,
       highPainSignals: highPain,
-      sources: sources as any[],
+      sources: sourcesRaw as any[],
     });
   } catch (error: any) {
     console.error("[STATS]", error);
