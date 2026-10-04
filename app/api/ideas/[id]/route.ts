@@ -1,19 +1,22 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const data = await req.json();
-  const idea = await prisma.idea.update({ where: { id: params.id }, data });
-  return NextResponse.json(idea);
-}
-
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  await prisma.idea.delete({ where: { id: params.id } });
-  return NextResponse.json({ success: true });
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const body = await req.json();
+    const updated = await prisma.idea.update({
+      where: { id: params.id },
+      data: {
+        ...body,
+        updatedAt: new Date(),
+      },
+    });
+    return NextResponse.json(updated);
+  } catch (error: any) {
+    console.error("[IDEA PUT]", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 }
