@@ -365,6 +365,13 @@ export async function PUT(
       },
     });
 
+    // Automatische Confidence-Berechnung
+    const autoConfidence = await calculateAutoConfidence(params.id);
+    await prisma.opportunity.update({
+      where: { id: params.id },
+      data: { confidence: autoConfidence },
+    });
+
     // Automatische Stop-Condition Prüfung
     const oppForCheck = {
       scoreA: opportunity.scoreA,
@@ -392,6 +399,49 @@ export async function PUT(
     console.error("[OPPORTUNITY PUT]", error);
     return NextResponse.json({ message: "Interner Fehler" }, { status: 500 });
   }
+}
+
+
+/**
+ * Berechnet Confidence automatisch aus Signals + Experiments.
+ * Formula: verified_signals / total_signals * 0.6 + completed_experiments / total_experiments * 0.4
+ */
+async function calculateAutoConfidence(opportunityId: string): Promise<number> {
+  try {
+    const totalSignals = await prisma.signal.count({ where: { opportunityId } });
+    const verifiedSignals = await prisma.signal.count({ where: { opportunityId, verified: true } });
+    const totalExperiments = await prisma.experiment.count({ where: { opportunityId } });
+    const completedExperiments = await prisma.experiment.count({ where: { opportunityId, status: "completed" } });
+
+    const signalRatio = totalSignals > 0 ? verifiedSignals / totalSignals : 0;
+    const experimentRatio = totalExperiments > 0 ? completedExperiments / totalExperiments : 0;
+
+    // Gewichtung: 60% Signals, 40% Experiments
+    const confidence = Math.min(1.0, signalRatio * 0.6 + experimentRatio * 0.4);
+    return Math.round(confidence * 100) / 100;
+  } catch {
+    return 0.0;
+  }
+}
+
+/**
+ * Prüft und aktualisiert Evidence Counts (supporting vs contradicting).
+ */
+async function updateEvidenceCounts(opportunityId: string) {
+  const supportingCount = await prisma.signal.count({
+    where: { opportunityId, verified: true },
+  });
+  const contradictingCount = await prisma.negativeEvidence.count({
+    where: { opportunityId },
+  });
+  await prisma.opportunity.update({
+    where: { id: opportunityId },
+    data: {
+      supportingEvidenceCount: supportingCount,
+      contradictingEvidenceCount: contradictingCount,
+    },
+  });
+  return { supportingCount, contradictingCount };
 }
 
 // DELETE /api/opportunities/[id]
