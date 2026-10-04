@@ -1,36 +1,20 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "version": 2,
-  "framework": "nextjs",
-  "buildCommand": "npm run build",
-  "installCommand": "npm install",
-  "devCommand": "npm run dev",
-  "functions": {
-    "app/api/**/*.ts": {
-      "maxDuration": 10
-    },
-    "app/api/ideenscout/run/**/*.ts": {
-      "maxDuration": 10
-    },
-    "app/api/ideenscout/heartbeat/**/*.ts": {
-      "maxDuration": 15
-    },
-    "app/api/crons/**/*.ts": {
-      "maxDuration": 10
-    }
-  },
   "crons": [
     {
-      "path": "/api/tasks/process",
-      "schedule": "*/5 * * * *"
+      "path": "/api/cron/agents",
+      "schedule": "0 */6 * * *"
     },
     {
-      "path": "/api/warmup",
-      "schedule": "*/2 * * * *"
+      "path": "/api/cron/scrape",
+      "schedule": "0 */12 * * *"
     },
     {
-      "path": "/api/crons/ideenscout-heartbeat",
-      "schedule": "*/10 * * * *"
+      "path": "/api/cron/orchestrator",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/auto-score",
+      "schedule": "0 2 * * *"
     }
   ]
 }
