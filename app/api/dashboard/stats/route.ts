@@ -59,6 +59,8 @@ export async function GET() {
       opportunityCount: opportunities.length,
       ventureCount: ventures.length,
       ideaCount: ideas.length,
+      scoutIdeasCount: scrapedTotal,
+      totalIdeas: ideas.length + scrapedTotal,
       scrapedTotal,
       highPainSignals: highPainCount,
       sources,
