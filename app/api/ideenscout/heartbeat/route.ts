@@ -21,9 +21,15 @@ export async function GET(req: NextRequest) {
     let run = (runs as any[])?.[0];
 
     if (!run) {
-      await queryRaw(`INSERT INTO scout_runs (agent_id, status, interval_sec) VALUES ($1, 'stopped', 300)`, agentId);
-      runs = await queryRaw(`SELECT * FROM scout_runs WHERE agent_id = $1 ORDER BY created_at DESC LIMIT 1`, agentId);
-      run = (runs as any[])?.[0];
+      // Prisma Client statt RAW SQL — CUID wird automatisch generiert
+      const newRun = await prisma.scoutRun.create({
+        data: {
+          agentId,
+          status: "stopped",
+          intervalSec: 300,
+        },
+      });
+      run = newRun;
     }
 
     // Statistiken
@@ -76,9 +82,15 @@ export async function POST(req: NextRequest) {
     let run = (runs as any[])?.[0];
 
     if (!run) {
-      await queryRaw(`INSERT INTO scout_runs (agent_id, status, interval_sec) VALUES ($1, 'stopped', 300)`, agentId);
-      runs = await queryRaw(`SELECT * FROM scout_runs WHERE agent_id = $1 ORDER BY created_at DESC LIMIT 1`, agentId);
-      run = (runs as any[])?.[0];
+      // Prisma Client statt RAW SQL — CUID wird automatisch generiert
+      const newRun = await prisma.scoutRun.create({
+        data: {
+          agentId,
+          status: "stopped",
+          intervalSec: 300,
+        },
+      });
+      run = newRun;
     }
 
     // Status-Wechsel
@@ -133,23 +145,27 @@ export async function POST(req: NextRequest) {
         idea = { title: "Idee #" + (run.total_ideas + 1), description: content.slice(0, 500), category: "sonstige" };
       }
 
-      const ideaId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
-      await queryRaw(
-        `INSERT INTO business_ideas (id, scout_run_id, title, description, category, target_audience, revenue_model, mvp_effort, potential, competition, differentiation, source) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'ideenscout')`,
-        ideaId,
-        run.id,
-        idea.title?.slice(0, 200) || "Neue Idee",
-        idea.description?.slice(0, 2000) || "",
-        idea.category || "sonstige",
-        idea.targetAudience || "",
-        idea.revenueModel || "",
-        idea.mvpEffort || "medium",
-        idea.potential || "medium",
-        idea.competition || "mittel",
-        idea.differentiation || ""
-      );
+      const createdIdea = await prisma.businessIdea.create({
+        data: {
+          scoutRunId: run.id,
+          title: (idea.title?.slice(0, 200) || "Neue Idee"),
+          description: (idea.description?.slice(0, 2000) || ""),
+          category: (idea.category || "sonstige"),
+          targetAudience: (idea.targetAudience || ""),
+          revenueModel: (idea.revenueModel || ""),
+          mvpEffort: (idea.mvpEffort || "medium"),
+          potential: (idea.potential || "medium"),
+        },
+      });
 
-      await queryRaw(`UPDATE scout_runs SET total_ideas = total_ideas + 1, last_run_at = NOW(), last_error = NULL WHERE id = $1`, run.id);
+      await prisma.scoutRun.update({
+        where: { id: run.id },
+        data: {
+          totalIdeas: { increment: 1 },
+          lastRunAt: new Date(),
+          lastError: null,
+        },
+      });
 
       return NextResponse.json({ success: true, idea, action: "run_now", scoutRunId: run.id });
     }

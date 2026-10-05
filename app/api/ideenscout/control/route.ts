@@ -22,15 +22,15 @@ export async function POST(req: NextRequest) {
 
     let run = (runs as any[])?.[0];
     if (!run) {
-      await queryRaw(
-        `INSERT INTO scout_runs (agent_id, status) VALUES ($1, 'stopped') RETURNING *`,
-        agentId
-      );
-      runs = await queryRaw(
-        `SELECT * FROM scout_runs WHERE agent_id = $1 ORDER BY created_at DESC LIMIT 1`,
-        agentId
-      );
-      run = (runs as any[])?.[0];
+      // Prisma Client statt RAW SQL — damit CUID automatisch generiert wird
+      const newRun = await prisma.scoutRun.create({
+        data: {
+          agentId,
+          status: "stopped",
+          intervalSec: 300,
+        },
+      });
+      run = newRun;
     }
 
     const newStatus = action === "start" ? "running" : action === "pause" ? "paused" : "stopped";
