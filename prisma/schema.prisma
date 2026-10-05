@@ -2620,6 +2620,10 @@ model BusinessIdea {
   revenueModel  String?  @map("revenue_model")
   mvpEffort     String?  @map("mvp_effort") // low, medium, high
   potential     String?  // low, medium, high
+  source        String   @default("ideenscout") // reddit, hackernews, github, manual
+  sourceUrl     String?  @map("source_url")
+  painScore     Int?     @map("pain_score")
+  painKeywords  String?  @map("pain_keywords")
   isSaved       Boolean  @default(false) @map("is_saved")
   createdAt     DateTime @default(now()) @map("created_at")
 
