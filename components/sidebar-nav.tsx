@@ -57,6 +57,17 @@ export function SidebarNav({ roleName }: { roleName?: string }) {
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
+        {/* 🎯 IdeenScout — Prominent ganz oben */}
+        <Link href="/ideenscout" className={`flex items-center gap-3 rounded-md px-3 py-3 text-sm font-bold transition-colors ${
+          isScoutActive ? "bg-amber-100 text-amber-900 border border-amber-300" : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
+        }`}>
+          <Telescope className="w-5 h-5 shrink-0" />
+          <span>🔍 IdeenScout</span>
+          <span className="ml-auto text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full font-bold">LIVE</span>
+        </Link>
+
+        <div className="h-px bg-border my-2" />
+
         <Link href="/dashboard" className={linkClass("/dashboard")}>
           <LayoutDashboard className="w-4 h-4 shrink-0" /> Dashboard
         </Link>
@@ -64,7 +75,7 @@ export function SidebarNav({ roleName }: { roleName?: string }) {
           <Building2 className="w-4 h-4 shrink-0" /> Studio OS
         </Link>
 
-        {/* IdeenScout */}
+        {/* IdeenScout Sub-Menü */}
         <div className="space-y-0.5">
           <button
             onClick={() => setScoutOpen(!scoutOpen)}
@@ -73,14 +84,11 @@ export function SidebarNav({ roleName }: { roleName?: string }) {
             }`}
           >
             <Telescope className="w-4 h-4 shrink-0" />
-            <span className="flex-1">🔍 IdeenScout</span>
+            <span className="flex-1">📡 Scout Analyse</span>
             <ChevronRight className={`w-3 h-3 transition-transform ${scoutOpen ? "rotate-90" : ""}`} />
           </button>
           {scoutOpen && (
             <div className="ml-4 pl-3 border-l border-border space-y-0.5">
-              <Link href="/ideenscout" className={childClass("/ideenscout")}>
-                <LayoutDashboard className="w-3 h-3 shrink-0" /> Übersicht
-              </Link>
               <Link href="/ideenscout/signal" className={childClass("/ideenscout/signal")}>
                 <ScanSearch className="w-3 h-3 shrink-0" /> 📡 Signals
               </Link>
@@ -99,6 +107,8 @@ export function SidebarNav({ roleName }: { roleName?: string }) {
             </div>
           )}
         </div>
+
+        <div className="h-px bg-border my-2" />
 
         <Link href="/ideas" className={linkClass("/ideas")}>
           <Lightbulb className="w-4 h-4 shrink-0" /> Ideen

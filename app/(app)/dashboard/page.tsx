@@ -416,6 +416,77 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Pipeline Flow Widget */}
+      <div className="rounded-xl border bg-card p-6">
+        <h3 className="text-lg font-semibold mb-4">🔄 Ideen → Opportunities → Ventures</h3>
+        <div className="grid grid-cols-3 gap-4">
+          {/* Ideen */}
+          <div className="text-center p-4 rounded-lg bg-amber-50/50 border border-amber-200">
+            <div className="text-3xl font-bold text-amber-600">{stats?.totalIdeas || 0}</div>
+            <div className="text-sm text-amber-700 mt-1">💡 Ideen</div>
+            <div className="text-xs text-muted-foreground mt-2">{stats?.scoutIdeasCount || 0} gescraped</div>
+            <Link href="/ideenscout" className="inline-block mt-3 text-xs bg-amber-100 text-amber-800 px-3 py-1.5 rounded-full hover:bg-amber-200 transition-colors">
+              + Neue finden
+            </Link>
+          </div>
+
+          {/* Arrow */}
+          <div className="flex items-center justify-center">
+            <div className="text-center">
+              <ArrowRight className="w-8 h-8 text-muted-foreground mx-auto" />
+              <div className="text-xs text-muted-foreground mt-1">
+                {stats?.opportunityCount && stats?.totalIdeas && stats.totalIdeas > 0
+                  ? `${Math.round((stats.opportunityCount / stats.totalIdeas) * 100)}%`
+                  : "0%"} Conversion
+              </div>
+            </div>
+          </div>
+
+          {/* Opportunities */}
+          <div className="text-center p-4 rounded-lg bg-blue-50/50 border border-blue-200">
+            <div className="text-3xl font-bold text-blue-600">{stats?.opportunityCount || 0}</div>
+            <div className="text-sm text-blue-700 mt-1">🎯 Opportunities</div>
+            <div className="text-xs text-muted-foreground mt-2">{(stats?.opportunityCount || 0) > 0 ? "Bereit für Bewertung" : "Noch keine"}</div>
+            <Link href="/opportunities" className="inline-block mt-3 text-xs bg-blue-100 text-blue-800 px-3 py-1.5 rounded-full hover:bg-blue-200 transition-colors">
+              Alle ansehen
+            </Link>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4 mt-4">
+          <div />
+
+          {/* Arrow down */}
+          <div className="flex items-center justify-center">
+            <div className="text-center">
+              <ArrowRight className="w-8 h-8 text-muted-foreground mx-auto rotate-90" />
+              <div className="text-xs text-muted-foreground mt-1">
+                {stats?.ventureCount && stats?.opportunityCount && stats.opportunityCount > 0
+                  ? `${Math.round((stats.ventureCount / stats.opportunityCount) * 100)}%`
+                  : "0%"} Conversion
+              </div>
+            </div>
+          </div>
+
+          <div />
+        </div>
+
+        <div className="grid grid-cols-3 gap-4 mt-4">
+          <div />
+          <div />
+
+          {/* Ventures */}
+          <div className="text-center p-4 rounded-lg bg-emerald-50/50 border border-emerald-200">
+            <div className="text-3xl font-bold text-emerald-600">{stats?.ventureCount || 0}</div>
+            <div className="text-sm text-emerald-700 mt-1">🚀 Ventures</div>
+            <div className="text-xs text-muted-foreground mt-2">{(stats?.ventureCount || 0) > 0 ? "Im Portfolio" : "Noch keine"}</div>
+            <Link href="/ventures" className="inline-block mt-3 text-xs bg-emerald-100 text-emerald-800 px-3 py-1.5 rounded-full hover:bg-emerald-200 transition-colors">
+              Portfolio ansehen
+            </Link>
+          </div>
+        </div>
+      </div>
+
       {/* Quick Actions */}
       <div className="rounded-xl border bg-card p-6">
         <h3 className="text-lg font-semibold mb-4">Schnellzugriff</h3>
