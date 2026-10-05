@@ -28,7 +28,7 @@ export async function GET() {
       : 0;
 
     return NextResponse.json({
-      ideas: ideas.length,
+      ideas: totalIdeas,          // Gesamt = manuell + gescrapte
       scrapedIdeas,
       totalIdeas,
       opportunities: opportunities.length,
