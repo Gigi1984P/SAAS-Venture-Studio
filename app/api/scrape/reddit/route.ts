@@ -1,7 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+async function checkAuth() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ error: "Nicht authentifiziert" }, { status: 401 });
+  }
+  return null;
+}
+
 export async function POST(req: NextRequest) {
+  const authError = await checkAuth();
+  if (authError) return authError;
+
   try {
     const body = await req.json().catch(() => ({}));
     const subreddits = body.subreddits || ["SaaS", "startups", "smallbusiness"];
