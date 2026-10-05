@@ -1,5 +1,15 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+
+async function checkAuth() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ error: "Nicht authentifiziert" }, { status: 401 });
+  }
+  return null;
+}
 
 const PAINS = [
   { name: "AI Meeting Notes", pain: "2h/Woche manuell notieren", cat: "Productivity", score: 85 },
@@ -10,6 +20,9 @@ const PAINS = [
 ];
 
 export async function POST() {
+  const authError = await checkAuth();
+  if (authError) return authError;
+
   let count = 0;
   for (const p of PAINS) {
     const pot = p.score > 80 ? 'high' : 'medium';

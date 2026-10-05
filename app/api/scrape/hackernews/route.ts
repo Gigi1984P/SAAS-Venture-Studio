@@ -1,7 +1,19 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+async function checkAuth() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ error: "Nicht authentifiziert" }, { status: 401 });
+  }
+  return null;
+}
+
 import { prisma } from "@/lib/prisma";
 
 export async function POST() {
+  const authError = await checkAuth();
+  if (authError) return authError;
   try {
     const results = [];
     const queries = ["SaaS problem", "startup pain", "workflow automation"];

@@ -9,9 +9,18 @@ export async function GET() {
       prisma.venture.findMany(),
     ]);
 
-    // Calculate conversions
-    const ideaToOpportunity = ideas.length > 0
-      ? Math.round((opportunities.length / ideas.length) * 100)
+    // Echte Scraping-Daten aus business_ideas
+    const businessIdeasCount = await prisma.$queryRaw`
+      SELECT COUNT(*)::int as count FROM business_ideas WHERE scout_run_id IS NOT NULL
+    `;
+    const scrapedIdeas = (businessIdeasCount as any[])?.[0]?.count || 0;
+
+    // Gesamtzahl = gespeicherte Ideen + gescrapte Ideen
+    const totalIdeas = ideas.length + scrapedIdeas;
+
+    // Calculate conversions (inkl. gescrapte Ideen)
+    const ideaToOpportunity = totalIdeas > 0
+      ? Math.round((opportunities.length / totalIdeas) * 100)
       : 0;
     
     const opportunityToVenture = opportunities.length > 0
@@ -20,6 +29,8 @@ export async function GET() {
 
     return NextResponse.json({
       ideas: ideas.length,
+      scrapedIdeas,
+      totalIdeas,
       opportunities: opportunities.length,
       ventures: ventures.length,
       conversions: {
@@ -31,6 +42,8 @@ export async function GET() {
     console.error("[PIPELINE]", error);
     return NextResponse.json({
       ideas: 0,
+      scrapedIdeas: 0,
+      totalIdeas: 0,
       opportunities: 0,
       ventures: 0,
       conversions: { ideaToOpportunity: 0, opportunityToVenture: 0 },
