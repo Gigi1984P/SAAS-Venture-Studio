@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     const filterAnalyzed = searchParams.get("analyzed");
     const filterSearch = searchParams.get("q");
 
-    // ScoutRun finden oder erstellen
+    // ScoutRun finden (KEINE automatische Erstellung mehr)
     let runs = await queryRaw(
       `SELECT * FROM scout_runs WHERE agent_id = $1 ORDER BY created_at DESC LIMIT 1`,
       agentId
@@ -28,15 +28,13 @@ export async function GET(req: NextRequest) {
 
     let run = (runs as any[])?.[0];
     if (!run) {
-      await queryRaw(
-        `INSERT INTO scout_runs (agent_id, status) VALUES ($1, 'stopped')`,
-        agentId
-      );
-      runs = await queryRaw(
-        `SELECT * FROM scout_runs WHERE agent_id = $1 ORDER BY created_at DESC LIMIT 1`,
-        agentId
-      );
-      run = (runs as any[])?.[0];
+      // Kein Run vorhanden — leeres Ergebnis zurückgeben
+      return NextResponse.json({
+        run: { status: "stopped", total_ideas: 0, agent_id: agentId },
+        ideas: [],
+        pagination: { page: 1, limit, totalCount: 0, totalPages: 0, hasNext: false, hasPrev: false },
+        filters: { categories: [] },
+      });
     }
 
     // Build WHERE clause
