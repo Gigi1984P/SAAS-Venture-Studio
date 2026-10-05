@@ -210,7 +210,142 @@ async function scrapeProductHunt(): Promise<any[]> {
   return results;
 }
 
-// ─── BUSINESS IDEA GENERATION ───
+// ─── HEISE DEUTSCHLAND SCRAPER ───
+async function scrapeHeise(): Promise<any[]> {
+  const results: any[] = [];
+  try {
+    const res = await fetch("https://www.heise.de/rss/heise-Rubrik-IT.rdf", {
+      headers: { "User-Agent": "Mozilla/5.0" },
+      next: { revalidate: 0 },
+    });
+    if (!res.ok) return results;
+    const xml = await res.text();
+    const itemMatches = xml.match(/<item>[\s\S]*?<\/item>/g);
+    if (itemMatches) {
+      for (const item of itemMatches.slice(0, 15)) {
+        const titleMatch = item.match(/<title>(.*?)<\/title>/);
+        const linkMatch = item.match(/<link>(.*?)<\/link>/);
+        const descMatch = item.match(/<description>(.*?)<\/description>/);
+        if (titleMatch) {
+          const title = titleMatch[1].replace(/<[^\u003e]+>/g, "").trim();
+          const desc = (descMatch?.[1] || "").replace(/<[^\u003e]+>/g, "").trim();
+          const combined = `${title} ${desc}`;
+          const pain = extractPainSignals(combined);
+          // B2B-Filter: Nur Artikel mit B2B-Relevanz
+          const b2bKeywords = ["Software", "SaaS", "Cloud", "Digitalisierung", "IT-Sicherheit", "CRM", "ERP", "Workflow", "Automatisierung", "KI", "Datenschutz", "DGSVO", "Remote", "Homeoffice"];
+          const hasB2B = b2bKeywords.some(kw => combined.toLowerCase().includes(kw.toLowerCase()));
+          if ((pain.hasPain || hasB2B) && title.length > 20) {
+            results.push({
+              source: "heise",
+              sourceUrl: linkMatch?.[1] || "https://www.heise.de",
+              sourceName: "Heise Online (DE)",
+              title: title.slice(0, 150),
+              content: desc.slice(0, 800) || title.slice(0, 500),
+              author: "Heise",
+              upvotes: 10,
+              comments: 0,
+              painScore: pain.hasPain ? pain.painScore : 3,
+              painKeywords: pain.matchedKeywords,
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error("[Heise]", e);
+  }
+  return results;
+}
+
+// ─── DEUTSCHE STARTUPS SCRAPER ───
+async function scrapeDeutscheStartups(): Promise<any[]> {
+  const results: any[] = [];
+  try {
+    const res = await fetch("https://www.deutsche-startups.de/feed/", {
+      headers: { "User-Agent": "Mozilla/5.0" },
+      next: { revalidate: 0 },
+    });
+    if (!res.ok) return results;
+    const xml = await res.text();
+    const itemMatches = xml.match(/<item>[\s\S]*?<\/item>/g);
+    if (itemMatches) {
+      for (const item of itemMatches.slice(0, 10)) {
+        const titleMatch = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || item.match(/<title>(.*?)<\/title>/);
+        const linkMatch = item.match(/<link>(.*?)<\/link>/);
+        const descMatch = item.match(/<description><!\[CDATA\[(.*?)\]\]\u003e<\/description>/);
+        if (titleMatch) {
+          const title = titleMatch[1].replace(/<[^\u003e]+>/g, "").trim();
+          const desc = (descMatch?.[1] || "").replace(/<[^\u003e]+>/g, "").trim();
+          const pain = extractPainSignals(title + " " + desc);
+          // Filtere Startup-News
+          const startupRelevant = /startup|gründung|business|software|app|plattform|digital/i.test(title + " " + desc);
+          if ((pain.hasPain || startupRelevant) && title.length > 15) {
+            results.push({
+              source: "deutsche-startups",
+              sourceUrl: linkMatch?.[1] || "https://www.deutsche-startups.de",
+              sourceName: "Deutsche Startups (DE)",
+              title: title.slice(0, 150),
+              content: desc.slice(0, 800) || title.slice(0, 500),
+              author: "Deutsche Startups",
+              upvotes: 5,
+              comments: 0,
+              painScore: pain.hasPain ? pain.painScore : 2,
+              painKeywords: pain.matchedKeywords,
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error("[Deutsche Startups]", e);
+  }
+  return results;
+}
+
+// ─── GOLEM DEUTSCHLAND SCRAPER ───
+async function scrapeGolem(): Promise<any[]> {
+  const results: any[] = [];
+  try {
+    const res = await fetch("https://rss.golem.de/rss.php?feed=ATOM1.0", {
+      headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/atom+xml" },
+      next: { revalidate: 0 },
+    });
+    if (!res.ok) return results;
+    const xml = await res.text();
+    const entryMatches = xml.match(/<entry>[\s\S]*?<\/entry>/g);
+    if (entryMatches) {
+      for (const entry of entryMatches.slice(0, 10)) {
+        const titleMatch = entry.match(/<title[^\u003e]*>(.*?)<\/title>/);
+        const linkMatch = entry.match(/<link[^\u003e]*href="([^"]+)"/);
+        if (titleMatch) {
+          const title = titleMatch[1].replace(/<[^\u003e]+>/g, "").trim();
+          const pain = extractPainSignals(title);
+          const b2bRelevant = /software|cloud|sicherheit|daten|it-|digital|unternehmen|b2b/i.test(title);
+          if ((pain.hasPain || b2bRelevant) && title.length > 20) {
+            results.push({
+              source: "golem",
+              sourceUrl: linkMatch?.[1] || "https://www.golem.de",
+              sourceName: "Golem.de (DE)",
+              title: title.slice(0, 150),
+              content: title.slice(0, 500),
+              author: "Golem",
+              upvotes: 8,
+              comments: 0,
+              painScore: pain.hasPain ? pain.painScore : 3,
+              painKeywords: pain.matchedKeywords,
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error("[Golem]", e);
+  }
+  return results;
+}
 function generateIdeaFromSignal(signal: any): any {
   const title = signal.title.slice(0, 100);
   const pain = signal.content.slice(0, 500);
@@ -236,6 +371,9 @@ function generateIdeaFromSignal(signal: any): any {
     indiehackers: "Indie Hackers & Solopreneurs",
     stackoverflow: "Software Developers",
     producthunt: "Early Adopters & Product People",
+    heise: "DACH IT-Entscheider & Unternehmen",
+    "deutsche-startups": "DACH Startup Gründer",
+    golem: "DACH Tech Professionals",
   };
   
   return {
@@ -280,16 +418,19 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // PARALLELES SCRAPING — 5 Quellen
-    const [hnSignals, ghSignals, ihSignals, soSignals, phSignals] = await Promise.all([
+    // PARALLELES SCRAPING — 8 Quellen (5 internationale + 3 deutsche)
+    const [hnSignals, ghSignals, ihSignals, soSignals, phSignals, heiseSignals, dsSignals, golemSignals] = await Promise.all([
       scrapeHackerNews(["SaaS problem", "startup pain", "workflow automation", "developer tool", "selfhosted", "open source alternative"]),
       scrapeGitHub(["SaaS problem", "feature request", "need automation", "pain point", "workflow", "productivity"]),
       scrapeIndieHackers(),
       scrapeStackOverflow(["javascript", "python", "saas", "automation"]),
       scrapeProductHunt(),
+      scrapeHeise(),
+      scrapeDeutscheStartups(),
+      scrapeGolem(),
     ]);
 
-    const allSignals = [...hnSignals, ...ghSignals, ...ihSignals, ...soSignals, ...phSignals];
+    const allSignals = [...hnSignals, ...ghSignals, ...ihSignals, ...soSignals, ...phSignals, ...heiseSignals, ...dsSignals, ...golemSignals];
     
     // Nach Pain Score sortieren, Top N nehmen
     const topSignals = allSignals
@@ -340,6 +481,9 @@ export async function POST(req: NextRequest) {
         indiehackers: ihSignals.length,
         stackoverflow: soSignals.length,
         producthunt: phSignals.length,
+        heise: heiseSignals.length,
+        "deutsche-startups": dsSignals.length,
+        golem: golemSignals.length,
       },
       ideas: savedIdeas.slice(0, 5),
     });
