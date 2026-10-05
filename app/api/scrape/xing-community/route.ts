@@ -30,6 +30,9 @@ const PAINS = [
 ];
 
 export async function POST() {
+  const authError = await checkAuth();
+  if (authError) return authError;
+
   let count = 0;
   for (const p of PAINS) {
     const pot = p.score > 80 ? 'high' : 'medium';
