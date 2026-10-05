@@ -9,6 +9,8 @@ const PAIN_KEYWORDS = [
   "waste", "expensive", "manual", "boring", "time-consuming", "annoying",
   "wish", "would love", "need a tool", "looking for", "any recommendations",
   "tired of", "sick of", "can't find", "doesn't exist", "missing feature",
+  "too complicated", "too slow", "broken", "bug", "error", "frustrating",
+  "not working", "confusing", "overwhelming", "expensive", "too much",
 ];
 
 function extractPainSignals(text: string): { hasPain: boolean; painScore: number; matchedKeywords: string[] } {
@@ -16,45 +18,6 @@ function extractPainSignals(text: string): { hasPain: boolean; painScore: number
   const matched = PAIN_KEYWORDS.filter(kw => lower.includes(kw.toLowerCase()));
   const painScore = Math.min(10, matched.length * 2 + (lower.length < 200 ? 1 : 0));
   return { hasPain: matched.length >= 2, painScore, matchedKeywords: matched };
-}
-
-// ─── REDDIT SCRAPER ───
-async function scrapeReddit(subreddits: string[]): Promise<any[]> {
-  const results: any[] = [];
-  for (const sub of subreddits) {
-    try {
-      const res = await fetch(`https://www.reddit.com/r/${sub}/hot.json?limit=25`, {
-        headers: { "User-Agent": "SaaSVentureStudio/1.0 (by /u/saas_venture)" },
-        next: { revalidate: 0 },
-      });
-      if (!res.ok) continue;
-      const data = await res.json();
-      const posts = data.data?.children || [];
-      for (const post of posts) {
-        const p = post.data;
-        const combined = `${p.title} ${p.selftext || ""}`;
-        const pain = extractPainSignals(combined);
-        if (pain.hasPain) {
-          results.push({
-            source: "reddit",
-            sourceUrl: `https://reddit.com${p.permalink}`,
-            sourceName: `r/${sub}`,
-            title: p.title,
-            content: p.selftext?.slice(0, 1000) || p.title,
-            author: p.author,
-            upvotes: p.ups || 0,
-            comments: p.num_comments || 0,
-            painScore: pain.painScore,
-            painKeywords: pain.matchedKeywords,
-            createdAt: new Date(p.created_utc * 1000).toISOString(),
-          });
-        }
-      }
-    } catch (e) {
-      console.error(`[Reddit r/${sub}]`, e);
-    }
-  }
-  return results;
 }
 
 // ─── HACKERNEWS SCRAPER ───
@@ -131,25 +94,132 @@ async function scrapeGitHub(queries: string[]): Promise<any[]> {
   return results;
 }
 
+// ─── INDIE HACKERS SCRAPER ───
+async function scrapeIndieHackers(): Promise<any[]> {
+  const results: any[] = [];
+  try {
+    const res = await fetch("https://www.indiehackers.com/api/posts?category=ideas", {
+      headers: { "Accept": "application/json", "User-Agent": "SaaSVentureStudio/1.0" },
+      next: { revalidate: 0 },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const posts = data.posts || data.results || [];
+      for (const post of posts.slice(0, 15)) {
+        const combined = `${post.title || ""} ${post.body || ""}`;
+        const pain = extractPainSignals(combined);
+        if (pain.hasPain || post.votes >= 5) {
+          results.push({
+            source: "indiehackers",
+            sourceUrl: post.url || `https://www.indiehackers.com/post/${post.id || ""}`,
+            sourceName: "Indie Hackers",
+            title: (post.title || "Unbenannt").slice(0, 150),
+            content: (post.body || post.title || "").slice(0, 1000),
+            author: post.user?.name || "unknown",
+            upvotes: post.votes || 0,
+            comments: post.comments_count || 0,
+            painScore: pain.painScore,
+            painKeywords: pain.matchedKeywords,
+            createdAt: post.created_at || new Date().toISOString(),
+          });
+        }
+      }
+    }
+  } catch (e) {
+    console.error("[Indie Hackers]", e);
+  }
+  return results;
+}
+
+// ─── STACK OVERFLOW SCRAPER ───
+async function scrapeStackOverflow(tags: string[]): Promise<any[]> {
+  const results: any[] = [];
+  for (const tag of tags) {
+    try {
+      const res = await fetch(
+        `https://api.stackexchange.com/2.3/questions?order=desc&sort=votes&tagged=${encodeURIComponent(tag)}&site=stackoverflow&pagesize=15`,
+        { headers: { "Accept": "application/json" }, next: { revalidate: 0 } }
+      );
+      if (!res.ok) continue;
+      const data = await res.json();
+      for (const q of data.items || []) {
+        const combined = `${q.title} ${q.body || ""}`;
+        const pain = extractPainSignals(combined);
+        if (pain.hasPain || q.score >= 10) {
+          results.push({
+            source: "stackoverflow",
+            sourceUrl: q.link,
+            sourceName: `Stack Overflow [${tag}]`,
+            title: q.title.slice(0, 150),
+            content: (q.body || q.title).slice(0, 1000),
+            author: q.owner?.display_name || "unknown",
+            upvotes: q.score || 0,
+            comments: q.answer_count || 0,
+            painScore: pain.painScore + (q.score >= 20 ? 2 : 0),
+            painKeywords: pain.matchedKeywords,
+            createdAt: new Date(q.creation_date * 1000).toISOString(),
+          });
+        }
+      }
+    } catch (e) {
+      console.error(`[StackOverflow ${tag}]`, e);
+    }
+  }
+  return results;
+}
+
+// ─── PRODUCT HUNT SCRAPER ───
+async function scrapeProductHunt(): Promise<any[]> {
+  const results: any[] = [];
+  try {
+    const res = await fetch("https://www.producthunt.com/feed", {
+      headers: { "Accept": "application/rss+xml", "User-Agent": "SaaSVentureStudio/1.0" },
+      next: { revalidate: 0 },
+    });
+    if (!res.ok) return results;
+    const xml = await res.text();
+    const itemMatches = xml.match(/<item>[\s\S]*?<\/item>/g);
+    if (itemMatches) {
+      for (const item of itemMatches.slice(0, 10)) {
+        const titleMatch = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || item.match(/<title>(.*?)<\/title>/);
+        const linkMatch = item.match(/<link>(.*?)<\/link>/);
+        if (titleMatch) {
+          const title = titleMatch[1].replace(/<[^\u003e]+>/g, "").trim();
+          const pain = extractPainSignals(title);
+          if (pain.hasPain) {
+            results.push({
+              source: "producthunt",
+              sourceUrl: linkMatch?.[1] || "https://www.producthunt.com/",
+              sourceName: "Product Hunt",
+              title: title.slice(0, 150),
+              content: title.slice(0, 500),
+              author: "unknown",
+              upvotes: 10,
+              comments: 0,
+              painScore: pain.painScore,
+              painKeywords: pain.matchedKeywords,
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error("[Product Hunt]", e);
+  }
+  return results;
+}
+
 // ─── BUSINESS IDEA GENERATION ───
 function generateIdeaFromSignal(signal: any): any {
   const title = signal.title.slice(0, 100);
   const pain = signal.content.slice(0, 500);
   
-  // Einfache Kategorie-Zuordnung
   const categories: Record<string, string> = {
-    "CRM": "CRM",
-    "email": "Email Marketing",
-    "invoice": "Finance",
-    "contract": "Legal",
-    "team": "Team Collaboration",
-    "remote": "Remote Work",
-    "meeting": "Productivity",
-    "analytics": "Analytics",
-    "AI": "AI Tools",
-    "automation": "Automation",
-    "chat": "Communication",
-    "support": "Customer Support",
+    "CRM": "CRM", "email": "Email Marketing", "invoice": "Finance",
+    "contract": "Legal", "team": "Team Collaboration", "remote": "Remote Work",
+    "meeting": "Productivity", "analytics": "Analytics", "AI": "AI Tools",
+    "automation": "Automation", "chat": "Communication", "support": "Customer Support",
   };
   
   let category = "SaaS";
@@ -160,11 +230,19 @@ function generateIdeaFromSignal(signal: any): any {
     }
   }
   
+  const audiences: Record<string, string> = {
+    hackernews: "Tech Startups & Founders",
+    github: "Developers & Engineering Teams",
+    indiehackers: "Indie Hackers & Solopreneurs",
+    stackoverflow: "Software Developers",
+    producthunt: "Early Adopters & Product People",
+  };
+  
   return {
     title: title,
     description: pain,
     category: category,
-    targetAudience: signal.source === "reddit" ? "Reddit Community" : signal.source === "hackernews" ? "Tech Startups" : "Developers",
+    targetAudience: audiences[signal.source] || "SaaS Founders",
     revenueModel: "SaaS-Abonnement (€29-99/Monat)",
     mvpEffort: signal.painScore >= 6 ? "medium" : "low",
     potential: signal.upvotes >= 50 ? "high" : signal.upvotes >= 10 ? "medium" : "low",
@@ -202,13 +280,16 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // PARALLELES SCRAPING (ohne Reddit — blockiert ohne Auth)
-    const [hnSignals, ghSignals] = await Promise.all([
+    // PARALLELES SCRAPING — 5 Quellen
+    const [hnSignals, ghSignals, ihSignals, soSignals, phSignals] = await Promise.all([
       scrapeHackerNews(["SaaS problem", "startup pain", "workflow automation", "developer tool", "selfhosted", "open source alternative"]),
       scrapeGitHub(["SaaS problem", "feature request", "need automation", "pain point", "workflow", "productivity"]),
+      scrapeIndieHackers(),
+      scrapeStackOverflow(["javascript", "python", "saas", "automation"]),
+      scrapeProductHunt(),
     ]);
 
-    const allSignals = [...hnSignals, ...ghSignals];
+    const allSignals = [...hnSignals, ...ghSignals, ...ihSignals, ...soSignals, ...phSignals];
     
     // Nach Pain Score sortieren, Top N nehmen
     const topSignals = allSignals
@@ -256,8 +337,11 @@ export async function POST(req: NextRequest) {
       sources: {
         hackernews: hnSignals.length,
         github: ghSignals.length,
+        indiehackers: ihSignals.length,
+        stackoverflow: soSignals.length,
+        producthunt: phSignals.length,
       },
-      ideas: savedIdeas.slice(0, 5), // Top 5 zurückgeben
+      ideas: savedIdeas.slice(0, 5),
     });
 
   } catch (error: any) {
@@ -269,12 +353,19 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   return NextResponse.json({
     info: "POST um echten Markt-Scraping zu starten",
-    sources: ["Reddit (r/SaaS, r/startups, r/smallbusiness)", "HackerNews (Algolia API)", "GitHub Issues (Search API)"],
+    sources: [
+      "HackerNews (Algolia API) — Tech-Startup-Probleme",
+      "GitHub Issues (Search API) — Developer Pain Points",
+      "Indie Hackers (Posts API) — Solopreneur-Ideen",
+      "Stack Overflow (API) — Entwickler-Probleme",
+      "Product Hunt (RSS Feed) — Neue Produkte & Nischen",
+    ],
     features: [
-      "Echte Posts und Issues von Nutzern",
-      "Pain Signal Erkennung via Keywords",
+      "Echte Posts, Issues und Fragen von Nutzern",
+      "Pain Signal Erkennung via 25+ Keywords",
       "Automatische Kategorie-Zuordnung",
       "Quellenangabe mit Original-URL",
+      "Pain Score 0-10 basierend auf Signal-Stärke",
     ],
   });
 }
