@@ -184,3 +184,58 @@ export async function GET() {
     );
   }
 }
+
+// POST /api/portfolio/metrics — Snapshot erstellen und Metrics speichern
+export async function POST() {
+  try {
+    const [totalOpps, avgScores, activeVentures, activeExperiments] = await Promise.all([
+      prisma.opportunity.count(),
+      prisma.opportunity.aggregate({ _avg: { scoreA: true, scoreB: true, confidence: true } }),
+      prisma.venture.count({ where: { status: { notIn: ["ended", "rejected", "archived"] } } }),
+      prisma.experiment.count({ where: { status: { in: ["planned", "running"] } } }),
+    ]);
+
+    const pipelineValueAgg = await prisma.opportunity.aggregate({
+      _sum: { potentialValueCreation: true },
+    });
+
+    const pipelineValue = pipelineValueAgg._sum.potentialValueCreation || 0;
+    const avgScoreA = Math.round((avgScores._avg.scoreA || 0) * 10) / 10;
+    const avgScoreB = Math.round((avgScores._avg.scoreB || 0) * 10) / 10;
+    const avgConfidence = Math.round((avgScores._avg.confidence || 0) * 100) / 100;
+
+    // Speichere Metrics
+    const metricsToSave = [
+      { metricType: "pipeline_value", value: pipelineValue },
+      { metricType: "avg_score_a", value: avgScoreA },
+      { metricType: "avg_score_b", value: avgScoreB },
+      { metricType: "active_count", value: activeVentures + activeExperiments },
+      { metricType: "avg_confidence", value: avgConfidence },
+      { metricType: "total_opportunities", value: totalOpps },
+    ];
+
+    await prisma.portfolioMetric.createMany({ data: metricsToSave });
+
+    // Speichere Snapshot
+    const snapshot = await prisma.portfolioSnapshot.create({
+      data: {
+        totalOpportunities: totalOpps,
+        totalVentures: await prisma.venture.count(),
+        avgScoreA,
+        avgScoreB,
+        pipelineValue,
+        activeExperiments,
+        avgConfidence,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      snapshot,
+      metricsSaved: metricsToSave.length,
+    }, { status: 201 });
+  } catch (error: any) {
+    console.error("[PORTFOLIO METRICS POST]", error);
+    return NextResponse.json({ error: "Fehler beim Speichern" }, { status: 500 });
+  }
+}

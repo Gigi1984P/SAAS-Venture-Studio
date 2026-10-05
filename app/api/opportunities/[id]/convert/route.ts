@@ -46,6 +46,21 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       data: { status: "build_approved" },
     });
 
+    // Pipeline Event erstellen
+    await prisma.pipelineEvent.create({
+      data: {
+        ventureId: venture.id,
+        opportunityId: params.id,
+        eventType: "handoff",
+        fromStage: opp.status,
+        toStage: "build_approved",
+        metadata: { ventureName: venture.name, ventureSlug: venture.slug },
+        actorId: session.user.email || "system",
+        actorType: "user",
+        notes: `Opportunity "${opp.title}" zu Venture "${venture.name}" konvertiert`,
+      }
+    });
+
     return NextResponse.json({ venture, success: true }, { status: 201 });
   } catch (err) {
     console.error("Error converting opportunity:", err);

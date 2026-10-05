@@ -99,6 +99,23 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       method: "POST",
     }).catch(() => {});
     
+    // Pipeline Event erstellen
+    await prisma.pipelineEvent.create({
+      data: {
+        ventureId: (await prisma.venture.findFirst({ where: { opportunityId: id } }))?.id || "",
+        opportunityId: id,
+        eventType: "stage_change",
+        fromStage: current,
+        toStage: transition.next,
+        scoreA: opp.scoreA || 0,
+        scoreB: opp.scoreB || 0,
+        metadata: { reason: "auto_transition", checks },
+        actorId: "system",
+        actorType: "system",
+        notes: `Automatische Transition von ${current} → ${transition.next}`,
+      }
+    });
+    
     // Update Status
     const updated = await prisma.opportunity.update({
       where: { id },
