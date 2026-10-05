@@ -191,6 +191,7 @@ model Venture {
   ventureModules VentureModule[]
   notes         VentureNote[]
   todos         VentureTodo[]
+  pipelineEvents PipelineEvent[]
 
   @@map("ventures")
 }
@@ -332,6 +333,8 @@ model Opportunity {
   personaDetails             PersonaDetail[]
   interviewGuides            InterviewGuide[]
   techStackConfigs           TechStackConfig[]
+  intelligenceReports        IntelligenceReport[]
+  pipelineEvents             PipelineEvent[]
 
   @@map("opportunities")
 }
@@ -2624,6 +2627,181 @@ model BusinessIdea {
   @@index([isSaved])
   @@index([createdAt])
   @@map("business_ideas")
+}
+
+// ============================================================
+// INTELLIGENCE ENGINE (Konfigurierbare Scraping Sources)
+// ============================================================
+
+model IntelligenceReport {
+  id           String   @id @default(cuid())
+  opportunityId String? @map("opportunity_id")
+  sourceId     String   @map("source_id")
+  sourceSlug   String   @map("source_slug")
+  sourceName   String   @map("source_name")
+  query        String?
+  url          String?
+  title        String?
+  content      String?  @db.Text
+  sentiment    String?  @default("neutral")
+  relevanceScore Float? @map("relevance_score")
+  rawData      Json?    @map("raw_data")
+  fetchedAt    DateTime @default(now()) @map("fetched_at")
+  opportunity  Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@index([opportunityId])
+  @@index([sourceSlug])
+  @@index([fetchedAt])
+  @@map("intelligence_reports")
+}
+
+model IntelligenceSourceConfig {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  name            String
+  description     String?
+  type            String   @default("scraper") // scraper | api | rss
+  baseUrl         String   @map("base_url")
+  searchUrl       String?  @map("search_url")
+  apiKey          String?  @map("api_key")
+  apiEndpoint     String?  @map("api_endpoint")
+  selectorTitle   String?  @map("selector_title")
+  selectorContent String?  @map("selector_content")
+  selectorAuthor  String?  @map("selector_author")
+  selectorDate    String?  @map("selector_date")
+  rateLimitRpm    Int      @default(10) @map("rate_limit_rpm")
+  isActive        Boolean  @default(true) @map("is_active")
+  priority        Int      @default(5)
+  lastScrapedAt   DateTime? @map("last_scraped_at")
+  totalScrapes    Int      @default(0) @map("total_scrapes")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("intelligence_source_configs")
+}
+
+// ============================================================
+// AUTONOMOUS AGENTS (Heartbeat / Selbstständige Agenten)
+// ============================================================
+
+model AutonomousAgent {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  agentType       String   @map("agent_type") // scout | validator | researcher | monitor
+  schedule        String   @default("0 */6 * * *") // Cron: alle 6h
+  intervalMinutes Int?     @map("interval_minutes")
+  isActive        Boolean  @default(false) @map("is_active")
+  config          Json?    // Agent-spezifische Konfiguration
+  lastRunAt       DateTime? @map("last_run_at")
+  nextRunAt       DateTime? @map("next_run_at")
+  totalRuns       Int      @default(0) @map("total_runs")
+  successCount    Int      @default(0) @map("success_count")
+  failCount       Int      @default(0) @map("fail_count")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("autonomous_agents")
+}
+
+// ============================================================
+// PIPELINE EVENTS (Event-Log für Pipeline-Änderungen)
+// ============================================================
+
+model PipelineEvent {
+  id            String       @id @default(cuid())
+  ventureId     String       @map("venture_id")
+  opportunityId String?      @map("opportunity_id")
+  eventType     String       @map("event_type")
+  fromStage     String?      @map("from_stage")
+  toStage       String?      @map("to_stage")
+  scoreA        Int?         @map("score_a")
+  scoreB        Int?         @map("score_b")
+  metadata      Json?        // Zusätzliche Event-Daten
+  actorId       String?      @map("actor_id")
+  actorType     String?      @default("user") @map("actor_type")
+  notes         String?
+  createdAt     DateTime     @default(now()) @map("created_at")
+  venture       Venture      @relation(fields: [ventureId], references: [id], onDelete: Cascade)
+  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@index([ventureId])
+  @@index([opportunityId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("pipeline_events")
+}
+
+// ============================================================
+// COMPETITOR MATRIX v2 (Erweiterte Analyse)
+// ============================================================
+
+model CompetitorFeature {
+  id             String   @id @default(cuid())
+  competitorId   String   @map("competitor_id")
+  featureName    String   @map("feature_name")
+  category       String   @default("core")
+  hasFeature     Boolean  @default(false) @map("has_feature")
+  qualityScore   Int?     @map("quality_score")
+  priceIncluded  Boolean  @default(true) @map("price_included")
+  notes          String?
+  sourceUrl      String?  @map("source_url")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([competitorId])
+  @@index([featureName])
+  @@map("competitor_features")
+}
+
+model CompetitorPricingTier {
+  id             String   @id @default(cuid())
+  competitorId   String   @map("competitor_id")
+  planName       String   @map("plan_name")
+  priceEur       Float?   @map("price_eur")
+  billingPeriod  String   @default("monthly") @map("billing_period")
+  features       String[]
+  limitations    String[]
+  sourceUrl      String?  @map("source_url")
+  observedAt     DateTime @default(now()) @map("observed_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([competitorId])
+  @@map("competitor_pricing_tiers")
+}
+
+// ============================================================
+// PORTFOLIO METRICS (Venture Portfolio Dashboard)
+// ============================================================
+
+model PortfolioMetric {
+  id               String   @id @default(cuid())
+  metricType       String   @map("metric_type") // pipeline_value | avg_score_a | avg_score_b | velocity | active_count | validation_rate | revenue_forecast
+  value            Float    @default(0)
+  changePercent    Float?   @map("change_percent")
+  period           String   @default("daily") // daily | weekly | monthly
+  calculatedAt     DateTime @default(now()) @map("calculated_at")
+  metadata         Json?    // Zusätzliche Kontextdaten
+
+  @@index([metricType])
+  @@index([calculatedAt])
+  @@map("portfolio_metrics")
+}
+
+model PortfolioSnapshot {
+  id               String   @id @default(cuid())
+  totalIdeas       Int      @default(0) @map("total_ideas")
+  totalOpportunities Int    @default(0) @map("total_opportunities")
+  totalVentures    Int      @default(0) @map("total_ventures")
+  avgScoreA        Float    @default(0) @map("avg_score_a")
+  avgScoreB        Float    @default(0) @map("avg_score_b")
+  pipelineValue    Float    @default(0) @map("pipeline_value")
+  activeExperiments Int     @default(0) @map("active_experiments")
+  avgConfidence    Float    @default(0) @map("avg_confidence")
+  calculatedAt     DateTime @default(now()) @map("calculated_at")
+
+  @@index([calculatedAt])
+  @@map("portfolio_snapshots")
 }
 
 // ─── Feature-Gating / Pricing Plans ───

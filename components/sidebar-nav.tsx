@@ -16,6 +16,7 @@ import {
   Telescope,
   ScanSearch,
   HeartCrack,
+  Brain,
   BarChart3,
   FlaskConical,
   ChevronRight,
@@ -107,6 +108,12 @@ export function SidebarNav({ roleName }: { roleName?: string }) {
         </Link>
         <Link href="/ventures" className={linkClass("/ventures")}>
           <Briefcase className="w-4 h-4 shrink-0" /> Ventures
+        </Link>
+        <Link href="/intelligence" className={linkClass("/intelligence")}>
+          <Brain className="w-4 h-4 shrink-0" /> Intelligence
+        </Link>
+        <Link href="/portfolio" className={linkClass("/portfolio")}>
+          <BarChart3 className="w-4 h-4 shrink-0" /> Portfolio
         </Link>
         <Link href="/templates" className={linkClass("/templates")}>
           <Rocket className="w-4 h-4 shrink-0" /> Templates
