@@ -12,8 +12,9 @@ interface BusinessIdea {
   revenue_model: string | null;
   mvp_effort: string | null;
   potential: string | null;
-  competition: string | null;
-  differentiation: string | null;
+  source: string | null;
+  source_url: string | null;
+  pain_score: number | null;
   is_saved: boolean;
   created_at: string;
   // Signal
@@ -239,6 +240,9 @@ export default function IdeenScoutClient() {
           <div className="flex flex-wrap gap-2">
             {selectedIdea.category && <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">🏷️ {selectedIdea.category}</span>}
             {selectedIdea.potential && <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">🚀 {selectedIdea.potential}</span>}
+            {(selectedIdea as any).source && <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700">📡 {(selectedIdea as any).source}</span>}
+            {(selectedIdea as any).pain_score !== null && (selectedIdea as any).pain_score !== undefined && <span className={`text-xs px-2 py-1 rounded-full ${(selectedIdea as any).pain_score >= 6 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>💔 Pain: {(selectedIdea as any).pain_score}/10</span>}
+            {(selectedIdea as any).source_url && <a href={(selectedIdea as any).source_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline ml-2">🔗 Original</a>}
             {selectedIdea.mvp_effort && <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700">🏗️ {selectedIdea.mvp_effort}</span>}
             {selectedIdea.confidence && <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700">🎯 {selectedIdea.confidence}</span>}
           </div>
@@ -450,6 +454,8 @@ export default function IdeenScoutClient() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
                         <h3 className="text-lg font-semibold">{idea.title}</h3>
+                        {(idea as any).source && <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">📡 {(idea as any).source}</span>}
+                        {(idea as any).pain_score !== null && (idea as any).pain_score !== undefined && <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${(idea as any).pain_score >= 6 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>💔 Pain: {(idea as any).pain_score}/10</span>}
                         {idea.potential && <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">{idea.potential === "high" ? "🚀 Hoch" : idea.potential === "medium" ? "⭐ Mittel" : "📉 Niedrig"}</span>}
                         {idea.is_saved && <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">💾 Gespeichert</span>}
                         {idea.score_overall !== null && <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${scoreColor(idea.score_overall)}`}>📊 {idea.score_overall}/10</span>}

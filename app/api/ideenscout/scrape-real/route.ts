@@ -202,14 +202,13 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // PARALLELES SCRAPING
-    const [redditSignals, hnSignals, ghSignals] = await Promise.all([
-      scrapeReddit(["SaaS", "startups", "smallbusiness", "Entrepreneur", "webdev"]),
-      scrapeHackerNews(["SaaS problem", "startup pain", "workflow automation", "developer tool"]),
-      scrapeGitHub(["SaaS problem", "feature request", "need automation", "pain point"]),
+    // PARALLELES SCRAPING (ohne Reddit — blockiert ohne Auth)
+    const [hnSignals, ghSignals] = await Promise.all([
+      scrapeHackerNews(["SaaS problem", "startup pain", "workflow automation", "developer tool", "selfhosted", "open source alternative"]),
+      scrapeGitHub(["SaaS problem", "feature request", "need automation", "pain point", "workflow", "productivity"]),
     ]);
 
-    const allSignals = [...redditSignals, ...hnSignals, ...ghSignals];
+    const allSignals = [...hnSignals, ...ghSignals];
     
     // Nach Pain Score sortieren, Top N nehmen
     const topSignals = allSignals
@@ -255,7 +254,6 @@ export async function POST(req: NextRequest) {
       totalSignals: allSignals.length,
       ideasGenerated: savedIdeas.length,
       sources: {
-        reddit: redditSignals.length,
         hackernews: hnSignals.length,
         github: ghSignals.length,
       },
