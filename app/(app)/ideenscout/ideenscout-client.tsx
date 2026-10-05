@@ -244,11 +244,13 @@ export default function IdeenScoutClient() {
           </div>
 
           {!isAnalyzed ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground mb-4">Diese Idee wurde noch nicht analysiert.</p>
+            <div className="text-center py-8 bg-amber-50/30 border border-amber-200 rounded-lg">
+              <p className="text-amber-800 font-semibold mb-2">🧪 Noch nicht analysiert</p>
+              <p className="text-muted-foreground mb-4">Diese Idee wurde vom IdeenScout generiert, aber noch nicht durch die 4-Phasen-Analyse laufen lassen.</p>
+              <p className="text-sm text-muted-foreground mb-4">Nach der Analyse siehst du hier: Signal Discovery, Pain Graph, Opportunity Engine, Scoring und Experiment Engine.</p>
               <button onClick={() => analyzeIdea(selectedIdea.id)} disabled={analyzingId === selectedIdea.id}
                 className="px-6 py-3 rounded-md bg-primary text-primary-foreground font-semibold hover:bg-primary/90 disabled:opacity-50"
-              >{analyzingId === selectedIdea.id ? "🧠 Analysiere..." : "🧠 4-Phasen-Analyse starten"}</button>
+              >{analyzingId === selectedIdea.id ? "🧠 Analysiere..." : "🧠 Jetzt analysieren"}</button>
             </div>
           ) : (
             <div className="space-y-6">
