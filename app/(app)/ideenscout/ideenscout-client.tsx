@@ -190,18 +190,45 @@ export default function IdeenScoutClient() {
     } catch { /* ignore */ }
   }
 
-  async function convertToVenture(ideaId: string) {
+  async function convertToOpportunity(ideaId: string) {
     try {
-      const res = await fetch("/api/ideenscout/ideas", {
+      setLoading(true);
+      // Zuerst Preview laden
+      const previewRes = await fetch(`/api/business-ideas/${ideaId}/convert`);
+      const previewData = await previewRes.json();
+      
+      if (!previewRes.ok) {
+        setMessage(`❌ ${previewData.error || "Fehler beim Laden der Vorschau"}`);
+        return;
+      }
+      
+      // Dann Konvertierung durchführen
+      const res = await fetch(`/api/business-ideas/${ideaId}/convert`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ideaId }),
       });
       const data = await res.json();
-      if (res.ok) setMessage(`🚀 Venture "${data.venture?.name}" erstellt!`);
-      else setMessage(data.error || "Fehler");
-      fetchStatus();
-    } catch { /* ignore */ }
+      
+      if (res.ok) {
+        setMessage(`🚀 Opportunity "${data.opportunity?.title?.slice(0, 50)}" erstellt! Score A: ${data.opportunity?.scoreA}/100`);
+        // Idee als gespeichert markieren
+        if (selectedIdea) setSelectedIdea({ ...selectedIdea, is_saved: true });
+        fetchStatus();
+      } else if (res.status === 409) {
+        setMessage(`⚠️ Bereits als Opportunity vorhanden (ID: ${data.opportunityId?.slice(0, 8)}...)`);
+      } else {
+        setMessage(`❌ ${data.error || "Fehler bei der Konvertierung"}`);
+      }
+    } catch (e) {
+      setMessage("❌ Netzwerkfehler");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function convertToVenture(ideaId: string) {
+    // Legacy — leitet jetzt zur Opportunity-Konvertierung weiter
+    await convertToOpportunity(ideaId);
   }
 
   const statusColors: Record<string, string> = {
@@ -251,10 +278,15 @@ export default function IdeenScoutClient() {
             <div className="text-center py-8 bg-amber-50/30 border border-amber-200 rounded-lg">
               <p className="text-amber-800 font-semibold mb-2">🧪 Noch nicht analysiert</p>
               <p className="text-muted-foreground mb-4">Diese Idee wurde vom IdeenScout generiert, aber noch nicht durch die 4-Phasen-Analyse laufen lassen.</p>
-              <p className="text-sm text-muted-foreground mb-4">Nach der Analyse siehst du hier: Signal Discovery, Pain Graph, Opportunity Engine, Scoring und Experiment Engine.</p>
-              <button onClick={() => analyzeIdea(selectedIdea.id)} disabled={analyzingId === selectedIdea.id}
-                className="px-6 py-3 rounded-md bg-primary text-primary-foreground font-semibold hover:bg-primary/90 disabled:opacity-50"
-              >{analyzingId === selectedIdea.id ? "🧠 Analysiere..." : "🧠 Jetzt analysieren"}</button>
+              <p className="text-sm text-muted-foreground mb-4">Du kannst sie jetzt direkt als Opportunity konvertieren oder zuerst analysieren.</p>
+              <div className="flex gap-3 justify-center">
+                <button onClick={() => convertToOpportunity(selectedIdea.id)} disabled={loading}
+                  className="px-6 py-3 rounded-md bg-green-600 text-white font-semibold hover:bg-green-700 disabled:opacity-50"
+                >{loading ? "⏳ Konvertiere..." : "🚀 Direkt zu Opportunity"}</button>
+                <button onClick={() => analyzeIdea(selectedIdea.id)} disabled={analyzingId === selectedIdea.id}
+                  className="px-6 py-3 rounded-md bg-primary text-primary-foreground font-semibold hover:bg-primary/90 disabled:opacity-50"
+                >{analyzingId === selectedIdea.id ? "🧠 Analysiere..." : "🧠 Jetzt analysieren"}</button>
+              </div>
             </div>
           ) : (
             <div className="space-y-6">
@@ -309,7 +341,9 @@ export default function IdeenScoutClient() {
                 </div>
               </div>
               <div className="flex gap-3 pt-4">
-                <button onClick={() => convertToVenture(selectedIdea.id)} className="px-6 py-3 rounded-md bg-green-600 text-white font-semibold hover:bg-green-700">🚀 Zu Venture konvertieren</button>
+                <button onClick={() => convertToOpportunity(selectedIdea.id)} disabled={loading}
+                  className="px-6 py-3 rounded-md bg-green-600 text-white font-semibold hover:bg-green-700 disabled:opacity-50"
+                >{loading ? "⏳ Konvertiere..." : "🚀 Zu Opportunity konvertieren"}</button>
                 <button onClick={() => saveIdea(selectedIdea.id)} disabled={selectedIdea.is_saved}
                   className="px-6 py-3 rounded-md bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200 disabled:opacity-50"
                 >{selectedIdea.is_saved ? "💾 Gespeichert" : "💾 Speichern"}</button>
