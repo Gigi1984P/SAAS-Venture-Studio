@@ -279,6 +279,7 @@ export default function DashboardPage() {
     {
       label: "Opportunities",
       value: stats?.opportunityCount || 0,
+      subtitle: stats?.opportunityCount ? `${stats.opportunityCount} aktiv` : "Noch keine — Erstelle die erste",
       href: "/opportunities",
       icon: Target,
       color: "text-blue-400",
@@ -287,6 +288,7 @@ export default function DashboardPage() {
     {
       label: "Ventures",
       value: stats?.ventureCount || 0,
+      subtitle: stats?.ventureCount ? `${stats.ventureCount} im Portfolio` : "Noch keine — Wandle eine Opportunity um",
       href: "/ventures",
       icon: Briefcase,
       color: "text-emerald-400",
