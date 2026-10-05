@@ -79,19 +79,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       data: { isSaved: true },
     });
 
-    // Pipeline Event erstellen
-    await prisma.pipelineEvent.create({
-      data: {
-        opportunityId: opportunity.id,
-        eventType: "opportunity_created",
-        status: "completed",
-        severity: "info",
-        title: `Opportunity aus IdeeScout erstellt`,
-        description: `Automatisch konvertiert aus: ${idea.title.slice(0, 100)}`,
-        metadata: JSON.stringify({ source: idea.source, painScore: idea.painScore }),
-      },
-    });
-
     return NextResponse.json({
       success: true,
       opportunityId: opportunity.id,
