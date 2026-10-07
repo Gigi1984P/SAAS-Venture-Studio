@@ -76,6 +76,14 @@ const CATEGORY_ICONS: Record<string, any> = {
   "de-sport": Rss,
   "de-mode": Rss,
   "de-tourismus": Rss,
+  "de-events": Rss,
+  "de-druck": Rss,
+  "de-chemie": Rss,
+  "de-moebel": Rss,
+  "de-garten": Rss,
+  "de-wasser": Rss,
+  "de-recycling": Rss,
+  "de-luftfahrt": Rss,
   custom: Globe,
 };
 
@@ -140,6 +148,14 @@ const CATEGORY_LABELS: Record<string, string> = {
   "de-sport": "DE Sport & Fitness (FitForFun, Sport1, Kicker)",
   "de-mode": "DE Mode & Lifestyle (Vogue, Textilwirtschaft)",
   "de-tourismus": "DE Tourismus & Reisen (FVW, Touristik Aktuell)",
+  "de-events": "DE Veranstaltungen & Events (Messewirtschaft, Kongress)",
+  "de-druck": "DE Druck & Verpackung (Druckmarkt, Packaging360)",
+  "de-chemie": "DE Chemie & Pharma (Chemie.de, GMP Compliance)",
+  "de-moebel": "DE Möbel & Innenausbau (Möbelkultur, WohnDesign)",
+  "de-garten": "DE Gartentechnik (GALabau, Gartenjournal)",
+  "de-wasser": "DE Wasserversorgung (GWF Wasser, DWA)",
+  "de-recycling": "DE Abfall & Recycling (Recycling Magazin, Entsorga)",
+  "de-luftfahrt": "DE Luftfahrt & Aerospace (AeroBuzz, DLR, Airliners)",
   custom: "Custom",
 };
 
