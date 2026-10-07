@@ -2,9 +2,45 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 
-// PUT /api/opportunities/[id]/signals/deduplicate
-// Batch deduplication: hashes signals, marks duplicates, applies same-origin spam filter
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+// GET: Deduplication-Stats lesen (ohne Mutation)
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const totalSignals = await prisma.signal.count({ where: { opportunityId: params.id } });
+    const dupCount = await prisma.signal.count({ where: { opportunityId: params.id, isDuplicate: true } });
+    const irrCount = await prisma.signal.count({ where: { opportunityId: params.id, isRelevant: false } });
+    const highConf = await prisma.signal.count({ where: { opportunityId: params.id, isDuplicate: false, confidence: { gte: 0.7 } } });
+    const independent = totalSignals - dupCount;
+
+    return NextResponse.json({
+      stats: {
+        rawSignals: totalSignals,
+        duplicatesRemoved: dupCount,
+        irrelevantRemoved: irrCount,
+        highConfidenceSignals: highConf,
+        independentSignals: independent,
+      },
+      funnel: [
+        { stage: "raw_signals", count: totalSignals },
+        { stage: "duplicates_removed", count: totalSignals - dupCount },
+        { stage: "same_origin_removed", count: totalSignals - dupCount - irrCount },
+        { stage: "independent_signals", count: independent },
+        { stage: "high_confidence", count: highConf },
+      ],
+    });
+  } catch (error: any) {
+    console.error("[DEDUPLICATE GET]", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// POST: Deduplication ausführen (Frontend erwartet POST)
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const signals = await prisma.signal.findMany({ where: { opportunityId: params.id } });
     const hashMap = new Map<string, string>(); // hash -> first signal id
@@ -78,11 +114,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       duplicatesMarked,
       irrelevantMarked,
       stats: {
-        total: totalSignals,
-        duplicates: dupCount,
-        irrelevant: irrCount,
-        highConfidence: highConf,
-        independent,
+        rawSignals: totalSignals,
+        duplicatesRemoved: dupCount,
+        irrelevantRemoved: irrCount,
+        highConfidenceSignals: highConf,
+        independentSignals: independent,
       },
       funnel: [
         { stage: "raw_signals", count: totalSignals },
@@ -92,8 +128,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         { stage: "high_confidence", count: highConf },
       ],
     });
-  } catch (error) {
-    console.error("[DEDUPLICATE PUT]", error);
+  } catch (error: any) {
+    console.error("[DEDUPLICATE POST]", error);
     return NextResponse.json({ message: "Interner Fehler" }, { status: 500 });
   }
 }
