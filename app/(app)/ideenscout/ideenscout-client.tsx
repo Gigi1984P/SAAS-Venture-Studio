@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ChevronLeft, ChevronRight, Search, Filter, X, Save } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, Filter, X, Save, Settings } from "lucide-react";
+import ScoutSourcesManager from "./scout-sources-manager";
 
 interface BusinessIdea {
   id: string;
@@ -381,6 +382,10 @@ export default function IdeenScoutClient() {
           <button onClick={() => control("stop")} disabled={loading || run?.status === "stopped"}
             className="px-6 py-3 rounded-md bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-50"
           >{loading ? "..." : "🛑 Stoppen"}</button>
+          
+          <div className="ml-auto">
+            <ScoutSourcesManager />
+          </div>
         </div>
 
         {message && <div className="text-sm font-medium text-primary animate-pulse">{message}</div>}
