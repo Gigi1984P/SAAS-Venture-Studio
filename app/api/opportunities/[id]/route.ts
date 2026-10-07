@@ -10,8 +10,6 @@ export async function GET(
     const opp = await prisma.opportunity.findUnique({
       where: { id: params.id },
       include: {
-        industry: true,
-        persona: true,
         gates: true,
         assumptions: true,
         experiments: true,
