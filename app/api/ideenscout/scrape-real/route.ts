@@ -856,18 +856,56 @@ Gib NUR dieses JSON zurück (keine Markdown, keine Erklärungen):
 }
 
 // ─── KOSTENLOSE KI-ÜBERSETZUNG via MyMemory Translate ───
+// Chunking für lange Texte (MyMemory Limit: 500 Zeichen)
 async function translateWithMyMemory(text: string): Promise<string> {
-  try {
-    const response = await fetch(
-      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|de`,
-      { next: { revalidate: 0 } }
-    );
-    if (!response.ok) return text;
-    const data = await response.json();
-    return data.responseData?.translatedText || text;
-  } catch (e) {
-    return text;
+  if (!text || text.length <= 500) {
+    // Kurze Texte direkt übersetzen
+    try {
+      const response = await fetch(
+        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|de`,
+        { next: { revalidate: 0 } }
+      );
+      if (!response.ok) return text;
+      const data = await response.json();
+      return data.responseData?.translatedText || text;
+    } catch (e) {
+      return text;
+    }
   }
+  
+  // Lange Texte: In Sätze aufteilen und einzeln übersetzen
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+  const chunks: string[] = [];
+  let currentChunk = "";
+  
+  for (const sentence of sentences) {
+    if ((currentChunk + sentence).length > 450) {
+      if (currentChunk) chunks.push(currentChunk.trim());
+      currentChunk = sentence;
+    } else {
+      currentChunk += sentence;
+    }
+  }
+  if (currentChunk) chunks.push(currentChunk.trim());
+  
+  // Parallel übersetzen
+  const translatedChunks = await Promise.all(
+    chunks.map(async (chunk) => {
+      try {
+        const response = await fetch(
+          `https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=en|de`,
+          { next: { revalidate: 0 } }
+        );
+        if (!response.ok) return chunk;
+        const data = await response.json();
+        return data.responseData?.translatedText || chunk;
+      } catch (e) {
+        return chunk;
+      }
+    })
+  );
+  
+  return translatedChunks.join(" ").slice(0, 500);
 }
 
 // ─── GRAMMATIKALISCH KORREKTER DEUTSCHER ÜBERSETZER ───
