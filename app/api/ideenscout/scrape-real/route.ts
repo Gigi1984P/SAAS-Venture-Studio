@@ -878,57 +878,75 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // LADE RSS CONFIG
-    let rssConfig: any = {};
+    // LADE QUELLEN AUS DB (dynamisch, UI-gesteuert)
+    let dbSources: any[] = [];
     try {
-      rssConfig = await import("@/config/rss-feeds.json").then(m => m.default || m);
+      dbSources = await prisma.$queryRaw`
+        SELECT id, name, slug, url, category, enabled, max_results as "maxResults", pain_boost as "painBoost"
+        FROM scout_sources WHERE enabled = true ORDER BY sort_order ASC;
+      ` || [];
     } catch (e) {
-      rssConfig = {};
+      console.error("[SCOUT] DB sources error", e);
     }
 
-    // PARALLELES SCRAPING — 20+ APIs + 99 RSS Feeds
-    const [
-      hnSignals, ghSignals, ihSignals, soSignals, phSignals,
-      heiseSignals, dsSignals, golemSignals,
-      redditSignals, g2Signals, trustpilotSignals, devtoSignals,
-      t3nSignals, gruenderszeneSignals, getappSignals, softwareAdviceSignals,
-      mediumSignals,
-      xSignals, quoraSignals,
-      rssHandwerkSignals, rssImmobilienSignals, rssLogistikSignals, rssBuchhaltungSignals
-    ] = await Promise.all([
-      scrapeHackerNews(["SaaS problem", "startup pain", "workflow automation", "developer tool", "selfhosted", "open source alternative"]),
-      scrapeGitHub(["SaaS problem", "feature request", "need automation", "pain point", "workflow", "productivity"]),
-      scrapeIndieHackers(),
-      scrapeStackOverflow(["javascript", "python", "saas", "automation"]),
-      scrapeProductHunt(),
-      scrapeHeise(),
-      scrapeDeutscheStartups(),
-      scrapeGolem(),
-      scrapeReddit(["SaaS", "startups", "smallbusiness", "Entrepreneur", "webdev", "productivity", "mktg"]),
-      scrapeG2Reviews(),
-      scrapeTrustpilot(),
-      scrapeDevTo(),
-      scrapeT3N(),
-      scrapeGruenderszene(),
-      scrapeGetApp(),
-      scrapeSoftwareAdvice(),
-      scrapeMedium(),
-      scrapeXTwitter(),
-      scrapeQuora(),
-      scrapeRSS(rssConfig.handwerk_bau || [], "Handwerk & Bau"),
-      scrapeRSS(rssConfig.immobilien || [], "Immobilien"),
-      scrapeRSS(rssConfig.logistik || [], "Logistik & Supply Chain"),
-      scrapeRSS(rssConfig.buchhaltung || [], "Buchhaltung & Steuern"),
-    ]);
+    // Fallback wenn DB leer
+    if (!Array.isArray(dbSources) || dbSources.length === 0) {
+      dbSources = [
+        { slug: "hackernews", maxResults: 20, painBoost: 0 },
+        { slug: "github", maxResults: 10, painBoost: 2 },
+        { slug: "stackoverflow", maxResults: 15, painBoost: 2 },
+        { slug: "heise", maxResults: 15, painBoost: 0 },
+        { slug: "deutsche-startups", maxResults: 10, painBoost: 0 },
+        { slug: "golem", maxResults: 10, painBoost: 0 },
+      ];
+    }
 
-    const allSignals = [
-      ...hnSignals, ...ghSignals, ...ihSignals, ...soSignals, ...phSignals,
-      ...heiseSignals, ...dsSignals, ...golemSignals,
-      ...redditSignals, ...g2Signals, ...trustpilotSignals, ...devtoSignals,
-      ...t3nSignals, ...gruenderszeneSignals, ...getappSignals, ...softwareAdviceSignals,
-      ...mediumSignals, ...xSignals, ...quoraSignals,
-      ...rssHandwerkSignals, ...rssImmobilienSignals, ...rssLogistikSignals, ...rssBuchhaltungSignals
-    ];
+    const scrapeFunctions: Record<string, Function> = {
+      "hackernews": () => scrapeHackerNews(["SaaS problem", "startup pain", "workflow automation", "developer tool"]),
+      "github": () => scrapeGitHub(["SaaS problem", "feature request", "need automation", "pain point"]),
+      "indiehackers": () => scrapeIndieHackers(),
+      "stackoverflow": () => scrapeStackOverflow(["javascript", "python", "saas", "automation"]),
+      "producthunt": () => scrapeProductHunt(),
+      "devto": () => scrapeDevTo(),
+      "medium": () => scrapeMedium(),
+      "heise": () => scrapeHeise(),
+      "deutsche-startups": () => scrapeDeutscheStartups(),
+      "golem": () => scrapeGolem(),
+      "t3n": () => scrapeT3N(),
+      "gruenderszene": () => scrapeGruenderszene(),
+      "reddit": () => scrapeReddit(["SaaS", "startups", "smallbusiness", "Entrepreneur", "webdev"]),
+      "g2": () => scrapeG2Reviews(),
+      "trustpilot": () => scrapeTrustpilot(),
+      "getapp": () => scrapeGetApp(),
+      "software-advice": () => scrapeSoftwareAdvice(),
+      "x-twitter": () => scrapeXTwitter(),
+      "quora": () => scrapeQuora(),
+      "rss-handwerk-bau": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.handwerk_bau || [], "Handwerk & Bau"); } catch (e) { return []; } },
+      "rss-immobilien": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.immobilien || [], "Immobilien"); } catch (e) { return []; } },
+      "rss-logistik": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.logistik || [], "Logistik & Supply Chain"); } catch (e) { return []; } },
+      "rss-buchhaltung": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.buchhaltung || [], "Buchhaltung & Steuern"); } catch (e) { return []; } },
+    };
+
+    // Paralleles Scraping nur aktivierter Quellen
+    const scrapePromises = dbSources.map((src: any) => {
+      const fn = scrapeFunctions[src.slug];
+      if (!fn) {
+        console.warn(`[SCOUT] Unbekannte Quelle: ${src.slug}`);
+        return Promise.resolve([]);
+      }
+      return fn().then((signals: any[]) => {
+        if (src.painBoost > 0) {
+          signals.forEach((s: any) => { s.painScore = Math.min(10, s.painScore + src.painBoost); });
+        }
+        return signals.slice(0, src.maxResults || 20);
+      }).catch((e: any) => {
+        console.error(`[SCOUT ${src.slug}]`, e.message);
+        return [];
+      });
+    });
+
+    const allSignalsArrays = await Promise.all(scrapePromises);
+    const allSignals = allSignalsArrays.flat();
     
     // Nach Pain Score sortieren, Top N nehmen
     const topSignals = allSignals
@@ -971,33 +989,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       scoutRunId: scoutRun.id,
-      totalSignals: allSignals.length,
       ideasGenerated: savedIdeas.length,
-      sources: {
-        hackernews: hnSignals.length,
-        github: ghSignals.length,
-        indiehackers: ihSignals.length,
-        stackoverflow: soSignals.length,
-        producthunt: phSignals.length,
-        heise: heiseSignals.length,
-        "deutsche-startups": dsSignals.length,
-        golem: golemSignals.length,
-        reddit: redditSignals.length,
-        g2: g2Signals.length,
-        trustpilot: trustpilotSignals.length,
-        devto: devtoSignals.length,
-        t3n: t3nSignals.length,
-        gruenderszene: gruenderszeneSignals.length,
-        getapp: getappSignals.length,
-        "software-advice": softwareAdviceSignals.length,
-        medium: mediumSignals.length,
-        "x-twitter": xSignals.length,
-        quora: quoraSignals.length,
-        "rss-handwerk-bau": rssHandwerkSignals.length,
-        "rss-immobilien": rssImmobilienSignals.length,
-        "rss-logistik": rssLogistikSignals.length,
-        "rss-buchhaltung": rssBuchhaltungSignals.length,
-      },
+      sourceCounts: dbSources.reduce((acc: any, src: any) => {
+        acc[src.slug] = allSignalsArrays[dbSources.indexOf(src)]?.length || 0;
+        return acc;
+      }, {}),
+      totalSignals: allSignals.length,
       ideas: savedIdeas.slice(0, 5),
     });
 
