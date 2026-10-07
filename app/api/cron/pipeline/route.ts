@@ -95,14 +95,12 @@ export async function GET(req: Request) {
 
         // ── 3. ASSUMPTIONS ──
         const assumptions = await prisma.assumption.createMany({
-          data: ASSUMPTION_TEMPLATES.map((t) => ({
-            opportunityId: opp.id,
-            statement: t.statement,
-            category: t.category,
-            confidence: t.confidence,
-            impact: t.impact,
-            status: "untested",
-          })),
+          data: [
+            { opportunityId: opp.id, code: "A1-PRICE", statement: "Nutzer sind bereit, €50-100/Monat zu zahlen", category: "pricing", confidence: 0.6 },
+            { opportunityId: opp.id, code: "A2-MVP", statement: "MVP kann in 8 Wochen gebaut werden", category: "technical", confidence: 0.7 },
+            { opportunityId: opp.id, code: "A3-PLG", statement: "Vertrieb über PLG funktioniert", category: "go-to-market", confidence: 0.5 },
+            { opportunityId: opp.id, code: "A4-LEGAL", statement: "Regulatorische Anforderungen sind erfüllbar", category: "legal", confidence: 0.75 },
+          ],
         });
         oppResult.steps.push({ step: "assumptions", count: assumptions.count });
 
