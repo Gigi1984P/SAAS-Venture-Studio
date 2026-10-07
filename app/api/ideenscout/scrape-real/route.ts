@@ -1152,6 +1152,17 @@ export async function POST(req: NextRequest) {
       "rss-nonprofit": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.non_profit || [], "Non-Profit & NGOs"); } catch (e) { return []; } },
       "rss-datenschutz": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.datenschutz_it_sicherheit || [], "Datenschutz & IT-Sicherheit"); } catch (e) { return []; } },
       "rss-ki": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.ki_automation || [], "KI & Automation"); } catch (e) { return []; } },
+      "de-allgemein": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.deutschland_allgemein || [], "Deutschland Allgemein"); } catch (e) { return []; } },
+      "de-mittelstand": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_mittelstand || [], "Deutscher Mittelstand"); } catch (e) { return []; } },
+      "de-digital": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_digitalisierung || [], "DE Digitalisierung"); } catch (e) { return []; } },
+      "de-fertigung": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_fertigung_industrie || [], "DE Fertigung & Industrie"); } catch (e) { return []; } },
+      "de-handel": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_handel_logistik || [], "DE Handel & Logistik"); } catch (e) { return []; } },
+      "de-gesundheit": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_gesundheit_pflege || [], "DE Gesundheit & Pflege"); } catch (e) { return []; } },
+      "de-energie": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_energie_umwelt || [], "DE Energie & Umwelt"); } catch (e) { return []; } },
+      "de-finanzen": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_finanzen_steuer || [], "DE Finanzen & Steuern"); } catch (e) { return []; } },
+      "de-recht": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_recht_compliance || [], "DE Recht & Compliance"); } catch (e) { return []; } },
+      "de-hr": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_hr_arbeit || [], "DE HR & Arbeit"); } catch (e) { return []; } },
+      "de-bildung": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_bildung_weiterbildung || [], "DE Bildung & Weiterbildung"); } catch (e) { return []; } },
     };
 
     // Fallback-Handler für dynamische/custom Quellen
