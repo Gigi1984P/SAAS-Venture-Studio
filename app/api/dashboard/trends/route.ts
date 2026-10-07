@@ -6,7 +6,6 @@ export async function GET() {
   try {
     const snapshots = await prisma.dashboardSnapshot.findMany({
       orderBy: { date: "asc" },
-      take: 30,
     });
 
     return NextResponse.json({ 
