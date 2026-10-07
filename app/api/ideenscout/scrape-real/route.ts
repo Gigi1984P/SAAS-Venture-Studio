@@ -1125,13 +1125,62 @@ export async function POST(req: NextRequest) {
       "rss-buchhaltung": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.buchhaltung || [], "Buchhaltung & Steuern"); } catch (e) { return []; } },
     };
 
+    // Fallback-Handler für dynamische/custom Quellen
+    function getScraperForSource(src: any): Function {
+      // Wenn slug in scrapeFunctions → direkt nutzen
+      if (scrapeFunctions[src.slug]) {
+        return scrapeFunctions[src.slug];
+      }
+      
+      // Fallback: Wenn URL ein RSS-Feed ist → RSS scraping
+      if (src.url && (src.url.endsWith('.xml') || src.url.endsWith('.rss') || src.url.includes('/feed') || src.url.includes('/rss'))) {
+        return () => scrapeRSS([src.url], src.name || src.slug);
+      }
+      
+      // Fallback: Für alle anderen URLs → einfache HTTP-Anfrage mit Pain-Extraction
+      if (src.url) {
+        return async () => {
+          try {
+            const res = await fetch(src.url, {
+              headers: { "User-Agent": "Mozilla/5.0" },
+              next: { revalidate: 0 },
+            });
+            if (!res.ok) return [];
+            const html = await res.text();
+            // Extrahiere Text aus HTML
+            const text = html.replace(/\u003c[^\u003e]+\u003e/g, ' ').replace(/\s+/g, ' ').slice(0, 5000);
+            const pain = extractPainSignals(text);
+            
+            if (pain.hasPain || text.length > 200) {
+              return [{
+                source: src.slug,
+                sourceUrl: src.url,
+                sourceName: src.name,
+                title: `${src.name} — Relevanter Inhalt gefunden`,
+                content: text.slice(0, 500),
+                author: "unknown",
+                upvotes: 3,
+                comments: 0,
+                painScore: pain.hasPain ? pain.painScore : 3,
+                painKeywords: pain.matchedKeywords,
+                createdAt: new Date().toISOString(),
+              }];
+            }
+            return [];
+          } catch (e) {
+            return [];
+          }
+        };
+      }
+      
+      // Kein Scraper verfügbar
+      console.warn(`[SCOUT] Kein Scraper für Quelle: ${src.slug} (${src.name})`);
+      return () => Promise.resolve([]);
+    }
+
     // Paralleles Scraping nur aktivierter Quellen
     const scrapePromises = dbSources.map((src: any) => {
-      const fn = scrapeFunctions[src.slug];
-      if (!fn) {
-        console.warn(`[SCOUT] Unbekannte Quelle: ${src.slug}`);
-        return Promise.resolve([]);
-      }
+      const fn = getScraperForSource(src);
       return fn().then((signals: any[]) => {
         if (src.painBoost > 0) {
           signals.forEach((s: any) => { s.painScore = Math.min(10, s.painScore + src.painBoost); });
