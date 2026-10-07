@@ -24,6 +24,15 @@ const CATEGORY_ICONS: Record<string, any> = {
   "rss-immobilien": Rss,
   "rss-logistik": Rss,
   "rss-buchhaltung": Rss,
+  "rss-finanzen": Rss,
+  "rss-versicherungen": Rss,
+  "rss-gesundheit": Rss,
+  "rss-recht": Rss,
+  "rss-hr": Rss,
+  "rss-marketing": Rss,
+  "rss-produktion": Rss,
+  "rss-energie": Rss,
+  "rss-bildung": Rss,
   custom: Globe,
 };
 
@@ -35,7 +44,16 @@ const CATEGORY_LABELS: Record<string, string> = {
   "rss-handwerk": "RSS Handwerk & Bau",
   "rss-immobilien": "RSS Immobilien",
   "rss-logistik": "RSS Logistik",
-  "rss-buchhaltung": "RSS Buchhaltung",
+  "rss-buchhaltung": "RSS Buchhaltung & Steuern",
+  "rss-finanzen": "RSS Finanzen & Banking",
+  "rss-versicherungen": "RSS Versicherungen",
+  "rss-gesundheit": "RSS Gesundheit & Medizin",
+  "rss-recht": "RSS Recht & Compliance",
+  "rss-hr": "RSS HR & Personal",
+  "rss-marketing": "RSS Marketing & Vertrieb",
+  "rss-produktion": "RSS Produktion & Industrie",
+  "rss-energie": "RSS Energie & Umwelt",
+  "rss-bildung": "RSS Bildung & Weiterbildung",
   custom: "Custom",
 };
 

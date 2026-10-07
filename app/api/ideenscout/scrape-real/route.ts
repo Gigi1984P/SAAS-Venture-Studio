@@ -1123,6 +1123,15 @@ export async function POST(req: NextRequest) {
       "rss-immobilien": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.immobilien || [], "Immobilien"); } catch (e) { return []; } },
       "rss-logistik": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.logistik || [], "Logistik & Supply Chain"); } catch (e) { return []; } },
       "rss-buchhaltung": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.buchhaltung || [], "Buchhaltung & Steuern"); } catch (e) { return []; } },
+      "rss-finanzen": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.finanzen_banking || [], "Finanzen & Banking"); } catch (e) { return []; } },
+      "rss-versicherungen": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.versicherungen || [], "Versicherungen"); } catch (e) { return []; } },
+      "rss-gesundheit": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.gesundheit_medizin || [], "Gesundheit & Medizin"); } catch (e) { return []; } },
+      "rss-recht": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.recht_compliance || [], "Recht & Compliance"); } catch (e) { return []; } },
+      "rss-hr": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.hr_personal || [], "HR & Personal"); } catch (e) { return []; } },
+      "rss-marketing": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.marketing_vertrieb || [], "Marketing & Vertrieb"); } catch (e) { return []; } },
+      "rss-produktion": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.produktion_industrie || [], "Produktion & Industrie"); } catch (e) { return []; } },
+      "rss-energie": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.energie_umwelt || [], "Energie & Umwelt"); } catch (e) { return []; } },
+      "rss-bildung": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.bildung_weiterbildung || [], "Bildung & Weiterbildung"); } catch (e) { return []; } },
     };
 
     // Fallback-Handler für dynamische/custom Quellen
