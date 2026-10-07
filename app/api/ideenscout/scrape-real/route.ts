@@ -797,7 +797,65 @@ async function scrapeQuora(): Promise<any[]> {
   }
   return results;
 }
-// ─── DEUTSCHER OFFLINE-ÜBERSETZER ───
+// ─── KI-ÜBERSETZUNG (DeepSeek via OpenRouter) ───
+async function translateIdeaWithAI(title: string, description: string): Promise<{ title: string; description: string }> {
+  const apiKey = process.env.OPENROUTER_API_KEY || process.env.OLLAMA_API_KEY;
+  if (!apiKey) {
+    console.warn("[TRANSLATE] Kein API-Key gefunden — Fallback auf Keyword-Übersetzung");
+    return { title: translateToGerman(title), description: translateToGerman(description) };
+  }
+
+  try {
+    const prompt = `Übersetze folgenden SaaS-Geschäftsideen-Titel und Beschreibung FLÜSSIG und NATÜRLICH ins Deutsche. Behalte Fachbegriffe wie SaaS, API, KI, Workflow bei, aber übersetze den Satzfluss vollständig.
+
+Titel (Englisch): ${title}
+Beschreibung (Englisch): ${description}
+
+Gib NUR dieses JSON zurück (keine Markdown, keine Erklärungen):
+{"title": "...", "description": "..."}`;
+
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://saas-venture-studio.vercel.app",
+        "X-Title": "SaaS Venture Studio",
+      },
+      body: JSON.stringify({
+        model: "deepseek/deepseek-chat-v3-0324:free",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.3,
+        max_tokens: 800,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("[TRANSLATE] OpenRouter Fehler:", response.status, await response.text());
+      return { title: translateToGerman(title), description: translateToGerman(description) };
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || "";
+    
+    // JSON parsen
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        title: parsed.title?.slice(0, 100) || translateToGerman(title),
+        description: parsed.description?.slice(0, 500) || translateToGerman(description),
+      };
+    }
+
+    return { title: translateToGerman(title), description: translateToGerman(description) };
+  } catch (error: any) {
+    console.error("[TRANSLATE] Fehler:", error.message);
+    return { title: translateToGerman(title), description: translateToGerman(description) };
+  }
+}
+
+// ─── DEUTSCHER OFFLINE-ÜBERSETZER (Fallback) ───
 const EN_DE: Record<string, string> = {
   // SaaS / Tech
   "saas": "SaaS", "software": "Software", "platform": "Plattform", "tool": "Tool",
@@ -938,11 +996,8 @@ function translateToGerman(text: string): string {
   return translated;
 }
 
-// ─── IDEEN-GENERATOR MIT AUTO-ÜBERSETZUNG ───
+// ─── IDEEN-GENERATOR (Original-Text, KI übersetzt später) ───
 function generateIdeaFromSignal(signal: any): any {
-  // 🔥 AUTOMATISCH AUF DEUTSCH ÜBERSETZEN
-  const titleDe = translateToGerman(signal.title).slice(0, 100);
-  const contentDe = translateToGerman(signal.content).slice(0, 500);
   
   const categories: Record<string, string> = {
     "CRM": "CRM", "email": "E-Mail-Marketing", "invoice": "Rechnungsstellung",
@@ -953,7 +1008,7 @@ function generateIdeaFromSignal(signal: any): any {
   
   let category = "SaaS";
   for (const [key, val] of Object.entries(categories)) {
-    if (contentDe.toLowerCase().includes(key.toLowerCase()) || titleDe.toLowerCase().includes(key.toLowerCase())) {
+    if (signal.content.toLowerCase().includes(key.toLowerCase()) || signal.title.toLowerCase().includes(key.toLowerCase())) {
       category = val;
       break;
     }
@@ -983,15 +1038,15 @@ function generateIdeaFromSignal(signal: any): any {
   };
   
   return {
-    title: titleDe,
-    description: contentDe,
+    title: signal.title.slice(0, 100),
+    description: signal.content.slice(0, 500),
     category: category,
     targetAudience: audiences[signal.source] || "SaaS-Gründer",
     revenueModel: "SaaS-Abonnement (€29-99/Monat)",
     mvpEffort: signal.painScore >= 6 ? "medium" : "low",
-    potential: signal.upvotes >= 50 ? "hoch" : signal.upvotes >= 10 ? "mittel" : "niedrig",
+    potential: signal.upvotes >= 50 ? "high" : signal.upvotes >= 10 ? "medium" : "low",
     painScore: signal.painScore,
-    painKeywords: signal.painKeywords.map((k: string) => EN_DE[k.toLowerCase()] || k).join(", "),
+    painKeywords: signal.painKeywords.join(", "),
     source: signal.source,
     sourceUrl: signal.sourceUrl,
   };
@@ -1096,15 +1151,19 @@ export async function POST(req: NextRequest) {
       .sort((a, b) => b.painScore - a.painScore)
       .slice(0, maxIdeas);
 
-    // In BusinessIdeas umwandeln und speichern
+    // In BusinessIdeas umwandeln, ÜBERSETZEN und speichern
     const savedIdeas = [];
     for (const signal of topSignals) {
       const idea = generateIdeaFromSignal(signal);
+      
+      // 🔥 KI-ÜBERSETZUNG (DeepSeek via OpenRouter)
+      const translated = await translateIdeaWithAI(idea.title, idea.description);
+      
       const saved = await prisma.businessIdea.create({
         data: {
           scoutRunId: scoutRun.id,
-          title: idea.title,
-          description: idea.description,
+          title: translated.title,
+          description: translated.description,
           category: idea.category,
           targetAudience: idea.targetAudience,
           revenueModel: idea.revenueModel,
