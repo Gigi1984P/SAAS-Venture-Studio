@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Settings, ToggleLeft, ToggleRight, Plus, Trash2, Save, X, RefreshCw, Globe, Rss, MessageSquare, Newspaper, Code } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Settings, ToggleLeft, ToggleRight, Plus, Trash2, Save, X, RefreshCw, Globe, Rss, MessageSquare, Newspaper, Code, Check } from "lucide-react";
 
 interface ScoutSource {
   id: string;
@@ -24,6 +24,7 @@ const CATEGORY_ICONS: Record<string, any> = {
   "rss-immobilien": Rss,
   "rss-logistik": Rss,
   "rss-buchhaltung": Rss,
+  custom: Globe,
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -35,6 +36,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   "rss-immobilien": "RSS Immobilien",
   "rss-logistik": "RSS Logistik",
   "rss-buchhaltung": "RSS Buchhaltung",
+  custom: "Custom",
 };
 
 export default function ScoutSourcesManager() {
@@ -44,6 +46,19 @@ export default function ScoutSourcesManager() {
   const [message, setMessage] = useState("");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<ScoutSource | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // Formular-State für neue Quelle
+  const [newSource, setNewSource] = useState({
+    name: "",
+    slug: "",
+    url: "",
+    category: "tech",
+    enabled: true,
+    maxResults: 20,
+    painBoost: 0,
+  });
 
   async function loadSources() {
     setLoading(true);
@@ -57,7 +72,25 @@ export default function ScoutSourcesManager() {
     setLoading(false);
   }
 
-  useEffect(() => { loadSources(); }, []);
+  useEffect(() => { 
+    if (open) loadSources(); 
+  }, [open]);
+
+  // Click-Outside Handler
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+        // Nur schließen wenn nicht im Add-Formular oder Edit-Modal
+        if (!showAddForm && !editing) {
+          setOpen(false);
+        }
+      }
+    }
+    if (open) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [open, showAddForm, editing]);
 
   async function toggleEnabled(source: ScoutSource) {
     const updated = sources.map(s => s.id === source.id ? { ...s, enabled: !s.enabled } : s);
@@ -116,31 +149,44 @@ export default function ScoutSourcesManager() {
     setTimeout(() => setMessage(""), 2000);
   }
 
-  async function addSource() {
-    const newSource = {
-      name: "Neue Quelle",
-      slug: `custom-${Date.now()}`,
-      url: "",
-      category: "tech",
-      enabled: true,
-      maxResults: 10,
-      painBoost: 0,
-      sortOrder: sources.length + 1,
-    };
+  async function addSource(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newSource.name || !newSource.slug) {
+      setMessage("Name und Slug sind erforderlich");
+      setTimeout(() => setMessage(""), 3000);
+      return;
+    }
+
+    setSaving(true);
     try {
       const res = await fetch("/api/scout-sources", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newSource),
       });
+      const data = await res.json();
       if (res.ok) {
         await loadSources();
+        setShowAddForm(false);
+        setNewSource({ name: "", slug: "", url: "", category: "tech", enabled: true, maxResults: 20, painBoost: 0 });
         setMessage("Neue Quelle hinzugefügt");
+      } else {
+        setMessage(data.error || "Fehler beim Hinzufügen");
       }
     } catch (e) {
       setMessage("Fehler beim Hinzufügen");
     }
-    setTimeout(() => setMessage(""), 2000);
+    setSaving(false);
+    setTimeout(() => setMessage(""), 3000);
+  }
+
+  // Auto-generiere slug aus name
+  function generateSlug(name: string) {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, "")
+      .replace(/\s+/g, "-")
+      .slice(0, 50) + "-" + Date.now().toString().slice(-4);
   }
 
   const grouped = sources.reduce((acc, s) => {
@@ -166,7 +212,7 @@ export default function ScoutSourcesManager() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-xl border bg-card p-6 shadow-2xl">
+      <div ref={modalRef} className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-xl border bg-card p-6 shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -180,7 +226,7 @@ export default function ScoutSourcesManager() {
           </div>
           <div className="flex items-center gap-2">
             {message && (
-              <span className="text-sm px-3 py-1 rounded-full bg-primary/10 text-primary">
+              <span className={`text-sm px-3 py-1 rounded-full ${message.includes("Fehler") ? "bg-red-100 text-red-700" : "bg-primary/10 text-primary"}`}>
                 {message}
               </span>
             )}
@@ -200,97 +246,198 @@ export default function ScoutSourcesManager() {
           </div>
         </div>
 
+        {/* Add Form */}
+        {showAddForm ? (
+          <form onSubmit={addSource} className="mb-6 rounded-lg border bg-muted/30 p-4 space-y-4">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Neue Quelle hinzufügen
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Name *</label>
+                <input
+                  type="text"
+                  value={newSource.name}
+                  onChange={e => {
+                    const name = e.target.value;
+                    setNewSource(prev => ({ 
+                      ...prev, 
+                      name,
+                      slug: prev.slug || generateSlug(name)
+                    }));
+                  }}
+                  placeholder="z.B. TechCrunch"
+                  className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Slug *</label>
+                <input
+                  type="text"
+                  value={newSource.slug}
+                  onChange={e => setNewSource(prev => ({ ...prev, slug: e.target.value }))}
+                  placeholder="techcrunch-1234"
+                  className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm"
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium">URL (RSS oder Webseite)</label>
+              <input
+                type="url"
+                value={newSource.url}
+                onChange={e => setNewSource(prev => ({ ...prev, url: e.target.value }))}
+                placeholder="https://techcrunch.com/feed/"
+                className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="text-sm font-medium">Kategorie</label>
+                <select
+                  value={newSource.category}
+                  onChange={e => setNewSource(prev => ({ ...prev, category: e.target.value }))}
+                  className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm"
+                >
+                  {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
+                    <option key={key} value={key}>{label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Max. Ergebnisse</label>
+                <input
+                  type="number"
+                  value={newSource.maxResults}
+                  onChange={e => setNewSource(prev => ({ ...prev, maxResults: parseInt(e.target.value) || 20 }))}
+                  className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm"
+                  min={1}
+                  max={100}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Pain Boost</label>
+                <input
+                  type="number"
+                  value={newSource.painBoost}
+                  onChange={e => setNewSource(prev => ({ ...prev, painBoost: parseInt(e.target.value) || 0 }))}
+                  className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm"
+                  min={0}
+                  max={5}
+                />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowAddForm(false)}
+                className="flex-1 rounded-lg border px-4 py-2 text-sm hover:bg-muted transition-colors"
+              >
+                Abbrechen
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
+              >
+                {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                Hinzufügen
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="mb-4">
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Neue Quelle hinzufügen
+            </button>
+          </div>
+        )}
+
+        {/* Sources List */}
         {loading ? (
           <div className="flex items-center justify-center h-32">
             <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <>
-            {/* Add Button */}
-            <div className="mb-4">
-              <button
-                onClick={addSource}
-                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-              >
-                <Plus className="h-4 w-4" />
-                Neue Quelle hinzufügen
-              </button>
-            </div>
-
-            {/* Sources by Category */}
-            <div className="space-y-6">
-              {Object.entries(grouped).map(([cat, items]) => (
-                <div key={cat} className="rounded-lg border overflow-hidden">
-                  <div className="bg-muted/50 px-4 py-2 text-sm font-semibold flex items-center gap-2">
-                    {(() => {
-                      const Icon = CATEGORY_ICONS[items[0]?.category] || Globe;
-                      return <Icon className="h-4 w-4" />;
-                    })()}
-                    {cat}
-                    <span className="text-xs text-muted-foreground font-normal ml-auto">
-                      {items.filter(s => s.enabled).length}/{items.length} aktiv
-                    </span>
-                  </div>
-                  <div className="divide-y">
-                    {items.sort((a, b) => a.sortOrder - b.sortOrder).map(source => (
-                      <div key={source.id} className="px-4 py-3 flex items-center gap-4 hover:bg-muted/30 transition-colors">
-                        {/* Toggle */}
-                        <button
-                          onClick={() => toggleEnabled(source)}
-                          className="flex-shrink-0"
-                        >
-                          {source.enabled ? (
-                            <ToggleRight className="h-6 w-6 text-emerald-500" />
-                          ) : (
-                            <ToggleLeft className="h-6 w-6 text-muted-foreground" />
-                          )}
-                        </button>
-
-                        {/* Name & Details */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className={`font-medium ${source.enabled ? "" : "text-muted-foreground line-through"}`}>
-                              {source.name}
-                            </span>
-                            <span className="text-xs text-muted-foreground">({source.slug})</span>
-                          </div>
-                          {source.url && (
-                            <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline truncate block">
-                              {source.url}
-                            </a>
-                          )}
-                        </div>
-
-                        {/* Stats */}
-                        <div className="hidden sm:flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>Max: {source.maxResults}</span>
-                          <span>Pain+{source.painBoost}</span>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => setEditing(editing?.id === source.id ? null : source)}
-                            className="p-2 rounded-lg hover:bg-muted transition-colors"
-                            title="Bearbeiten"
-                          >
-                            <Settings className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => deleteSource(source.id, source.name)}
-                            className="p-2 rounded-lg hover:bg-red-500/10 text-red-500 transition-colors"
-                            title="Löschen"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+          <div className="space-y-6">
+            {Object.entries(grouped).map(([cat, items]) => (
+              <div key={cat} className="rounded-lg border overflow-hidden">
+                <div className="bg-muted/50 px-4 py-2 text-sm font-semibold flex items-center gap-2">
+                  {(() => {
+                    const Icon = CATEGORY_ICONS[items[0]?.category] || Globe;
+                    return <Icon className="h-4 w-4" />;
+                  })()}
+                  {cat}
+                  <span className="text-xs text-muted-foreground font-normal ml-auto">
+                    {items.filter(s => s.enabled).length}/{items.length} aktiv
+                  </span>
                 </div>
-              ))}
-            </div>
-          </>
+                <div className="divide-y">
+                  {items.sort((a, b) => a.sortOrder - b.sortOrder).map(source => (
+                    <div key={source.id} className="px-4 py-3 flex items-center gap-4 hover:bg-muted/30 transition-colors">
+                      {/* Toggle */}
+                      <button
+                        onClick={() => toggleEnabled(source)}
+                        className="flex-shrink-0"
+                      >
+                        {source.enabled ? (
+                          <ToggleRight className="h-6 w-6 text-emerald-500" />
+                        ) : (
+                          <ToggleLeft className="h-6 w-6 text-muted-foreground" />
+                        )}
+                      </button>
+
+                      {/* Name & Details */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className={`font-medium ${source.enabled ? "" : "text-muted-foreground line-through"}`}>
+                            {source.name}
+                          </span>
+                          <span className="text-xs text-muted-foreground">({source.slug})</span>
+                        </div>
+                        {source.url && (
+                          <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline truncate block">
+                            {source.url}
+                          </a>
+                        )}
+                      </div>
+
+                      {/* Stats */}
+                      <div className="hidden sm:flex items-center gap-4 text-sm text-muted-foreground">
+                        <span>Max: {source.maxResults}</span>
+                        <span>Pain+{source.painBoost}</span>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setEditing(editing?.id === source.id ? null : source)}
+                          className="p-2 rounded-lg hover:bg-muted transition-colors"
+                          title="Bearbeiten"
+                        >
+                          <Settings className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => deleteSource(source.id, source.name)}
+                          className="p-2 rounded-lg hover:bg-red-500/10 text-red-500 transition-colors"
+                          title="Löschen"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
 
         {/* Edit Modal */}
