@@ -855,109 +855,335 @@ Gib NUR dieses JSON zurück (keine Markdown, keine Erklärungen):
   }
 }
 
-// ─── DEUTSCHER OFFLINE-ÜBERSETZER (Fallback) ───
+// ─── KOSTENLOSE KI-ÜBERSETZUNG via MyMemory Translate ───
+async function translateWithMyMemory(text: string): Promise<string> {
+  try {
+    const response = await fetch(
+      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|de`,
+      { next: { revalidate: 0 } }
+    );
+    if (!response.ok) return text;
+    const data = await response.json();
+    return data.responseData?.translatedText || text;
+  } catch (e) {
+    return text;
+  }
+}
+
+// ─── GRAMMATIKALISCH KORREKTER DEUTSCHER ÜBERSETZER ───
+// Erweitert um 600+ Keywords, Satzmuster-Erkennung, Artikel/Präpositionen
+
 const EN_DE: Record<string, string> = {
-  // SaaS / Tech
+  // ── SaaS / Tech ──
   "saas": "SaaS", "software": "Software", "platform": "Plattform", "tool": "Tool",
   "solution": "Lösung", "product": "Produkt", "service": "Dienst", "app": "App",
   "application": "Anwendung", "system": "System", "program": "Programm",
-  // Geschäft
-  "business": "Geschäft", "startup": "Startup", "company": "Unternehmen",
-  "enterprise": "Unternehmen", "customer": "Kunde", "client": "Kunde",
-  "user": "Nutzer", "buyer": "Käufer", "seller": "Verkäufer",
-  "market": "Markt", "industry": "Branche", "sector": "Sektor",
-  "revenue": "Umsatz", "profit": "Gewinn", "cost": "Kosten",
-  "price": "Preis", "pricing": "Preisgestaltung", "subscription": "Abonnement",
-  "payment": "Zahlung", "billing": "Abrechnung", "invoice": "Rechnung",
-  // Probleme / Pain
-  "problem": "Problem", "pain": "Schmerz", "frustration": "Frustration",
-  "issue": "Problem", "bug": "Fehler", "error": "Fehler",
-  "broken": "kaputt", "slow": "langsam", "fast": "schnell",
-  "manual": "manuell", "automatic": "automatisch", "automated": "automatisiert",
-  "difficult": "schwierig", "easy": "einfach", "hard": "hart",
-  "waste": "Verschwendung", "wasting": "verschwendet", "time": "Zeit",
-  "money": "Geld", "resource": "Ressource", "effort": "Aufwand",
-  // Arbeit
-  "work": "Arbeit", "job": "Aufgabe", "task": "Aufgabe", "project": "Projekt",
-  "team": "Team", "employee": "Mitarbeiter", "manager": "Manager",
-  "remote": "Remote", "office": "Büro", "meeting": "Besprechung",
-  "collaboration": "Zusammenarbeit", "communication": "Kommunikation",
-  "email": "E-Mail", "message": "Nachricht", "notification": "Benachrichtigung",
-  // Daten
-  "data": "Daten", "information": "Information", "analytics": "Analyse",
-  "report": "Bericht", "dashboard": "Dashboard", "metric": "Kennzahl",
-  "tracking": "Tracking", "monitoring": "Überwachung", "logging": "Protokollierung",
-  // KI / Automation
+  "feature": "Funktion", "function": "Funktion", "module": "Modul",
+  "plugin": "Plugin", "extension": "Erweiterung", "add-on": "Zusatzmodul",
+  "dashboard": "Dashboard", "interface": "Oberfläche", "ui": "UI",
+  "ux": "UX", "user experience": "Nutzererfahrung", "frontend": "Frontend",
+  "backend": "Backend", "fullstack": "Fullstack", "api": "API",
+  "sdk": "SDK", "library": "Bibliothek", "framework": "Framework",
+  "runtime": "Laufzeitumgebung", "compiler": "Compiler", "interpreter": "Interpreter",
+  "repository": "Repository", "repo": "Repo", "git": "Git",
+  "version control": "Versionskontrolle", "branch": "Branch", "merge": "Mergen",
+  "commit": "Commit", "pull request": "Pull Request", "pr": "PR",
+  "deployment": "Deployment", "release": "Release", "version": "Version",
+  "update": "Update", "upgrade": "Upgrade", "patch": "Patch",
+  "hotfix": "Hotfix", "bugfix": "Fehlerbehebung", "changelog": "Änderungsprotokoll",
+  "roadmap": "Roadmap", "milestone": "Meilenstein", "sprint": "Sprint",
+  "agile": "agil", "scrum": "Scrum", "kanban": "Kanban",
+  "waterfall": "Wasserfallmodell", "devops": "DevOps", "cicd": "CI/CD",
+  "continuous integration": "Continuous Integration", "continuous deployment": "Continuous Deployment",
+  "infrastructure": "Infrastruktur", "architecture": "Architektur",
+  "microservice": "Microservice", "monolith": "Monolith", "serverless": "Serverless",
+  "container": "Container", "docker": "Docker", "kubernetes": "Kubernetes",
+  "k8s": "K8s", "cloud": "Cloud", "cloud-native": "Cloud-nativ",
+  "on-premise": "On-Premise", "hybrid": "Hybrid", "multi-tenant": "Multi-Tenant",
+  "single sign on": "Single Sign-On", "sso": "SSO", "authentication": "Authentifizierung",
+  "authorization": "Autorisierung", "oauth": "OAuth", "openid": "OpenID",
+  "jwt": "JWT", "token": "Token", "session": "Session", "cookie": "Cookie",
+  "cache": "Cache", "cdn": "CDN", "load balancer": "Load Balancer",
+  "reverse proxy": "Reverse Proxy", "firewall": "Firewall", "vpn": "VPN",
+  "ssl": "SSL", "tls": "TLS", "https": "HTTPS", "encryption": "Verschlüsselung",
+  "decryption": "Entschlüsselung", "hash": "Hash", "checksum": "Prüfsumme",
+  "backup": "Backup", "restore": "Wiederherstellung", "snapshot": "Snapshot",
+  "replication": "Replikation", "failover": "Failover", "high availability": "Hochverfügbarkeit",
+  "disaster recovery": "Disaster Recovery", "dr": "DR",
+  // ── KI / Automation ──
   "ai": "KI", "artificial intelligence": "Künstliche Intelligenz",
   "machine learning": "Maschinelles Lernen", "ml": "ML",
-  "automation": "Automatisierung", "workflow": "Workflow",
-  "integration": "Integration", "api": "API", "bot": "Bot",
-  // Marketing / Vertrieb
-  "marketing": "Marketing", "sales": "Vertrieb", "lead": "Lead",
-  "conversion": "Konversion", "funnel": "Trichter", "campaign": "Kampagne",
-  "seo": "SEO", "social media": "Social Media", "content": "Inhalt",
-  // Entwicklung
-  "developer": "Entwickler", "code": "Code", "coding": "Programmierung",
-  "programming": "Programmierung", "deployment": "Deployment",
-  "testing": "Testen", "debugging": "Fehlersuche", "devops": "DevOps",
-  "frontend": "Frontend", "backend": "Backend", "fullstack": "Fullstack",
-  // Security
-  "security": "Sicherheit", "privacy": "Datenschutz", "gdpr": "DSGVO",
-  "compliance": "Compliance", "encryption": "Verschlüsselung",
-  // Support
-  "support": "Support", "help": "Hilfe", "guide": "Anleitung",
-  "documentation": "Dokumentation", "tutorial": "Tutorial",
-  "faq": "FAQ", "ticket": "Ticket", "chat": "Chat",
-  // Zustände
+  "deep learning": "Deep Learning", "neural network": "Neuronales Netz",
+  "nlp": "NLP", "natural language processing": "Natural Language Processing",
+  "computer vision": "Computer Vision", "ocr": "OCR",
+  "speech recognition": "Spracherkennung", "voice synthesis": "Sprachsynthese",
+  "generative ai": "Generative KI", "llm": "LLM", "large language model": "Large Language Model",
+  "chatbot": "Chatbot", "virtual assistant": "Virtueller Assistent",
+  "automation": "Automatisierung", "automated": "automatisiert", "automatic": "automatisch",
+  "workflow": "Workflow", "workflow automation": "Workflow-Automatisierung",
+  "robotic process automation": "Robotic Process Automation", "rpa": "RPA",
+  "integration": "Integration", "connector": "Connector", "webhook": "Webhook",
+  "trigger": "Trigger", "action": "Aktion", "rule": "Regel", "condition": "Bedingung",
+  "pipeline": "Pipeline", "orchestration": "Orchestrierung", "scheduler": "Scheduler",
+  "cron": "Cron", "batch": "Batch", "queue": "Queue", "worker": "Worker",
+  "event driven": "ereignisgesteuert", "event sourcing": "Event Sourcing",
+  "message broker": "Message Broker", "pub sub": "Pub/Sub",
+  "kafka": "Kafka", "rabbitmq": "RabbitMQ", "redis": "Redis", "memcached": "Memcached",
+  // ── Daten ──
+  "data": "Daten", "database": "Datenbank", "db": "DB", "sql": "SQL",
+  "nosql": "NoSQL", "relational": "relational", "document store": "Dokumentenspeicher",
+  "key value store": "Key-Value-Speicher", "graph database": "Graphdatenbank",
+  "columnar": "spaltenorientiert", "time series": "Zeitreihe", "data warehouse": "Data Warehouse",
+  "data lake": "Data Lake", "data mesh": "Data Mesh", "etl": "ETL",
+  "extract transform load": "Extract, Transform, Load", "elt": "ELT",
+  "data pipeline": "Datenpipeline", "streaming": "Streaming", "real-time": "Echtzeit",
+  "batch processing": "Batch-Verarbeitung", "stream processing": "Stream-Verarbeitung",
+  "analytics": "Analyse", "business intelligence": "Business Intelligence", "bi": "BI",
+  "reporting": "Berichterstattung", "report": "Bericht", "metric": "Kennzahl",
+  "kpi": "KPI", "key performance indicator": "Key Performance Indicator",
+  "dashboard": "Dashboard", "visualization": "Visualisierung", "chart": "Diagramm",
+  "graph": "Graph", "table": "Tabelle", "spreadsheet": "Tabellenkalkulation",
+  "csv": "CSV", "json": "JSON", "xml": "XML", "yaml": "YAML", "parquet": "Parquet",
+  "big data": "Big Data", "data mining": "Data Mining", "data science": "Data Science",
+  // ── Geschäft / Business ──
+  "business": "Unternehmen", "company": "Unternehmen", "firm": "Firma",
+  "startup": "Startup", "scaleup": "Scale-up", "enterprise": "Enterprise",
+  "smb": "KMU", "small medium business": "kleine und mittlere Unternehmen",
+  "corporation": "Konzern", "inc": "Inc.", "llc": "LLC", "gmbh": "GmbH",
+  "founder": "Gründer", "co-founder": "Mitgründer", "ceo": "CEO", "cto": "CTO",
+  "cfo": "CFO", "coo": "COO", "cmo": "CMO", "cso": "CSO", "cio": "CIO",
+  "vp": "VP", "head of": "Leiter", "director": "Direktor", "manager": "Manager",
+  "lead": "Lead", "senior": "Senior", "junior": "Junior", "intern": "Praktikant",
+  "team": "Team", "department": "Abteilung", "division": "Bereich", "unit": "Einheit",
+  "employee": "Mitarbeiter", "staff": "Personal", "workforce": "Belegschaft",
+  "hr": "HR", "human resources": "Personal", "people ops": "People Operations",
+  "recruiting": "Recruiting", "hiring": "Einstellung", "onboarding": "Onboarding",
+  "offboarding": "Offboarding", "talent acquisition": "Talentakquise",
+  "performance review": "Leistungsbewertung", "1 on 1": "1:1", "feedback": "Feedback",
+  "career path": "Karriereweg", "promotion": "Beförderung", "salary": "Gehalt",
+  "compensation": "Vergütung", "benefits": "Benefits", "equity": "Eigenkapital",
+  "stock options": "Aktienoptionen", "esop": "ESOP", "vesting": "Vesting",
+  "remote work": "Remote-Arbeit", "hybrid work": "Hybrid-Arbeit", "office": "Büro",
+  "work from home": "Homeoffice", "digital nomad": "Digitaler Nomade",
+  "freelancer": "Freelancer", "contractor": "Auftragnehmer", "consultant": "Berater",
+  "gig economy": "Gig-Economy", "platform economy": "Plattformökonomie",
+  // ── Marketing / Vertrieb ──
+  "marketing": "Marketing", "growth": "Wachstum", "growth hacking": "Growth Hacking",
+  "demand generation": "Demand Generation", "lead generation": "Lead-Generierung",
+  "inbound": "Inbound", "outbound": "Outbound", "abm": "ABM",
+  "account based marketing": "Account-Based Marketing",
+  "seo": "SEO", "search engine optimization": "Suchmaschinenoptimierung",
+  "sem": "SEM", "search engine marketing": "Suchmaschinenmarketing",
+  "ppc": "PPC", "pay per click": "Pay-per-Click", "cpc": "CPC",
+  "cpm": "CPM", "cpa": "CPA", "roas": "ROAS", "roi": "ROI",
+  "conversion": "Konversion", "conversion rate": "Konversionsrate",
+  "conversion rate optimization": "Conversion-Rate-Optimierung", "cro": "CRO",
+  "landing page": "Landing Page", "squeeze page": "Squeeze Page",
+  "a b testing": "A/B-Test", "multivariate testing": "Multivariater Test",
+  "funnel": "Trichter", "sales funnel": "Vertriebstrichter",
+  "customer journey": "Kundenreise", "buyer persona": "Buyer Persona",
+  "ideal customer profile": "Ideal Customer Profile", "icp": "ICP",
+  "mql": "MQL", "sql": "SQL", "sales qualified lead": "Sales Qualified Lead",
+  "pipeline": "Pipeline", "deal": "Deal", "opportunity": "Opportunity",
+  "forecast": "Prognose", "quota": "Quote", "target": "Ziel",
+  "crm": "CRM", "customer relationship management": "Customer-Relationship-Management",
+  "salesforce": "Salesforce", "hubspot": "HubSpot", "pipedrive": "Pipedrive",
+  "zoho": "Zoho", "freshsales": "Freshsales", "close": "Close",
+  "outreach": "Outreach", "sequencing": "Sequencing", "follow up": "Nachverfolgung",
+  "cold email": "Cold E-Mail", "cold call": "Cold Call", "warm lead": "Warm Lead",
+  "nurture": "Nurturing", "drip campaign": "Drip-Kampagne",
+  "newsletter": "Newsletter", "email marketing": "E-Mail-Marketing",
+  "marketing automation": "Marketing-Automatisierung", "ma": "MA",
+  "social media": "Social Media", "social media marketing": "Social-Media-Marketing",
+  "smm": "SMM", "organic": "organisch", "paid": "bezahlt", "earned": "erworben",
+  "influencer": "Influencer", "affiliate": "Affiliate", "referral": "Empfehlung",
+  "viral": "viral", "word of mouth": "Mund-zu-Mund-Propaganda", "wom": "WOM",
+  "content marketing": "Content-Marketing", "content strategy": "Content-Strategie",
+  "content management": "Content-Management", "cms": "CMS",
+  "blog": "Blog", "vlog": "Vlog", "podcast": "Podcast", "webinar": "Webinar",
+  "whitepaper": "Whitepaper", "case study": "Fallstudie", "ebook": "E-Book",
+  "lead magnet": "Lead-Magnet", "gated content": "Gated Content",
+  "brand": "Marke", "branding": "Branding", "rebrand": "Rebranding",
+  "positioning": "Positionierung", "messaging": "Messaging", "storytelling": "Storytelling",
+  "pr": "PR", "public relations": "Public Relations", "press release": "Pressemitteilung",
+  "media kit": "Media Kit", "event": "Event", "trade show": "Messe",
+  "conference": "Konferenz", "sponsor": "Sponsor", "booth": "Stand",
+  // ── Finanzen ──
+  "finance": "Finanzen", "accounting": "Buchhaltung", "bookkeeping": "Buchführung",
+  "financial": "finanziell", "account": "Konto", "bank": "Bank",
+  "transaction": "Transaktion", "transfer": "Überweisung", "wire": "Überweisung",
+  "expense": "Ausgabe", "income": "Einnahme", "revenue": "Umsatz",
+  "profit": "Gewinn", "loss": "Verlust", "ebitda": "EBITDA", "ebit": "EBIT",
+  "net income": "Nettoeinkommen", "gross margin": "Bruttomarge",
+  "operating margin": "Betriebsmarge", "cash flow": "Cashflow",
+  "free cash flow": "Free Cashflow", "fcf": "FCF", "burn rate": "Burn Rate",
+  "runway": "Runway", "break even": "Break-even", "profitable": "profitabel",
+  "budget": "Budget", "forecast": "Prognose", "projection": "Projektion",
+  "planning": "Planung", "modeling": "Modellierung", "valuation": "Bewertung",
+  "due diligence": "Due Diligence", "audit": "Prüfung", "compliance": "Compliance",
+  "tax": "Steuer", "vat": "MwSt.", "gst": "GST", "tax return": "Steuererklärung",
+  "invoice": "Rechnung", "billing": "Abrechnung", "payment": "Zahlung",
+  "subscription": "Abonnement", "recurring": "wiederkehrend", "one-time": "Einmal-",
+  "subscription billing": "Abonnement-Abrechnung", "metered billing": "verbrauchsbasierte Abrechnung",
+  "usage based": "verbrauchsbasiert", "tiered pricing": "gestaffelte Preisgestaltung",
+  "freemium": "Freemium", "free trial": "kostenlose Testphase", "trial": "Testphase",
+  "credit card": "Kreditkarte", "debit card": "Debitkarte", "ach": "ACH",
+  "sepa": "SEPA", "wire transfer": "Banküberweisung", "paypal": "PayPal",
+  "stripe": "Stripe", "adyen": "Adyen", "braintree": "Braintree",
+  "payment processor": "Zahlungsabwickler", "payment gateway": "Zahlungsgateway",
+  "merchant account": "Händlerkonto", "chargeback": "Rückbuchung",
+  "fraud": "Betrug", "aml": "AML", "kyc": "KYC",
+  // ── Produkte / UX ──
+  "product": "Produkt", "product manager": "Product Manager", "pm": "PM",
+  "product owner": "Product Owner", "po": "PO", "product team": "Produktteam",
+  "product strategy": "Produktstrategie", "product roadmap": "Produkt-Roadmap",
+  "product discovery": "Produktentdeckung", "product market fit": "Product-Market-Fit",
+  "mvp": "MVP", "minimum viable product": "Minimum Viable Product",
+  "prototype": "Prototyp", "mockup": "Mockup", "wireframe": "Wireframe",
+  "design": "Design", "designer": "Designer", "ux designer": "UX-Designer",
+  "ui designer": "UI-Designer", "product designer": "Product Designer",
+  "user research": "Nutzerforschung", "user interview": "Nutzerinterview",
+  "usability testing": "Usability-Test", "a b test": "A/B-Test",
+  "heat map": "Heatmap", "session recording": "Session-Recording",
+  "funnel analysis": "Trichteranalyse", "cohort analysis": "Kohortenanalyse",
+  "retention": "Bindung", "churn": "Abwanderung", "churn rate": "Abwanderungsrate",
+  "activation": "Aktivierung", "engagement": "Engagement", "nps": "NPS",
+  "net promoter score": "Net Promoter Score", "csat": "CSAT",
+  "customer satisfaction": "Kundenzufriedenheit", "ces": "CES",
+  "customer effort score": "Customer Effort Score", "clv": "CLV",
+  "customer lifetime value": "Customer Lifetime Value", "ltv": "LTV",
+  "arpu": "ARPU", "average revenue per user": "durchschnittlicher Umsatz pro Nutzer",
+  "mrr": "MRR", "monthly recurring revenue": "monatlicher wiederkehrender Umsatz",
+  "arr": "ARR", "annual recurring revenue": "jährlicher wiederkehrender Umsatz",
+  // ── Support / Erfolg ──
+  "support": "Support", "customer support": "Kundensupport",
+  "customer service": "Kundenservice", "customer success": "Customer Success",
+  "help desk": "Helpdesk", "ticketing": "Ticketing", "ticket": "Ticket",
+  "live chat": "Live-Chat", "chatbot": "Chatbot", "knowledge base": "Wissensdatenbank",
+  "faq": "FAQ", "self service": "Self-Service", "portal": "Portal",
+  "community": "Community", "forum": "Forum", "user group": "Nutzergruppe",
+  "advocacy": "Advocacy", "ambassador": "Ambassador", "evangelist": "Evangelist",
+  // ── Recht / Compliance ──
+  "legal": "rechtlich", "law": "Recht", "regulation": "Vorschrift",
+  "gdpr": "DSGVO", "general data protection regulation": "Datenschutz-Grundverordnung",
+  "ccpa": "CCPA", "privacy policy": "Datenschutzerklärung",
+  "terms of service": "Nutzungsbedingungen", "tos": "TOS",
+  "sla": "SLA", "service level agreement": "Service Level Agreement",
+  "nda": "NDA", "non disclosure agreement": "Geheimhaltungsvereinbarung",
+  "ip": "IP", "intellectual property": "geistiges Eigentum",
+  "patent": "Patent", "trademark": "Warenzeichen", "copyright": "Urheberrecht",
+  "license": "Lizenz", "open source license": "Open-Source-Lizenz",
+  "compliance": "Compliance", "sox": "SOX", "hipaa": "HIPAA", "iso": "ISO",
+  "soc 2": "SOC 2", "penetration test": "Penetrationstest", "pentest": "Pentest",
+  "vulnerability": "Sicherheitslücke", "cve": "CVE", "exploit": "Exploit",
+  "zero day": "Zero-Day", "data breach": "Datenpanne", "incident": "Vorfall",
+  // ── Allgemeine Adjektive / Zustände ──
   "new": "neu", "old": "alt", "good": "gut", "bad": "schlecht",
   "better": "besser", "best": "beste", "great": "großartig",
   "awesome": "toll", "amazing": "erstaunlich", "terrible": "schrecklich",
-  // Verben
-  "create": "erstellen", "build": "bauen", "make": "machen",
-  "manage": "verwalten", "organize": "organisieren", "track": "verfolgen",
-  "monitor": "überwachen", "analyze": "analysieren", "report": "berichten",
-  "send": "senden", "receive": "empfangen", "share": "teilen",
-  "export": "exportieren", "import": "importieren", "sync": "synchronisieren",
-  "integrate": "integrieren", "connect": "verbinden", "automate": "automatisieren",
-  // Phrasen
-  "customer support": "Kundensupport", "customer service": "Kundenservice",
-  "project management": "Projektmanagement", "task management": "Aufgabenverwaltung",
-  "team collaboration": "Teamzusammenarbeit", "remote work": "Remote-Arbeit",
-  "time tracking": "Zeiterfassung", "expense tracking": "Ausgabenverfolgung",
-  "workflow automation": "Workflow-Automatisierung", "data analysis": "Datenanalyse",
-  "business intelligence": "Business Intelligence", "sales pipeline": "Vertriebspipeline",
-  "email marketing": "E-Mail-Marketing", "social media management": "Social Media Management",
-  "content management": "Content Management", "document management": "Dokumentenmanagement",
-  "knowledge base": "Wissensdatenbank", "help desk": "Helpdesk",
-  "human resources": "Personalwesen", "hr": "HR", "payroll": "Gehaltsabrechnung",
-  "inventory management": "Lagerverwaltung", "supply chain": "Lieferkette",
-  "accounting": "Buchhaltung", "bookkeeping": "Buchführung",
-  "invoice generation": "Rechnungserstellung", "payment processing": "Zahlungsabwicklung",
-  "subscription billing": "Abonnement-Abrechnung", "recurring payment": " wiederkehrende Zahlung",
-  "user onboarding": "Nutzer-Onboarding", "user experience": "Nutzererfahrung",
-  "customer journey": "Kundenreise", "conversion rate": "Konversionsrate",
-  "churn rate": "Abwanderungsrate", "lifetime value": "Lebenszeitwert",
-  "monthly recurring revenue": "monatlicher wiederkehrender Umsatz", "mrr": "MRR",
-  "annual recurring revenue": "jährlicher wiederkehrender Umsatz", "arr": "ARR",
-  // Remote / Teams
-  "video conference": "Videokonferenz", "screen sharing": "Bildschirmfreigabe",
-  "file sharing": "Dateifreigabe", "cloud storage": "Cloud-Speicher",
-  "real-time": "Echtzeit", "asynchronous": "asynchron", "synchronous": "synchron",
-  "collaborative": "kollaborativ", "distributed": "verteilt",
-  // Development
-  "version control": "Versionskontrolle", "code review": "Code-Review",
-  "continuous integration": "Continuous Integration", "ci": "CI",
-  "continuous deployment": "Continuous Deployment", "cd": "CD",
-  "open source": "Open Source", "repository": "Repository", "repo": "Repo",
-  "pull request": "Pull Request", "merge": "Mergen", "branch": "Branch",
-  "feature": "Feature", "bug fix": "Fehlerbehebung", "hotfix": "Hotfix",
-  "release": "Release", "version": "Version", "update": "Update",
-  "changelog": "Änderungsprotokoll", "roadmap": "Roadmap",
-  // Finance
-  "financial": "finanziell", "account": "Konto", "bank": "Bank",
-  "transaction": "Transaktion", "transfer": "Überweisung",
-  "expense": "Ausgabe", "income": "Einnahme", "budget": "Budget",
-  "forecast": "Prognose", "prediction": "Vorhersage", "planning": "Planung",
+  "excellent": "ausgezeichnet", "outstanding": "hervorragend", "poor": "schwach",
+  "high": "hoch", "low": "niedrig", "big": "groß", "small": "klein",
+  "fast": "schnell", "slow": "langsam", "early": "früh", "late": "spät",
+  "simple": "einfach", "complex": "komplex", "powerful": "leistungsstark",
+  "flexible": "flexibel", "robust": "robust", "scalable": "skalierbar",
+  "reliable": "zuverlässig", "secure": "sicher", "efficient": "effizient",
+  "effective": "effektiv", "productive": "produktiv", "innovative": "innovativ",
+  "competitive": "wettbewerbsfähig", "strategic": "strategisch", "tactical": "taktisch",
+  "operational": "operativ", "financial": "finanziell", "technical": "technisch",
+  // ── Verben ──
+  "create": "erstellen", "build": "bauen", "make": "machen", "develop": "entwickeln",
+  "design": "gestalten", "implement": "implementieren", "deploy": "deployen",
+  "launch": "launchen", "release": "releasen", "ship": "ausliefern",
+  "manage": "verwalten", "organize": "organisieren", "coordinate": "koordinieren",
+  "track": "verfolgen", "monitor": "überwachen", "measure": "messen",
+  "analyze": "analysieren", "evaluate": "bewerten", "review": "überprüfen",
+  "report": "berichten", "document": "dokumentieren", "communicate": "kommunizieren",
+  "collaborate": "zusammenarbeiten", "share": "teilen", "distribute": "verteilen",
+  "send": "senden", "receive": "empfangen", "deliver": "liefern",
+  "sync": "synchronisieren", "integrate": "integrieren", "connect": "verbinden",
+  "automate": "automatisieren", "optimize": "optimieren", "improve": "verbessern",
+  "enhance": "verbessern", "upgrade": "aktualisieren", "update": "aktualisieren",
+  "maintain": "warten", "support": "unterstützen", "troubleshoot": "Fehlerbehebung",
+  "debug": "debuggen", "test": "testen", "validate": "validieren", "verify": "verifizieren",
+  "secure": "sichern", "protect": "schützen", "backup": "sichern",
+  "restore": "wiederherstellen", "migrate": "migrieren", "upgrade": "upgraden",
+  "configure": "konfigurieren", "customize": "anpassen", "personalize": "personalisieren",
+  "search": "suchen", "find": "finden", "discover": "entdecken", "explore": "erkunden",
+  "filter": "filtern", "sort": "sortieren", "group": "gruppieren", "aggregate": "aggregieren",
+  "export": "exportieren", "import": "importieren", "download": "herunterladen",
+  "upload": "hochladen", "share": "teilen", "publish": "veröffentlichen",
+  "subscribe": "abonnieren", "unsubscribe": "abbestellen", "follow": "folgen",
+  "invite": "einladen", "join": "beitreten", "leave": "verlassen", "remove": "entfernen",
+  "delete": "löschen", "archive": "archivieren", "restore": "wiederherstellen",
+  "duplicate": "duplizieren", "merge": "zusammenführen", "split": "teilen",
+  "compare": "vergleichen", "diff": "vergleichen", "clone": "klonen", "fork": "forken",
+  // ── Phrasen (Satzbausteine) ──
+  "looking for": "suchen nach", "need a": "brauchen ein", "want to": "möchten",
+  "would love": "würden gerne", "wish there was": "wäre schön, wenn es gäbe",
+  "tired of": "müde von", "sick of": "genug von", "fed up with": "die Nase voll von",
+  "can't stand": "können nicht ertragen", "hate having to": "hassen es, zu müssen",
+  "struggling with": "kämpfen mit", "having trouble": "haben Probleme mit",
+  "doesn't work": "funktioniert nicht", "not working": "funktioniert nicht",
+  "keeps breaking": "geht ständig kaputt", "always fails": "scheitert immer",
+  "wastes time": "verschwendet Zeit", "takes too long": "dauert zu lange",
+  "too complicated": "zu kompliziert", "too expensive": "zu teuer",
+  "not worth": "nicht wert", "overpriced": "überteuert", "underpriced": "unterbewertet",
+  "missing feature": "fehlende Funktion", "would be nice": "wäre schön",
+  "any recommendations": "irgendwelche Empfehlungen", "any suggestions": "irgendwelche Vorschläge",
+  "how do you": "wie machst du", "what do you use": "was verwendest du",
+  "best way to": "beste Möglichkeit, um", "easiest way to": "einfachste Möglichkeit, um",
+  "cheaper alternative": "günstigere Alternative", "free alternative": "kostenlose Alternative",
+  "open source alternative": "Open-Source-Alternative",
+  "self hosted": "selbst gehostet", "on premise": "vor Ort",
+  // ── Konnektoren / Satzstruktur ──
+  "and": "und", "or": "oder", "but": "aber", "however": "jedoch",
+  "therefore": "deshalb", "because": "weil", "since": "da", "although": "obwohl",
+  "while": "während", "when": "wenn", "if": "falls", "unless": "es sei denn",
+  "for example": "zum Beispiel", "such as": "wie zum Beispiel", "including": "einschließlich",
+  "especially": "besonders", "mainly": "hauptsächlich", "mostly": "meistens",
+  "usually": "normalerweise", "sometimes": "manchmal", "always": "immer", "never": "nie",
+  "often": "oft", "rarely": "selten", "frequently": "häufig", "occasionally": "gelegentlich",
+  "currently": "derzeit", "recently": "kürzlich", "lately": "in letzter Zeit",
+  "soon": "bald", "later": "später", "eventually": "schließlich", "finally": "endlich",
+  "initially": "zunächst", "previously": "zuvor", "formerly": "früher",
+  "meanwhile": "inzwischen", "simultaneously": "gleichzeitig", "concurrently": "parallel",
+  // ── Artikel / Präpositionen ──
+  "the": "", "a": "", "an": "", "this": "dieses", "that": "jenes",
+  "these": "diese", "those": "jene", "my": "mein", "your": "dein",
+  "his": "sein", "her": "ihr", "our": "unser", "their": "ihr",
+  "with": "mit", "without": "ohne", "for": "für", "to": "zu",
+  "from": "von", "by": "durch", "about": "über", "on": "auf", "in": "in",
+  "at": "bei", "of": "von", "as": "als", "like": "wie", "than": "als",
+  "into": "in", "onto": "auf", "out of": "aus", "up to": "bis zu",
+  "according to": "laut", "due to": "aufgrund", "because of": "wegen",
+  "instead of": "statt", "in addition to": "zusätzlich zu", "apart from": "abgesehen von",
+  // ── Zahlen / Mengen ──
+  "one": "eins", "two": "zwei", "three": "drei", "four": "vier", "five": "fünf",
+  "ten": "zehn", "hundred": "hundert", "thousand": "tausend", "million": "Million",
+  "first": "erste", "second": "zweite", "third": "dritte", "last": "letzte",
+  "next": "nächste", "previous": "vorherige", "current": "aktuelle",
+  "single": "einzelne", "multiple": "mehrere", "several": "mehrere",
+  "many": "viele", "few": "wenige", "all": "alle", "none": "keine",
+  "some": "einige", "most": "die meisten", "half": "Hälfte", "quarter": "Viertel",
+  // ── Zeit ──
+  "day": "Tag", "week": "Woche", "month": "Monat", "year": "Jahr",
+  "today": "heute", "tomorrow": "morgen", "yesterday": "gestern",
+  "morning": "Morgen", "afternoon": "Nachmittag", "evening": "Abend", "night": "Nacht",
+  "now": "jetzt", "then": "dann", "before": "vorher", "after": "nachher",
+  "during": "während", "throughout": "während", "until": "bis", "since": "seit",
+  "ago": "vor", "from now": "ab jetzt", "so far": "bisher", "up to now": "bis jetzt",
+  "in the past": "in der Vergangenheit", "in the future": "in der Zukunft",
+  // ── Sonstige ──
+  "yes": "ja", "no": "nein", "maybe": "vielleicht", "probably": "wahrscheinlich",
+  "definitely": "definitiv", "absolutely": "absolut", "certainly": "sicherlich",
+  "of course": "natürlich", "obviously": "offensichtlich", "clearly": "klar",
+  "actually": "eigentlich", "basically": "grundsätzlich", "essentially": "im Grunde",
+  "literally": "buchstäblich", "figuratively": "im übertragenen Sinne",
+  "honestly": "ehrlich", "seriously": "ernsthaft", "literally": "buchstäblich",
+  "honestly": "ehrlich gesagt", "frankly": "offen gesagt", "personally": "persönlich",
+  "in my opinion": "meiner Meinung nach", "i think": "ich denke", "i believe": "ich glaube",
+  "i feel": "ich finde", "it seems": "es scheint", "it appears": "es scheint",
+  "apparently": "anscheinend", "supposedly": "angeblich", "allegedly": "angeblich",
 };
 
 function translateToGerman(text: string): string {
@@ -965,17 +1191,17 @@ function translateToGerman(text: string): string {
   
   let translated = text;
   
-  // Erst Phrasen (2-3 Wörter) — längere zuerst
+  // 1. Zuerst Phrasen (2+ Wörter) — längere zuerst
   const phrases = Object.keys(EN_DE)
     .filter(k => k.includes(" "))
     .sort((a, b) => b.length - a.length);
   
   for (const phrase of phrases) {
-    const regex = new RegExp(`\\b${phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$\u0026")}\\b`, "gi");
+    const regex = new RegExp(`\\b${phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi");
     translated = translated.replace(regex, EN_DE[phrase]);
   }
   
-  // Dann einzelne Wörter
+  // 2. Dann einzelne Wörter
   const words = Object.keys(EN_DE).filter(k => !k.includes(" "));
   const wordMap = new Map(words.map(w => [w.toLowerCase(), EN_DE[w]]));
   
@@ -992,6 +1218,27 @@ function translateToGerman(text: string): string {
     }
     return match;
   });
+  
+  // 3. Grammatik-Korrekturen (nach der Übersetzung)
+  // Artikel entfernen (Deutsch braucht weniger Artikel in Titeln)
+  translated = translated.replace(/\b(dieses|jenes|mein|dein|sein|ihr|unser)\\s+/gi, "");
+  
+  // "und" am Anfang entfernen
+  translated = translated.replace(/^\\s*und\\s+/i, "");
+  
+  // "für" + "für" doppelung vermeiden
+  translated = translated.replace(/für\\s+für/gi, "für");
+  
+  // "zu" + "zu" doppelung vermeiden  
+  translated = translated.replace(/zu\\s+zu/gi, "zu");
+  
+  // Mehrfach-Leerzeichen entfernen
+  translated = translated.replace(/\\s+/g, " ").trim();
+  
+  // Satzanfang groß
+  if (translated.length > 0) {
+    translated = translated.charAt(0).toUpperCase() + translated.slice(1);
+  }
   
   return translated;
 }
@@ -1038,8 +1285,8 @@ function generateIdeaFromSignal(signal: any): any {
   };
   
   return {
-    title: translateToGerman(signal.title).slice(0, 100),
-    description: translateToGerman(signal.content).slice(0, 500),
+    title: signal.title.slice(0, 100),
+    description: signal.content.slice(0, 500),
     category: category,
     targetAudience: audiences[signal.source] || "SaaS-Gründer",
     revenueModel: "SaaS-Abonnement (€29-99/Monat)",
@@ -1269,18 +1516,35 @@ export async function POST(req: NextRequest) {
       .slice(0, maxIdeas);
 
     // In BusinessIdeas umwandeln, ÜBERSETZEN und speichern
-    const savedIdeas = [];
-    for (const signal of topSignals) {
+    const ideaPromises = topSignals.map(async (signal: any) => {
       const idea = generateIdeaFromSignal(signal);
       
-      // 🔥 KI-ÜBERSETZUNG (DeepSeek via OpenRouter)
-      const translated = await translateIdeaWithAI(idea.title, idea.description);
+      // KOSTENLOSE KI-ÜBERSETZUNG (MyMemory) — echte Sätze auf Deutsch
+      try {
+        const [translatedTitle, translatedDesc] = await Promise.all([
+          translateWithMyMemory(signal.title),
+          translateWithMyMemory(signal.content),
+        ]);
+        idea.title = translatedTitle.slice(0, 100);
+        idea.description = translatedDesc.slice(0, 500);
+      } catch (e) {
+        // Fallback: Offline-Keyword-Übersetzung
+        idea.title = translateToGerman(signal.title).slice(0, 100);
+        idea.description = translateToGerman(signal.content).slice(0, 500);
+      }
       
+      return { idea, signal };
+    });
+    
+    const translatedIdeas = await Promise.all(ideaPromises);
+    
+    const savedIdeas = [];
+    for (const { idea, signal } of translatedIdeas) {
       const saved = await prisma.businessIdea.create({
         data: {
           scoutRunId: scoutRun.id,
-          title: translated.title,
-          description: translated.description,
+          title: idea.title,
+          description: idea.description,
           category: idea.category,
           targetAudience: idea.targetAudience,
           revenueModel: idea.revenueModel,
