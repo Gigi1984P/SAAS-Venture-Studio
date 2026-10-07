@@ -14,15 +14,15 @@
     },
     {
       "path": "/api/cron/auto-scout",
-      "schedule": "*/30 * * * *"
+      "schedule": "*/15 * * * *"
     },
     {
       "path": "/api/cron/auto-convert",
-      "schedule": "5,35 * * * *"
+      "schedule": "3,18,33,48 * * * *"
     },
     {
       "path": "/api/cron/pipeline",
-      "schedule": "10,40 * * * *"
+      "schedule": "6,21,36,51 * * * *"
     },
     {
       "path": "/api/dashboard/snapshot",
