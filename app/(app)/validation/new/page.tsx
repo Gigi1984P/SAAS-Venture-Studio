@@ -4,11 +4,16 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 export default async function NewValidationSprintPage() {
-  const opportunities = await prisma.opportunity.findMany({
-    orderBy: { scoreB: "desc" },
-    select: { id: true, title: true, scoreA: true, scoreB: true },
-    take: 50,
-  });
+  let opportunities: any[] = [];
+  try {
+    opportunities = await prisma.opportunity.findMany({
+      orderBy: { scoreB: "desc" },
+      select: { id: true, title: true, scoreA: true, scoreB: true },
+      take: 50,
+    });
+  } catch {
+    opportunities = [];
+  }
 
   async function createSprint(formData: FormData) {
     "use server";

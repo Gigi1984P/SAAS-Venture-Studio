@@ -2863,3 +2863,38 @@ model Subscription {
   @@index([organizationId, status])
   @@map("subscriptions")
 }
+
+// ============================================================
+// DASHBOARD & AUTOMATION
+// ============================================================
+
+model DashboardSnapshot {
+  id              String   @id @default(cuid())
+  date            DateTime @default(now()) @map("date")
+  totalIdeas      Int      @default(0) @map("total_ideas")
+  totalOpportunities Int   @default(0) @map("total_opportunities")
+  totalVentures   Int      @default(0) @map("total_ventures")
+  avgScoreA       Int      @default(0) @map("avg_score_a")
+  avgScoreB       Int      @default(0) @map("avg_score_b")
+  totalMRR        Int      @default(0) @map("total_mrr")
+  highPainIdeas   Int      @default(0) @map("high_pain_ideas")
+  newSignals      Int      @default(0) @map("new_signals")
+  conversionRate  Float    @default(0) @map("conversion_rate")
+
+  @@index([date])
+  @@map("dashboard_snapshots")
+}
+
+model AutoScoutConfig {
+  id            String   @id @default(cuid())
+  enabled       Boolean  @default(false)
+  intervalHours Int      @default(6) @map("interval_hours")
+  sources       String[] @default(["hackernews", "github", "stackoverflow", "heise", "deutsche-startups", "golem"])
+  autoConvert   Boolean  @default(false) @map("auto_convert")
+  painThreshold Int      @default(7) @map("pain_threshold")
+  minUpvotes    Int      @default(10) @map("min_upvotes")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("auto_scout_configs")
+}

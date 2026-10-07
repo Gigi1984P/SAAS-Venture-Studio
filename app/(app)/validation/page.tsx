@@ -35,21 +35,26 @@ function statusBadge(status: string) {
 }
 
 export default async function ValidationPage() {
-  const runs = await prisma.validationRun.findMany({
-    orderBy: { createdAt: "desc" },
-    include: {
-      opportunity: { select: { id: true, title: true, scoreA: true, scoreB: true } },
-      _count: {
-        select: {
-          hypotheses: true,
-          experiments: true,
-          prospects: true,
-          evidenceObjects: true,
-          hardGates: true,
+  let runs: any[] = [];
+  try {
+    runs = await prisma.validationRun.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        opportunity: { select: { id: true, title: true, scoreA: true, scoreB: true } },
+        _count: {
+          select: {
+            hypotheses: true,
+            experiments: true,
+            prospects: true,
+            evidenceObjects: true,
+            hardGates: true,
+          },
         },
       },
-    },
-  });
+    });
+  } catch {
+    runs = [];
+  }
 
   return (
     <div className="space-y-6">

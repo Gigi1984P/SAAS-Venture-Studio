@@ -1,22 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
-  LayoutDashboard,
   Target,
   Briefcase,
   Lightbulb,
-  Rocket,
-  TrendingUp,
-  TrendingDown,
+  DollarSign,
   Loader2,
   Filter,
-  DollarSign,
-  BarChart3,
-  Zap,
   ArrowRight,
   Brain,
+  Bell,
+  TrendingUp,
+  TrendingDown,
+  Activity,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -71,10 +69,33 @@ interface PipelineData {
   };
 }
 
+interface Snapshot {
+  id: string;
+  date: string;
+  avgScoreA: number;
+  avgScoreB: number;
+  totalMRR: number;
+  totalIdeas: number;
+  totalOpportunities: number;
+  totalVentures: number;
+  conversionRate: number;
+}
+
+interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  status: string;
+  createdAt: string;
+}
+
 export default function DashboardPage() {
-  const router = useRouter();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [pipeline, setPipeline] = useState<PipelineData | null>(null);
+  const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -84,18 +105,33 @@ export default function DashboardPage() {
   async function loadData() {
     setLoading(true);
     try {
-      // Load stats
+      // Stats
       const statsRes = await fetch("/api/dashboard/stats", { cache: "no-store" });
       if (statsRes.ok) {
         const statsData = await statsRes.json();
         setStats(statsData);
       }
 
-      // Load pipeline data
+      // Pipeline
       const pipeRes = await fetch("/api/dashboard/pipeline", { cache: "no-store" });
       if (pipeRes.ok) {
         const pipeData = await pipeRes.json();
         setPipeline(pipeData);
+      }
+
+      // Trends (Snapshots)
+      const trendRes = await fetch("/api/dashboard/trends", { cache: "no-store" });
+      if (trendRes.ok) {
+        const trendData = await trendRes.json();
+        setSnapshots(trendData.snapshots || []);
+      }
+
+      // Notifications
+      const notifRes = await fetch("/api/dashboard/notifications", { cache: "no-store" });
+      if (notifRes.ok) {
+        const notifData = await notifRes.json();
+        setNotifications(notifData.alerts || []);
+        setUnreadCount(notifData.unreadCount || 0);
       }
     } catch (e) {
       console.error("Dashboard load error:", e);
@@ -112,32 +148,24 @@ export default function DashboardPage() {
     );
   }
 
-  // Funnel Chart Data
+  // ─── CHART DATA ───
+
+  // Funnel Chart
   const funnelData = {
     labels: ["Ideen", "Opportunities", "Ventures"],
-    datasets: [
-      {
-        label: "Anzahl",
-        data: [
-          pipeline?.ideas || stats?.ideaCount || 0,
-          pipeline?.opportunities || stats?.opportunityCount || 0,
-          pipeline?.ventures || stats?.ventureCount || 0,
-        ],
-        backgroundColor: [
-          "rgba(251, 191, 36, 0.8)",   // amber-400
-          "rgba(59, 130, 246, 0.8)",   // blue-500
-          "rgba(16, 185, 129, 0.8)",   // emerald-500
-        ],
-        borderColor: [
-          "rgba(251, 191, 36, 1)",
-          "rgba(59, 130, 246, 1)",
-          "rgba(16, 185, 129, 1)",
-        ],
-        borderWidth: 2,
-        borderRadius: 8,
-        borderSkipped: false,
-      },
-    ],
+    datasets: [{
+      label: "Anzahl",
+      data: [
+        pipeline?.ideas || stats?.totalIdeas || 0,
+        pipeline?.opportunities || stats?.opportunityCount || 0,
+        pipeline?.ventures || stats?.ventureCount || 0,
+      ],
+      backgroundColor: ["rgba(251, 191, 36, 0.8)", "rgba(59, 130, 246, 0.8)", "rgba(16, 185, 129, 0.8)"],
+      borderColor: ["rgba(251, 191, 36, 1)", "rgba(59, 130, 246, 1)", "rgba(16, 185, 129, 1)"],
+      borderWidth: 2,
+      borderRadius: 8,
+      borderSkipped: false,
+    }],
   };
 
   const funnelOptions: any = {
@@ -145,12 +173,7 @@ export default function DashboardPage() {
     maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
-      title: {
-        display: true,
-        text: "Venture Pipeline Funnel",
-        color: "#e2e8f0",
-        font: { size: 16, weight: "bold" },
-      },
+      title: { display: true, text: "Venture Pipeline Funnel", color: "#e2e8f0", font: { size: 16, weight: "bold" } },
       tooltip: {
         backgroundColor: "rgba(15, 23, 42, 0.9)",
         titleColor: "#e2e8f0",
@@ -169,74 +192,93 @@ export default function DashboardPage() {
       },
     },
     scales: {
-      y: {
-        beginAtZero: true,
-        grid: { color: "rgba(148, 163, 184, 0.1)" },
-        ticks: { color: "#94a3b8" },
-      },
-      x: {
-        grid: { display: false },
-        ticks: { color: "#e2e8f0", font: { weight: "bold" } },
-      },
+      y: { beginAtZero: true, grid: { color: "rgba(148, 163, 184, 0.1)" }, ticks: { color: "#94a3b8" } },
+      x: { grid: { display: false }, ticks: { color: "#e2e8f0", font: { weight: "bold" } } },
     },
   };
 
   // Score Distribution Doughnut
   const scoreData = {
     labels: ["Score A (Pain)", "Score B (Business)"],
-    datasets: [
-      {
-        data: [stats?.avgScoreA || 0, stats?.avgScoreB || 0],
-        backgroundColor: [
-          "rgba(239, 68, 68, 0.8)",    // red-500
-          "rgba(59, 130, 246, 0.8)",   // blue-500
-        ],
-        borderColor: [
-          "rgba(239, 68, 68, 1)",
-          "rgba(59, 130, 246, 1)",
-        ],
-        borderWidth: 2,
-      },
-    ],
+    datasets: [{
+      data: [stats?.avgScoreA || 0, stats?.avgScoreB || 0],
+      backgroundColor: ["rgba(239, 68, 68, 0.8)", "rgba(59, 130, 246, 0.8)"],
+      borderColor: ["rgba(239, 68, 68, 1)", "rgba(59, 130, 246, 1)"],
+      borderWidth: 2,
+    }],
   };
 
   const scoreOptions: any = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: {
-        position: "bottom" as const,
-        labels: { color: "#94a3b8" },
-      },
-      title: {
-        display: true,
-        text: "Ø Scores",
-        color: "#e2e8f0",
-        font: { size: 14, weight: "bold" },
-      },
+      legend: { position: "bottom" as const, labels: { color: "#94a3b8" } },
+      title: { display: true, text: "Ø Scores", color: "#e2e8f0", font: { size: 14, weight: "bold" } },
     },
   };
 
-  // MRR Trend (simulated based on data)
-  const mrrData = {
-    labels: ["Woche 1", "Woche 2", "Woche 3", "Woche 4"],
+  // Score Trend (echte Daten)
+  const trendLabels = snapshots.length > 0
+    ? snapshots.map((s) => new Date(s.date).toLocaleDateString("de-DE", { day: "2-digit", month: "short" }))
+    : ["Woche 1", "Woche 2", "Woche 3", "Woche 4"];
+  const scoreATrend = snapshots.length > 0 ? snapshots.map((s) => s.avgScoreA) : [0, 0, stats?.avgScoreA || 0, stats?.avgScoreA || 0];
+  const scoreBTrend = snapshots.length > 0 ? snapshots.map((s) => s.avgScoreB) : [0, 0, stats?.avgScoreB || 0, stats?.avgScoreB || 0];
+
+  const scoreTrendData = {
+    labels: trendLabels,
     datasets: [
       {
-        label: "MRR (€)",
-        data: [
-          Math.round((stats?.totalMRR || 0) * 0.6),
-          Math.round((stats?.totalMRR || 0) * 0.75),
-          Math.round((stats?.totalMRR || 0) * 0.9),
-          stats?.totalMRR || 0,
-        ],
-        fill: true,
-        backgroundColor: "rgba(16, 185, 129, 0.2)",
-        borderColor: "rgba(16, 185, 129, 1)",
+        label: "Score A (Pain)",
+        data: scoreATrend,
+        borderColor: "rgba(239, 68, 68, 1)",
+        backgroundColor: "rgba(239, 68, 68, 0.1)",
         tension: 0.4,
         pointRadius: 4,
-        pointBackgroundColor: "rgba(16, 185, 129, 1)",
+        fill: true,
+      },
+      {
+        label: "Score B (Business)",
+        data: scoreBTrend,
+        borderColor: "rgba(59, 130, 246, 1)",
+        backgroundColor: "rgba(59, 130, 246, 0.1)",
+        tension: 0.4,
+        pointRadius: 4,
+        fill: true,
       },
     ],
+  };
+
+  const scoreTrendOptions: any = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: "bottom" as const, labels: { color: "#94a3b8" } },
+      title: { display: true, text: "Score Trends (30 Tage)", color: "#e2e8f0", font: { size: 14, weight: "bold" } },
+    },
+    scales: {
+      y: { beginAtZero: true, max: 100, grid: { color: "rgba(148, 163, 184, 0.1)" }, ticks: { color: "#94a3b8" } },
+      x: { grid: { display: false }, ticks: { color: "#94a3b8" } },
+    },
+  };
+
+  // MRR Trend
+  const mrrTrendData = {
+    labels: snapshots.length > 0 ? trendLabels : ["Woche 1", "Woche 2", "Woche 3", "Woche 4"],
+    datasets: [{
+      label: "MRR (€)",
+      data: snapshots.length > 0 ? snapshots.map((s) => s.totalMRR) : [
+        Math.round((stats?.totalMRR || 0) * 0.6),
+        Math.round((stats?.totalMRR || 0) * 0.75),
+        Math.round((stats?.totalMRR || 0) * 0.9),
+        stats?.totalMRR || 0,
+      ],
+      fill: true,
+      backgroundColor: "rgba(16, 185, 129, 0.2)",
+      borderColor: "rgba(16, 185, 129, 1)",
+      tension: 0.4,
+      pointRadius: 4,
+      pointBackgroundColor: "rgba(16, 185, 129, 1)",
+    }],
   };
 
   const mrrOptions: any = {
@@ -244,25 +286,47 @@ export default function DashboardPage() {
     maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
-      title: {
-        display: true,
-        text: "MRR Trend",
-        color: "#e2e8f0",
-        font: { size: 14, weight: "bold" },
-      },
+      title: { display: true, text: "MRR Entwicklung", color: "#e2e8f0", font: { size: 14, weight: "bold" } },
     },
     scales: {
-      y: {
-        grid: { color: "rgba(148, 163, 184, 0.1)" },
-        ticks: {
-          color: "#94a3b8",
-          callback: (value: any) => `€${Number(value).toLocaleString()}`,
-        },
+      y: { grid: { color: "rgba(148, 163, 184, 0.1)" }, ticks: { color: "#94a3b8", callback: (value: any) => `€${Number(value).toLocaleString()}` } },
+      x: { grid: { display: false }, ticks: { color: "#94a3b8" } },
+    },
+  };
+
+  // Velocity Chart (Ideas → Opportunities)
+  const velocityData = {
+    labels: snapshots.length > 0 ? trendLabels : ["Tag 1", "Tag 7", "Tag 14", "Tag 30"],
+    datasets: [
+      {
+        label: "Ideen",
+        data: snapshots.length > 0 ? snapshots.map((s) => s.totalIdeas) : [stats?.totalIdeas || 0, 0, 0, 0],
+        borderColor: "rgba(251, 191, 36, 1)",
+        backgroundColor: "rgba(251, 191, 36, 0.1)",
+        tension: 0.3,
+        fill: true,
       },
-      x: {
-        grid: { display: false },
-        ticks: { color: "#94a3b8" },
+      {
+        label: "Opportunities",
+        data: snapshots.length > 0 ? snapshots.map((s) => s.totalOpportunities) : [stats?.opportunityCount || 0, 0, 0, 0],
+        borderColor: "rgba(59, 130, 246, 1)",
+        backgroundColor: "rgba(59, 130, 246, 0.1)",
+        tension: 0.3,
+        fill: true,
       },
+    ],
+  };
+
+  const velocityOptions: any = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: "bottom" as const, labels: { color: "#94a3b8" } },
+      title: { display: true, text: "Pipeline Velocity", color: "#e2e8f0", font: { size: 14, weight: "bold" } },
+    },
+    scales: {
+      y: { beginAtZero: true, grid: { color: "rgba(148, 163, 184, 0.1)" }, ticks: { color: "#94a3b8" } },
+      x: { grid: { display: false }, ticks: { color: "#94a3b8" } },
     },
   };
 
@@ -279,7 +343,7 @@ export default function DashboardPage() {
     {
       label: "Opportunities",
       value: stats?.opportunityCount || 0,
-      subtitle: stats?.opportunityCount ? `${stats.opportunityCount} aktiv` : "Noch keine — Erstelle die erste",
+      subtitle: stats?.opportunityCount ? `${stats.opportunityCount} aktiv` : "Noch keine",
       href: "/opportunities",
       icon: Target,
       color: "text-blue-400",
@@ -288,7 +352,7 @@ export default function DashboardPage() {
     {
       label: "Ventures",
       value: stats?.ventureCount || 0,
-      subtitle: stats?.ventureCount ? `${stats.ventureCount} im Portfolio` : "Noch keine — Wandle eine Opportunity um",
+      subtitle: stats?.ventureCount ? `${stats.ventureCount} im Portfolio` : "Noch keine",
       href: "/ventures",
       icon: Briefcase,
       color: "text-emerald-400",
@@ -306,21 +370,34 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header mit Notifications */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard v2</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Übersicht über alle Ventures und Opportunities
           </p>
         </div>
-        <button
-          onClick={loadData}
-          className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted transition-colors"
-        >
-          <Loader2 className="h-4 w-4" />
-          Aktualisieren
-        </button>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/dashboard/notifications"
+            className="relative inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted transition-colors"
+          >
+            <Bell className="h-4 w-4" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-[10px] text-white flex items-center justify-center">
+                {unreadCount}
+              </span>
+            )}
+          </Link>
+          <button
+            onClick={loadData}
+            className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted transition-colors"
+          >
+            <Loader2 className="h-4 w-4" />
+            Aktualisieren
+          </button>
+        </div>
       </div>
 
       {/* Stat Cards */}
@@ -349,78 +426,102 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Charts Row */}
+      {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Funnel Chart */}
         <div className="rounded-xl border bg-card p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-lg font-semibold">Pipeline Funnel</h3>
-              <p className="text-sm text-muted-foreground">
-                Ideen → Opportunities → Ventures
-              </p>
+              <p className="text-sm text-muted-foreground">Ideen → Opportunities → Ventures</p>
             </div>
             <Filter className="h-5 w-5 text-muted-foreground" />
           </div>
           <div className="h-72">
             <Bar data={funnelData} options={funnelOptions} />
           </div>
-          {/* Conversion Metrics */}
           <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t">
             <div className="text-center">
               <p className="text-2xl font-bold text-blue-400">
-                {pipeline?.conversions?.ideaToOpportunity ||
-                  (stats?.opportunityCount && stats?.totalIdeas
-                    ? Math.round((stats.opportunityCount / stats.totalIdeas) * 100)
-                    : 0)}%
+                {pipeline?.conversions?.ideaToOpportunity || (stats?.opportunityCount && stats?.totalIdeas ? Math.round((stats.opportunityCount / stats.totalIdeas) * 100) : 0)}%
               </p>
               <p className="text-xs text-muted-foreground">Idee → Opportunity</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-emerald-400">
-                {pipeline?.conversions?.opportunityToVenture ||
-                  (stats?.ventureCount && stats?.opportunityCount
-                    ? Math.round((stats.ventureCount / stats.opportunityCount) * 100)
-                    : 0)}%
+                {pipeline?.conversions?.opportunityToVenture || (stats?.ventureCount && stats?.opportunityCount ? Math.round((stats.ventureCount / stats.opportunityCount) * 100) : 0)}%
               </p>
               <p className="text-xs text-muted-foreground">Opportunity → Venture</p>
             </div>
           </div>
         </div>
 
-        {/* MRR + Score Charts */}
+        {/* Score Trend Chart */}
         <div className="space-y-6">
-          {/* MRR Trend */}
+          <div className="rounded-xl border bg-card p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Brain className="h-5 w-5 text-purple-400" />
+              <h3 className="text-lg font-semibold">Score Trends</h3>
+            </div>
+            <div className="h-48">
+              <Line data={scoreTrendData} options={scoreTrendOptions} />
+            </div>
+          </div>
+
           <div className="rounded-xl border bg-card p-6">
             <div className="flex items-center gap-2 mb-4">
               <DollarSign className="h-5 w-5 text-emerald-400" />
               <h3 className="text-lg font-semibold">MRR Entwicklung</h3>
             </div>
-            <div className="h-48">
-              <Line data={mrrData} options={mrrOptions} />
-            </div>
-          </div>
-
-          {/* Score Distribution */}
-          <div className="rounded-xl border bg-card p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Brain className="h-5 w-5 text-purple-400" />
-              <h3 className="text-lg font-semibold">Score Analyse</h3>
-            </div>
-            <div className="h-40 flex items-center justify-center">
-              <div className="w-48 h-48">
-                <Doughnut data={scoreData} options={scoreOptions} />
-              </div>
+            <div className="h-40">
+              <Line data={mrrTrendData} options={mrrOptions} />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Pipeline Flow Widget */}
+      {/* Charts Row 2 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Pipeline Velocity */}
+        <div className="rounded-xl border bg-card p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Activity className="h-5 w-5 text-blue-400" />
+            <h3 className="text-lg font-semibold">Pipeline Velocity</h3>
+          </div>
+          <div className="h-64">
+            <Line data={velocityData} options={velocityOptions} />
+          </div>
+        </div>
+
+        {/* Score Distribution + Notifications */}
+        <div className="space-y-6">
+          <div className="rounded-xl border bg-card p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Zap className="h-5 w-5 text-amber-400" />
+              <h3 className="text-lg font-semibold">Letzte Aktivität</h3>
+            </div>
+            <div className="space-y-3 max-h-48 overflow-y-auto">
+              {notifications.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">Keine neuen Benachrichtigungen</p>
+              )}
+              {notifications.slice(0, 8).map((n) => (
+                <div key={n.id} className="flex items-start gap-3 rounded-lg bg-muted/50 p-3">
+                  <div className={`mt-0.5 h-2 w-2 rounded-full shrink-0 ${n.status === "success" ? "bg-emerald-500" : n.status === "failed" ? "bg-red-500" : "bg-amber-500"}`} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{n.title}</p>
+                    <p className="text-xs text-muted-foreground truncate">{n.message}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Pipeline Flow */}
       <div className="rounded-xl border bg-card p-6">
         <h3 className="text-lg font-semibold mb-4">🔄 Ideen → Opportunities → Ventures</h3>
         <div className="grid grid-cols-3 gap-4">
-          {/* Ideen */}
           <div className="text-center p-4 rounded-lg bg-amber-50/50 border border-amber-200">
             <div className="text-3xl font-bold text-amber-600">{stats?.totalIdeas || 0}</div>
             <div className="text-sm text-amber-700 mt-1">💡 Ideen</div>
@@ -429,20 +530,14 @@ export default function DashboardPage() {
               + Neue finden
             </Link>
           </div>
-
-          {/* Arrow */}
           <div className="flex items-center justify-center">
             <div className="text-center">
               <ArrowRight className="w-8 h-8 text-muted-foreground mx-auto" />
               <div className="text-xs text-muted-foreground mt-1">
-                {stats?.opportunityCount && stats?.totalIdeas && stats.totalIdeas > 0
-                  ? `${Math.round((stats.opportunityCount / stats.totalIdeas) * 100)}%`
-                  : "0%"} Conversion
+                {stats?.opportunityCount && stats?.totalIdeas && stats.totalIdeas > 0 ? `${Math.round((stats.opportunityCount / stats.totalIdeas) * 100)}%` : "0%"} Conversion
               </div>
             </div>
           </div>
-
-          {/* Opportunities */}
           <div className="text-center p-4 rounded-lg bg-blue-50/50 border border-blue-200">
             <div className="text-3xl font-bold text-blue-600">{stats?.opportunityCount || 0}</div>
             <div className="text-sm text-blue-700 mt-1">🎯 Opportunities</div>
@@ -455,27 +550,20 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-3 gap-4 mt-4">
           <div />
-
-          {/* Arrow down */}
           <div className="flex items-center justify-center">
             <div className="text-center">
               <ArrowRight className="w-8 h-8 text-muted-foreground mx-auto rotate-90" />
               <div className="text-xs text-muted-foreground mt-1">
-                {stats?.ventureCount && stats?.opportunityCount && stats.opportunityCount > 0
-                  ? `${Math.round((stats.ventureCount / stats.opportunityCount) * 100)}%`
-                  : "0%"} Conversion
+                {stats?.ventureCount && stats?.opportunityCount && stats.opportunityCount > 0 ? `${Math.round((stats.ventureCount / stats.opportunityCount) * 100)}%` : "0%"} Conversion
               </div>
             </div>
           </div>
-
           <div />
         </div>
 
         <div className="grid grid-cols-3 gap-4 mt-4">
           <div />
           <div />
-
-          {/* Ventures */}
           <div className="text-center p-4 rounded-lg bg-emerald-50/50 border border-emerald-200">
             <div className="text-3xl font-bold text-emerald-600">{stats?.ventureCount || 0}</div>
             <div className="text-sm text-emerald-700 mt-1">🚀 Ventures</div>
@@ -491,52 +579,32 @@ export default function DashboardPage() {
       <div className="rounded-xl border bg-card p-6">
         <h3 className="text-lg font-semibold mb-4">Schnellzugriff</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Link
-            href="/ideenscout"
-            className="flex items-center gap-3 rounded-lg border p-4 hover:border-amber-500/50 hover:bg-amber-500/5 transition-all"
-          >
-            <div className="rounded-lg bg-amber-500/10 p-2">
-              <Lightbulb className="h-5 w-5 text-amber-400" />
-            </div>
+          <Link href="/ideenscout" className="flex items-center gap-3 rounded-lg border p-4 hover:border-amber-500/50 hover:bg-amber-500/5 transition-all">
+            <div className="rounded-lg bg-amber-500/10 p-2"><Lightbulb className="h-5 w-5 text-amber-400" /></div>
             <div>
               <p className="font-medium text-sm">Ideen finden</p>
               <p className="text-xs text-muted-foreground">Neuen Scout starten</p>
             </div>
           </Link>
-          <Link
-            href="/opportunities"
-            className="flex items-center gap-3 rounded-lg border p-4 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all"
-          >
-            <div className="rounded-lg bg-blue-500/10 p-2">
-              <Target className="h-5 w-5 text-blue-400" />
-            </div>
+          <Link href="/opportunities" className="flex items-center gap-3 rounded-lg border p-4 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all">
+            <div className="rounded-lg bg-blue-500/10 p-2"><Target className="h-5 w-5 text-blue-400" /></div>
             <div>
               <p className="font-medium text-sm">Opportunities</p>
               <p className="text-xs text-muted-foreground">Alle ansehen</p>
             </div>
           </Link>
-          <Link
-            href="/ventures"
-            className="flex items-center gap-3 rounded-lg border p-4 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all"
-          >
-            <div className="rounded-lg bg-emerald-500/10 p-2">
-              <Briefcase className="h-5 w-5 text-emerald-400" />
-            </div>
+          <Link href="/ventures" className="flex items-center gap-3 rounded-lg border p-4 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all">
+            <div className="rounded-lg bg-emerald-500/10 p-2"><Briefcase className="h-5 w-5 text-emerald-400" /></div>
             <div>
               <p className="font-medium text-sm">Ventures</p>
               <p className="text-xs text-muted-foreground">Portfolio ansehen</p>
             </div>
           </Link>
-          <Link
-            href="/plans"
-            className="flex items-center gap-3 rounded-lg border p-4 hover:border-purple-500/50 hover:bg-purple-500/5 transition-all"
-          >
-            <div className="rounded-lg bg-purple-500/10 p-2">
-              <Zap className="h-5 w-5 text-purple-400" />
-            </div>
+          <Link href="/studio" className="flex items-center gap-3 rounded-lg border p-4 hover:border-purple-500/50 hover:bg-purple-500/5 transition-all">
+            <div className="rounded-lg bg-purple-500/10 p-2"><Zap className="h-5 w-5 text-purple-400" /></div>
             <div>
-              <p className="font-medium text-sm">Pläne</p>
-              <p className="text-xs text-muted-foreground">Upgraden</p>
+              <p className="font-medium text-sm">Studio</p>
+              <p className="text-xs text-muted-foreground">Automationen</p>
             </div>
           </Link>
         </div>
