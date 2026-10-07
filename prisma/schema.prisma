@@ -2885,6 +2885,23 @@ model DashboardSnapshot {
   @@map("dashboard_snapshots")
 }
 
+
+model ScoutSource {
+  id          String   @id @default(cuid())
+  name        String   // z.B. "HackerNews"
+  slug        String   @unique // z.B. "hackernews"
+  url         String?  // API/Feed URL
+  category    String   // "tech", "dach", "reviews", "social", "rss-handwerk", "rss-immobilien", "rss-logistik", "rss-buchhaltung"
+  enabled     Boolean  @default(true)
+  maxResults  Int      @default(20) @map("max_results")
+  painBoost   Int      @default(0) @map("pain_boost") // Zusätzlicher Pain-Score
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("scout_sources")
+}
+
 model AutoScoutConfig {
   id            String   @id @default(cuid())
   enabled       Boolean  @default(false)
