@@ -5,13 +5,16 @@ import { prisma } from "@/lib/prisma";
 export async function GET() {
   try {
     const snapshots = await prisma.dashboardSnapshot.findMany({
-      orderBy: { date: "desc" },
+      orderBy: { date: "asc" },
       take: 30,
     });
 
-    return NextResponse.json({ snapshots: snapshots.reverse() });
+    return NextResponse.json({ 
+      snapshots,
+      count: snapshots.length 
+    });
   } catch (error: any) {
     console.error("[TRENDS]", error);
-    return NextResponse.json({ snapshots: [] }, { status: 500 });
+    return NextResponse.json({ snapshots: [], count: 0, error: error.message }, { status: 500 });
   }
 }
