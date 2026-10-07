@@ -658,6 +658,145 @@ async function scrapeMedium(): Promise<any[]> {
   }
   return results;
 }
+
+// ─── GENERIC RSS SCRAPER ───
+async function scrapeRSS(feeds: string[], industryLabel: string): Promise<any[]> {
+  const results: any[] = [];
+  for (const url of feeds) {
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": "Mozilla/5.0" },
+        next: { revalidate: 0 },
+      });
+      if (!res.ok) continue;
+      const xml = await res.text();
+      // Versuche <item> oder <entry>
+      const itemMatches = xml.match(/<item>[\s\S]*?<\/item>/g) || xml.match(/<entry>[\s\S]*?<\/entry>/g);
+      if (!itemMatches) continue;
+      for (const item of itemMatches.slice(0, 5)) {
+        const titleMatch = item.match(/<title>(.*?)<\/title>/) || item.match(/<title[^>]*>(.*?)<\/title>/);
+        const linkMatch = item.match(/<link>(.*?)<\/link>/) || item.match(/<link[^>]*href="([^"]+)"/);
+        const descMatch = item.match(/<description>(.*?)<\/description>/) || item.match(/<summary>(.*?)<\/summary>/);
+        if (titleMatch) {
+          const title = titleMatch[1].replace(/<!\[CDATA\[/g, '').replace(/\]\]>/g, '').replace(/<[^>]+>/g, '').trim();
+          const desc = (descMatch?.[1] || "").replace(/<!\[CDATA\[/g, '').replace(/\]\]>/g, '').replace(/<[^>]+>/g, '').trim();
+          const combined = `${title} ${desc}`;
+          const pain = extractPainSignals(combined);
+          if (pain.hasPain || title.length > 20) {
+            results.push({
+              source: "rss",
+              sourceUrl: linkMatch?.[1] || url,
+              sourceName: `${industryLabel} RSS`,
+              title: title.slice(0, 150),
+              content: (desc || title).slice(0, 800),
+              author: "unknown",
+              upvotes: 3,
+              comments: 0,
+              painScore: pain.hasPain ? pain.painScore : 2,
+              painKeywords: pain.matchedKeywords,
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
+      }
+    } catch (e) {
+      // Feed unreachable — silent skip
+    }
+  }
+  return results;
+}
+
+// ─── X / TWITTER VIA NITTER RSS ───
+async function scrapeXTwitter(): Promise<any[]> {
+  const results: any[] = [];
+  const queries = ["#SaaS problem", "#B2B pain", "#startup struggle", "#workflow automation"];
+  const nitterInstances = ["https://nitter.net", "https://nitter.cz", "https://nitter.privacydev.net"];
+  for (const query of queries) {
+    for (const base of nitterInstances) {
+      try {
+        const res = await fetch(`${base}/search/rss?f=tweets&q=${encodeURIComponent(query)}`, {
+          headers: { "User-Agent": "Mozilla/5.0" },
+          next: { revalidate: 0 },
+        });
+        if (!res.ok) continue;
+        const xml = await res.text();
+        const itemMatches = xml.match(/<item>[\s\S]*?<\/item>/g);
+        if (!itemMatches) continue;
+        for (const item of itemMatches.slice(0, 5)) {
+          const titleMatch = item.match(/<title>(.*?)<\/title>/);
+          const linkMatch = item.match(/<link>(.*?)<\/link>/);
+          if (titleMatch) {
+            const title = titleMatch[1].replace(/<!\[CDATA\[/g, '').replace(/\]\]>/g, '').trim();
+            const pain = extractPainSignals(title);
+            if (pain.hasPain) {
+              results.push({
+                source: "x-twitter",
+                sourceUrl: linkMatch?.[1] || `${base}/search?q=${encodeURIComponent(query)}`,
+                sourceName: "X / Twitter",
+                title: title.slice(0, 150),
+                content: title.slice(0, 500),
+                author: "unknown",
+                upvotes: 2,
+                comments: 0,
+                painScore: pain.painScore,
+                painKeywords: pain.matchedKeywords,
+                createdAt: new Date().toISOString(),
+              });
+            }
+          }
+        }
+        break; // Erste funktionierende Nitter-Instanz nutzen
+      } catch (e) {
+        continue;
+      }
+    }
+  }
+  return results;
+}
+
+// ─── QUORA VIA RSS (topics) ───
+async function scrapeQuora(): Promise<any[]> {
+  const results: any[] = [];
+  const topics = ["SaaS", "Business-Software", "Small-Business", "Startup-Advice"];
+  for (const topic of topics) {
+    try {
+      const res = await fetch(
+        `https://www.quora.com/topic/${topic}/rss`,
+        { headers: { "User-Agent": "Mozilla/5.0" }, next: { revalidate: 0 } }
+      );
+      if (!res.ok) continue;
+      const xml = await res.text();
+      const itemMatches = xml.match(/<item>[\s\S]*?<\/item>/g);
+      if (!itemMatches) continue;
+      for (const item of itemMatches.slice(0, 5)) {
+        const titleMatch = item.match(/<title>(.*?)<\/title>/);
+        const linkMatch = item.match(/<link>(.*?)<\/link>/);
+        if (titleMatch) {
+          const title = titleMatch[1].replace(/<!\[CDATA\[/g, '').replace(/\]\]>/g, '').trim();
+          const pain = extractPainSignals(title);
+          if (pain.hasPain) {
+            results.push({
+              source: "quora",
+              sourceUrl: linkMatch?.[1] || `https://www.quora.com/topic/${topic}`,
+              sourceName: `Quora ${topic}`,
+              title: title.slice(0, 150),
+              content: title.slice(0, 500),
+              author: "unknown",
+              upvotes: 4,
+              comments: 0,
+              painScore: pain.painScore,
+              painKeywords: pain.matchedKeywords,
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
+      }
+    } catch (e) {
+      // Quora blockiert oft
+    }
+  }
+  return results;
+}
 function generateIdeaFromSignal(signal: any): any {
   const title = signal.title.slice(0, 100);
   const pain = signal.content.slice(0, 500);
@@ -695,6 +834,9 @@ function generateIdeaFromSignal(signal: any): any {
     getapp: "SMB Software Decision Makers",
     "software-advice": "Enterprise Software Buyers",
     medium: "Tech Readers & Product People",
+    "x-twitter": "Social Media Founders & Operators",
+    quora: "Q&A Business Community",
+    rss: "Branchen-Feeds (Handwerk, Immobilien, Logistik, Buchhaltung)",
   };
   
   return {
@@ -736,13 +878,23 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // PARALLELES SCRAPING — 20+ Quellen (branchenübergreifend B2B)
+    // LADE RSS CONFIG
+    let rssConfig: any = {};
+    try {
+      rssConfig = await import("@/config/rss-feeds.json").then(m => m.default || m);
+    } catch (e) {
+      rssConfig = {};
+    }
+
+    // PARALLELES SCRAPING — 20+ APIs + 99 RSS Feeds
     const [
       hnSignals, ghSignals, ihSignals, soSignals, phSignals,
       heiseSignals, dsSignals, golemSignals,
       redditSignals, g2Signals, trustpilotSignals, devtoSignals,
       t3nSignals, gruenderszeneSignals, getappSignals, softwareAdviceSignals,
-      mediumSignals
+      mediumSignals,
+      xSignals, quoraSignals,
+      rssHandwerkSignals, rssImmobilienSignals, rssLogistikSignals, rssBuchhaltungSignals
     ] = await Promise.all([
       scrapeHackerNews(["SaaS problem", "startup pain", "workflow automation", "developer tool", "selfhosted", "open source alternative"]),
       scrapeGitHub(["SaaS problem", "feature request", "need automation", "pain point", "workflow", "productivity"]),
@@ -761,6 +913,12 @@ export async function POST(req: NextRequest) {
       scrapeGetApp(),
       scrapeSoftwareAdvice(),
       scrapeMedium(),
+      scrapeXTwitter(),
+      scrapeQuora(),
+      scrapeRSS(rssConfig.handwerk_bau || [], "Handwerk & Bau"),
+      scrapeRSS(rssConfig.immobilien || [], "Immobilien"),
+      scrapeRSS(rssConfig.logistik || [], "Logistik & Supply Chain"),
+      scrapeRSS(rssConfig.buchhaltung || [], "Buchhaltung & Steuern"),
     ]);
 
     const allSignals = [
@@ -768,7 +926,8 @@ export async function POST(req: NextRequest) {
       ...heiseSignals, ...dsSignals, ...golemSignals,
       ...redditSignals, ...g2Signals, ...trustpilotSignals, ...devtoSignals,
       ...t3nSignals, ...gruenderszeneSignals, ...getappSignals, ...softwareAdviceSignals,
-      ...mediumSignals
+      ...mediumSignals, ...xSignals, ...quoraSignals,
+      ...rssHandwerkSignals, ...rssImmobilienSignals, ...rssLogistikSignals, ...rssBuchhaltungSignals
     ];
     
     // Nach Pain Score sortieren, Top N nehmen
@@ -832,6 +991,12 @@ export async function POST(req: NextRequest) {
         getapp: getappSignals.length,
         "software-advice": softwareAdviceSignals.length,
         medium: mediumSignals.length,
+        "x-twitter": xSignals.length,
+        quora: quoraSignals.length,
+        "rss-handwerk-bau": rssHandwerkSignals.length,
+        "rss-immobilien": rssImmobilienSignals.length,
+        "rss-logistik": rssLogistikSignals.length,
+        "rss-buchhaltung": rssBuchhaltungSignals.length,
       },
       ideas: savedIdeas.slice(0, 5),
     });
@@ -851,20 +1016,24 @@ export async function GET() {
       "Indie Hackers — Solopreneur-Ideen",
       "Stack Overflow — Entwickler-Probleme",
       "Product Hunt — Neue Produkte & Nischen",
-      "Reddit (r/SaaS, r/startups, r/smallbusiness, r/Entrepreneur, r/webdev, r/productivity, r/mktg) — Community Pain Points",
-      "G2 Reviews — B2B Software Pain Points (PM, CRM, Accounting, HR)",
-      "Trustpilot — Business Software Reviews (Salesforce, HubSpot, Slack, Zoom)",
+      "Reddit (7 Subreddits) — Community Pain Points",
+      "G2 Reviews — B2B Software Pain Points",
+      "Trustpilot — Business Software Reviews",
       "DEV.to — Developer & Tech Community",
       "t3n — DACH Digital Professionals",
       "Gründerszene — DACH Entrepreneurs & Startups",
-      "GetApp — SMB Software Decision Makers (PM, Accounting, Inventory, ERP)",
-      "Software Advice — Enterprise Software Buyers (HCM, SCM, BI)",
+      "GetApp — SMB Software Decision Makers",
+      "Software Advice — Enterprise Software Buyers",
       "Medium — Tech Readers & Product Management",
+      "X / Twitter (via Nitter) — Social Media Pain Points",
+      "Quora — Q&A Business Community",
+      "RSS Feeds — 99 branchenübergreifende Feeds (Handwerk/Bau, Immobilien, Logistik, Buchhaltung)",
     ],
     industries: [
       "Software / SaaS", "IT / Developer Tools", "Finance / Accounting",
       "HR / People Ops", "Sales / CRM", "Marketing / Productivity",
-      "Supply Chain / ERP", "BI / Analytics", "Remote Work / Collaboration"
+      "Supply Chain / ERP", "BI / Analytics", "Remote Work / Collaboration",
+      "Handwerk & Bau", "Immobilien & Property Management", "Logistik & Supply Chain"
     ],
     features: [
       "Echte Posts, Issues und Fragen von Nutzern",
