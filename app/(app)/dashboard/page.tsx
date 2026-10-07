@@ -15,6 +15,7 @@ import {
   TrendingDown,
   Activity,
   Zap,
+  Trophy,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -81,6 +82,24 @@ interface Snapshot {
   conversionRate: number;
 }
 
+interface TrendAnalysis {
+  direction: "up" | "down" | "stable";
+  changePercent: number;
+  changeAbsolute: number;
+  trend: "improving" | "declining" | "stable";
+  confidence: number;
+  recommendation: string;
+}
+
+interface Insight {
+  type: "positive" | "negative" | "info";
+  icon: string;
+  title: string;
+  message: string;
+  action: string;
+  link: string;
+}
+
 interface Notification {
   id: string;
   type: string;
@@ -94,6 +113,8 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [pipeline, setPipeline] = useState<PipelineData | null>(null);
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
+  const [analysis, setAnalysis] = useState<Record<string, TrendAnalysis> | null>(null);
+  const [insights, setInsights] = useState<Insight[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -124,6 +145,8 @@ export default function DashboardPage() {
       if (trendRes.ok) {
         const trendData = await trendRes.json();
         setSnapshots(trendData.snapshots || []);
+        setAnalysis(trendData.analysis || null);
+        setInsights(trendData.insights || []);
       }
 
       // Notifications
@@ -459,13 +482,44 @@ export default function DashboardPage() {
         {/* Score Trend Chart */}
         <div className="space-y-6">
           <div className="rounded-xl border bg-card p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Brain className="h-5 w-5 text-purple-400" />
-              <h3 className="text-lg font-semibold">Score Trends</h3>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Brain className="h-5 w-5 text-purple-400" />
+                <h3 className="text-lg font-semibold">Score Trends</h3>
+              </div>
+              {analysis?.scoreA && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                    analysis.scoreA.trend === "improving" ? "bg-emerald-500/20 text-emerald-400" :
+                    analysis.scoreA.trend === "declining" ? "bg-red-500/20 text-red-400" :
+                    "bg-slate-500/20 text-slate-400"
+                  }`}>
+                    {analysis.scoreA.trend === "improving" ? (
+                      <TrendingUp className="h-3 w-3" />
+                    ) : analysis.scoreA.trend === "declining" ? (
+                      <TrendingDown className="h-3 w-3" />
+                    ) : (
+                      <Activity className="h-3 w-3" />
+                    )}
+                    {analysis.scoreA.changePercent > 0 ? "+" : ""}{analysis.scoreA.changePercent}%
+                  </span>
+                  <span className="text-muted-foreground text-xs">
+                    Konfidenz: {Math.round((analysis.scoreA.confidence || 0) * 100)}%
+                  </span>
+                </div>
+              )}
             </div>
             <div className="h-48">
               <Line data={scoreTrendData} options={scoreTrendOptions} />
             </div>
+            {analysis?.scoreA && (
+              <div className="mt-4 p-3 rounded-lg bg-muted/50 border border-muted">
+                <p className="text-sm">
+                  <span className="font-medium">Empfehlung: </span>
+                  {analysis.scoreA.recommendation}
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="rounded-xl border bg-card p-6">
@@ -476,6 +530,20 @@ export default function DashboardPage() {
             <div className="h-40">
               <Line data={mrrTrendData} options={mrrOptions} />
             </div>
+            {analysis?.mrr && (
+              <div className="mt-4 flex items-center gap-2 text-sm">
+                <span className={`font-medium ${
+                  analysis.mrr.trend === "improving" ? "text-emerald-400" :
+                  analysis.mrr.trend === "declining" ? "text-red-400" :
+                  "text-slate-400"
+                }`}>
+                  {analysis.mrr.changePercent > 0 ? "+" : ""}{analysis.mrr.changePercent}% Änderung
+                </span>
+                <span className="text-muted-foreground">
+                  ({analysis.mrr.recommendation})
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -491,10 +559,60 @@ export default function DashboardPage() {
           <div className="h-64">
             <Line data={velocityData} options={velocityOptions} />
           </div>
+          {analysis?.opportunities && (
+            <div className="mt-4 flex items-center gap-2 text-sm">
+              <span className={`font-medium ${
+                analysis.opportunities.trend === "improving" ? "text-emerald-400" :
+                analysis.opportunities.trend === "declining" ? "text-red-400" :
+                "text-slate-400"
+              }`}>
+                {analysis.opportunities.changePercent > 0 ? "+" : ""}{analysis.opportunities.changePercent}% Opportunities
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Score Distribution + Notifications */}
+        {/* Insights + Notifications */}
         <div className="space-y-6">
+          {/* AI Insights */}
+          {insights.length > 0 && (
+            <div className="rounded-xl border bg-card p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Brain className="h-5 w-5 text-purple-400" />
+                <h3 className="text-lg font-semibold">Trend-Insights</h3>
+              </div>
+              <div className="space-y-3 max-h-48 overflow-y-auto">
+                {insights.map((insight, i) => {
+                  const IconComp = insight.icon === "TrendingUp" ? TrendingUp :
+                    insight.icon === "TrendingDown" ? TrendingDown :
+                    insight.icon === "DollarSign" ? DollarSign :
+                    insight.icon === "Zap" ? Zap :
+                    insight.icon === "Trophy" ? Trophy :
+                    Brain;
+                  return (
+                    <Link
+                      key={i}
+                      href={insight.link}
+                      className="flex items-start gap-3 rounded-lg bg-muted/50 p-3 hover:bg-muted transition-colors"
+                    >
+                      <div className={`mt-0.5 shrink-0 ${
+                        insight.type === "positive" ? "text-emerald-400" :
+                        insight.type === "negative" ? "text-red-400" :
+                        "text-blue-400"
+                      }`}>
+                        <IconComp className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{insight.title}</p>
+                        <p className="text-xs text-muted-foreground truncate">{insight.message}</p>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="rounded-xl border bg-card p-6">
             <div className="flex items-center gap-2 mb-4">
               <Zap className="h-5 w-5 text-amber-400" />
