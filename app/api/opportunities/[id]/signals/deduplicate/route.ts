@@ -8,10 +8,16 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const totalSignals = await prisma.signal.count({ where: { opportunityId: params.id } });
-    const dupCount = await prisma.signal.count({ where: { opportunityId: params.id, isDuplicate: true } });
-    const irrCount = await prisma.signal.count({ where: { opportunityId: params.id, isRelevant: false } });
-    const highConf = await prisma.signal.count({ where: { opportunityId: params.id, isDuplicate: false, confidence: { gte: 0.7 } } });
+    // Stats mit Count-Workaround (findMany statt count wegen Vercel-Prisma-Bug)
+    const allSignals = await prisma.signal.findMany({ where: { opportunityId: params.id } });
+    const dupSignals = await prisma.signal.findMany({ where: { opportunityId: params.id, isDuplicate: true } });
+    const irrSignals = await prisma.signal.findMany({ where: { opportunityId: params.id, isRelevant: false } });
+    const highConfSignals = await prisma.signal.findMany({ where: { opportunityId: params.id, isDuplicate: false, confidence: { gte: 0.7 } } });
+    
+    const totalSignals = allSignals.length;
+    const dupCount = dupSignals.length;
+    const irrCount = irrSignals.length;
+    const highConf = highConfSignals.length;
     const independent = totalSignals - dupCount;
 
     return NextResponse.json({
@@ -103,10 +109,16 @@ export async function POST(
     }
 
     // Stats
-    const totalSignals = await prisma.signal.count({ where: { opportunityId: params.id } });
-    const dupCount = await prisma.signal.count({ where: { opportunityId: params.id, isDuplicate: true } });
-    const irrCount = await prisma.signal.count({ where: { opportunityId: params.id, isRelevant: false } });
-    const highConf = await prisma.signal.count({ where: { opportunityId: params.id, isDuplicate: false, confidence: { gte: 0.7 } } });
+    // Stats mit Count-Workaround (findMany statt count wegen Vercel-Prisma-Bug)
+    const allSignals = await prisma.signal.findMany({ where: { opportunityId: params.id } });
+    const dupSignals = await prisma.signal.findMany({ where: { opportunityId: params.id, isDuplicate: true } });
+    const irrSignals = await prisma.signal.findMany({ where: { opportunityId: params.id, isRelevant: false } });
+    const highConfSignals = await prisma.signal.findMany({ where: { opportunityId: params.id, isDuplicate: false, confidence: { gte: 0.7 } } });
+    
+    const totalSignals = allSignals.length;
+    const dupCount = dupSignals.length;
+    const irrCount = irrSignals.length;
+    const highConf = highConfSignals.length;
     const independent = totalSignals - dupCount;
 
     return NextResponse.json({
