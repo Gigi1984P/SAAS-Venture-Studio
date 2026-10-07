@@ -48,8 +48,9 @@ const COMPETITOR_TEMPLATES = [
 ];
 
 // ── PIPELINE RUNNER ──
-export async function GET() {
+export async function GET(req: Request) {
   const results: any[] = [];
+  const startTime = Date.now();
 
   try {
     // 1. Alle "discovered" Opportunities holen
@@ -215,7 +216,9 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
+      version: "v2",
       processed: results.length,
+      duration: Date.now() - startTime,
       results,
     });
 
