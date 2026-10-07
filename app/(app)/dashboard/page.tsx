@@ -51,9 +51,9 @@ interface DashboardStats {
   avgScoreB: number;
   opportunityCount: number;
   ventureCount: number;
-  ideaCount: number;
-  scoutIdeasCount: number;
   totalIdeas: number;
+  highPainSignals: number;
+  sources: { source: string; count: number }[];
   taskCount: number;
   taskPending: number;
   scoreTrend: number;
@@ -334,8 +334,8 @@ export default function DashboardPage() {
     {
       label: "Ideen",
       value: stats?.totalIdeas || 0,
-      subtitle: `${stats?.ideaCount || 0} gespeichert + ${stats?.scoutIdeasCount || 0} gefunden`,
-      href: "/ideenscout",
+      subtitle: "Gescrapte Ideen aus allen Quellen",
+      href: "/ideas",
       icon: Lightbulb,
       color: "text-amber-400",
       bg: "bg-amber-500/10",
@@ -525,7 +525,7 @@ export default function DashboardPage() {
           <div className="text-center p-4 rounded-lg bg-amber-50/50 border border-amber-200">
             <div className="text-3xl font-bold text-amber-600">{stats?.totalIdeas || 0}</div>
             <div className="text-sm text-amber-700 mt-1">💡 Ideen</div>
-            <div className="text-xs text-muted-foreground mt-2">{stats?.scoutIdeasCount || 0} gescraped</div>
+            <div className="text-xs text-muted-foreground mt-2">{stats?.highPainSignals || 0} High-Pain</div>
             <Link href="/ideenscout" className="inline-block mt-3 text-xs bg-amber-100 text-amber-800 px-3 py-1.5 rounded-full hover:bg-amber-200 transition-colors">
               + Neue finden
             </Link>

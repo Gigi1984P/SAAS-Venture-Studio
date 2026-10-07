@@ -95,13 +95,21 @@ export default function IdeenScoutClient() {
       if (filterAnalyzed) params.set("analyzed", filterAnalyzed);
       if (searchQuery.trim()) params.set("q", searchQuery.trim());
 
-      const res = await fetch(`/api/ideenscout?${params.toString()}`);
+      const res = await fetch(`/api/ideenscout?${params.toString()}`, {
+        cache: "no-store",
+      });
       if (!res.ok) return;
       const data = await res.json();
+      
       setRun(data.run);
       setIdeas(data.ideas || []);
       setPagination(data.pagination || { page: 1, limit: 20, totalCount: 0, totalPages: 1, hasNext: false, hasPrev: false });
       if (data.filters?.categories) setAvailableCategories(data.filters.categories);
+    
+      // WICHTIG: total_ideas aus tatsächlichem COUNT setzen
+      if (data.pagination?.totalCount != null && data.run) {
+        setRun(prev => prev ? { ...prev, total_ideas: data.pagination.totalCount } : prev);
+      }
     } catch { /* ignore */ }
   }, [filterSaved, filterCategory, filterPotential, filterAnalyzed, searchQuery, limit, pagination.page]);
 
