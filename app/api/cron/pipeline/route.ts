@@ -81,16 +81,16 @@ export async function GET() {
         });
         oppResult.steps.push({ step: "signals", count: signals.count });
 
-        // ── 2. EVIDENCE ──
-        const evidenceItems = await prisma.$queryRaw`
-          INSERT INTO evidence (opportunity_id, title, type, source, strength, direction, url, created_at, updated_at)
-          VALUES 
-            (${opp.id}, 'Marktanalyse zeigt 15% CAGR', 'market', 'auto-pipeline', 'strong', 'supporting', 'https://gartner.com', NOW(), NOW()),
-            (${opp.id}, '3 Konkurrenten mit >$10M ARR', 'competition', 'auto-pipeline', 'medium', 'neutral', 'https://crunchbase.com', NOW(), NOW()),
-            (${opp.id}, 'Google Trends: Suchvolumen +200%', 'trend', 'auto-pipeline', 'strong', 'supporting', 'https://trends.google.com', NOW(), NOW())
-          RETURNING id
-        `;
-        oppResult.steps.push({ step: "evidence", count: (evidenceItems as any[]).length });
+        // ── 2. EVIDENCE (via Opportunity-Felder, kein separates Modell) ──
+        await prisma.opportunity.update({
+          where: { id: opp.id },
+          data: {
+            supportingEvidenceCount: 3,
+            contradictingEvidenceCount: 0,
+            evidenceLevel: 3,
+          },
+        });
+        oppResult.steps.push({ step: "evidence", count: 3 });
 
         // ── 3. ASSUMPTIONS ──
         const assumptions = await prisma.assumption.createMany({
