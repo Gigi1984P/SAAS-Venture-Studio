@@ -394,10 +394,7 @@ function generateIdeaFromSignal(signal: any): any {
 // ─── MAIN API ───
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Nicht authentifiziert" }, { status: 401 });
-    }
+    // Solo-Modus: Keine Session-Prüfung nötig
 
     const { agentId = "ideen-scout", maxIdeas = 20 } = await req.json().catch(() => ({}));
 
