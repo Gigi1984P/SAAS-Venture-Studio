@@ -41,6 +41,7 @@ export async function GET() {
             scoreA: Math.min(100, (idea.pain_score || 5) * 10),
             scoreB: 0,
             source: idea.source || "auto-scout",
+            createdBy: "auto-scout",
           } as any,
         });
         converted.push({ id: opp.id, title: opp.title });
