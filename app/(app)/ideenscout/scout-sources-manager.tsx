@@ -33,6 +33,16 @@ const CATEGORY_ICONS: Record<string, any> = {
   "rss-produktion": Rss,
   "rss-energie": Rss,
   "rss-bildung": Rss,
+  "rss-retail": Rss,
+  "rss-food": Rss,
+  "rss-transport": Rss,
+  "rss-telekom": Rss,
+  "rss-sicherheit": Rss,
+  "rss-tourismus": Rss,
+  "rss-druck": Rss,
+  "rss-chemie": Rss,
+  "rss-automobil": Rss,
+  "rss-bau": Rss,
   custom: Globe,
 };
 
@@ -54,6 +64,16 @@ const CATEGORY_LABELS: Record<string, string> = {
   "rss-produktion": "RSS Produktion & Industrie",
   "rss-energie": "RSS Energie & Umwelt",
   "rss-bildung": "RSS Bildung & Weiterbildung",
+  "rss-retail": "RSS Retail & E-Commerce",
+  "rss-food": "RSS Food & Gastronomie",
+  "rss-transport": "RSS Transport & Mobilität",
+  "rss-telekom": "RSS Telekommunikation",
+  "rss-sicherheit": "RSS Sicherheit & Überwachung",
+  "rss-tourismus": "RSS Tourismus & Hotellerie",
+  "rss-druck": "RSS Druck & Medien",
+  "rss-chemie": "RSS Chemie & Pharma",
+  "rss-automobil": "RSS Automobil & Zulieferer",
+  "rss-bau": "RSS Bau & Architektur",
   custom: "Custom",
 };
 
