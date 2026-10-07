@@ -1038,15 +1038,15 @@ function generateIdeaFromSignal(signal: any): any {
   };
   
   return {
-    title: signal.title.slice(0, 100),
-    description: signal.content.slice(0, 500),
+    title: translateToGerman(signal.title).slice(0, 100),
+    description: translateToGerman(signal.content).slice(0, 500),
     category: category,
     targetAudience: audiences[signal.source] || "SaaS-Gründer",
     revenueModel: "SaaS-Abonnement (€29-99/Monat)",
     mvpEffort: signal.painScore >= 6 ? "medium" : "low",
-    potential: signal.upvotes >= 50 ? "high" : signal.upvotes >= 10 ? "medium" : "low",
+    potential: signal.upvotes >= 50 ? "hoch" : signal.upvotes >= 10 ? "mittel" : "niedrig",
     painScore: signal.painScore,
-    painKeywords: signal.painKeywords.join(", "),
+    painKeywords: signal.painKeywords.map((k: string) => EN_DE[k.toLowerCase()] || k).join(", "),
     source: signal.source,
     sourceUrl: signal.sourceUrl,
   };
