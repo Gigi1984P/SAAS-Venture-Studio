@@ -1183,6 +1183,14 @@ export async function POST(req: NextRequest) {
       "de-wasser": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_wasserversorgung || [], "DE Wasserversorgung"); } catch (e) { return []; } },
       "de-recycling": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_abfall_recycling || [], "DE Abfall & Recycling"); } catch (e) { return []; } },
       "de-luftfahrt": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_luftfahrt_aerospace || [], "DE Luftfahrt & Aerospace"); } catch (e) { return []; } },
+      "de-spedition": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_spedition_transport || [], "DE Spedition & Transport"); } catch (e) { return []; } },
+      "de-telekom": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_telekommunikation || [], "DE Telekommunikation"); } catch (e) { return []; } },
+      "de-versicherungen": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_versicherungen || [], "DE Versicherungen"); } catch (e) { return []; } },
+      "de-medien": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_medien_publishing || [], "DE Medien & Publishing"); } catch (e) { return []; } },
+      "de-baugewerbe": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_baugewerbe_ausbau || [], "DE Baugewerbe & Ausbau"); } catch (e) { return []; } },
+      "de-sicherheit": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_sicherheit_ueberwachung || [], "DE Sicherheit & Überwachung"); } catch (e) { return []; } },
+      "de-lebensmittel": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_lebensmittel_getraenke || [], "DE Lebensmittel & Getränke"); } catch (e) { return []; } },
+      "de-spielzeug": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_spielzeug_hobby || [], "DE Spielzeug & Hobby"); } catch (e) { return []; } },
     };
 
     // Fallback-Handler für dynamische/custom Quellen

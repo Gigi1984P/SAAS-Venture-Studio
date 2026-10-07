@@ -84,6 +84,14 @@ const CATEGORY_ICONS: Record<string, any> = {
   "de-wasser": Rss,
   "de-recycling": Rss,
   "de-luftfahrt": Rss,
+  "de-spedition": Rss,
+  "de-telekom": Rss,
+  "de-versicherungen": Rss,
+  "de-medien": Rss,
+  "de-baugewerbe": Rss,
+  "de-sicherheit": Rss,
+  "de-lebensmittel": Rss,
+  "de-spielzeug": Rss,
   custom: Globe,
 };
 
@@ -156,6 +164,14 @@ const CATEGORY_LABELS: Record<string, string> = {
   "de-wasser": "DE Wasserversorgung (GWF Wasser, DWA)",
   "de-recycling": "DE Abfall & Recycling (Recycling Magazin, Entsorga)",
   "de-luftfahrt": "DE Luftfahrt & Aerospace (AeroBuzz, DLR, Airliners)",
+  "de-spedition": "DE Spedition & Transport (DVZ, VerkehrsRundschau, Hansa)",
+  "de-telekom": "DE Telekommunikation (Telekom, Vodafone, teltarif)",
+  "de-versicherungen": "DE Versicherungen (VDH, Assekuranz, GDV)",
+  "de-medien": "DE Medien & Publishing (BDZV, DWDL, Quotenmeter)",
+  "de-baugewerbe": "DE Baugewerbe & Ausbau (ZDB, Malerblatt, Fensterbau)",
+  "de-sicherheit": "DE Sicherheit & Überwachung (VDS, Brandschutz, Alarm)",
+  "de-lebensmittel": "DE Lebensmittel & Getränke (LZ, FoodMonitor, Brauwelt)",
+  "de-spielzeug": "DE Spielzeug & Hobby (Spielwarenmesse, Toybook)",
   custom: "Custom",
 };
 
