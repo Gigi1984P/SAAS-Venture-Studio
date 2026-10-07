@@ -6,7 +6,8 @@ export async function GET() {
   try {
     const config = await prisma.autoScoutConfig.findFirst();
     const threshold = config?.painThreshold || 7;
-    const autoConvert = config?.autoConvert ?? false;
+    // Immer aktiv — Solo-Modus: Keine manuelle Freigabe nötig
+    const autoConvert = config?.autoConvert ?? true;
 
     // Alle unconvertierten High-Pain-Ideen finden
     const rawIdeas = await prisma.$queryRaw`
