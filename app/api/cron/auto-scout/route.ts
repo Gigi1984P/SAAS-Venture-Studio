@@ -1,22 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// Automatisches Marktdaten-Scraping mit Config-Steuerung (Raw SQL weil Schema nicht gepusht)
+// Automatisches Marktdaten-Scraping mit Config-Steuerung
+// Läuft alle 6 Stunden: Holt echte Daten von HN, GitHub, Heise, etc.
 export async function GET() {
   try {
-    // Config via Raw SQL laden oder Default
-    const configResult = await prisma.$queryRaw`
-      SELECT * FROM auto_scout_configs LIMIT 1
-    `;
-    const configs = configResult as any[];
-    let config = configs[0];
-
+    // Config laden oder Default erstellen
+    let config = await prisma.autoScoutConfig.findFirst();
     if (!config) {
-      await prisma.$queryRaw`
-        INSERT INTO auto_scout_configs (id, enabled, interval_hours, sources, auto_convert, pain_threshold, min_upvotes, created_at, updated_at)
-        VALUES (gen_random_uuid()::text, true, 6, '{hackernews,github,stackoverflow,heise,deutsche-startups,golem}', false, 7, 10, NOW(), NOW())
-      `;
-      config = { enabled: true, interval_hours: 6 };
+      config = await prisma.autoScoutConfig.create({
+        data: { enabled: true, intervalHours: 6 },
+      });
     }
 
     if (!config.enabled) {
@@ -46,13 +40,13 @@ export async function GET() {
       scrapeResult = await scrapeRes.json();
     }
 
-    // Automation Log (existierendes Modell)
+    // Automation Log
     await prisma.automationLog.create({
       data: {
-        automationId: config.id || "auto-scout",
+        automationId: config.id,
         name: "auto_scout",
         entityType: "scout",
-        entityId: config.id || "default",
+        entityId: config.id,
         action: "scout_run",
         status: scrapeRes?.ok ? "success" : "failed",
         details: { source: "cron", ideasGenerated: scrapeResult.ideasGenerated || 0 },
@@ -64,7 +58,7 @@ export async function GET() {
       status: "running",
       ideasGenerated: scrapeResult.ideasGenerated || 0,
       sources: scrapeResult.sources || {},
-      config: { intervalHours: config.interval_hours || 6, sources: config.sources || [] },
+      config: { intervalHours: config.intervalHours, sources: config.sources },
     });
   } catch (error: any) {
     console.error("[AUTO-SCOUT]", error);

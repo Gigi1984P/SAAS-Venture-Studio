@@ -1,17 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// Auto-Convert: High-Pain BusinessIdeen → Opportunities (Raw SQL)
+// Auto-Convert: High-Pain BusinessIdeen → Opportunities
 export async function GET() {
   try {
-    const configResult = await prisma.$queryRaw`
-      SELECT * FROM auto_scout_configs LIMIT 1
-    `;
-    const configs = configResult as any[];
-    const config = configs[0] || { pain_threshold: 7, auto_convert: false };
-
-    const threshold = config.pain_threshold || 7;
-    const autoConvert = config.auto_convert === true;
+    const config = await prisma.autoScoutConfig.findFirst();
+    const threshold = config?.painThreshold || 7;
+    const autoConvert = config?.autoConvert ?? false;
 
     // Alle unconvertierten High-Pain-Ideen finden
     const rawIdeas = await prisma.$queryRaw`
@@ -26,7 +21,6 @@ export async function GET() {
     const skipped: any[] = [];
 
     for (const idea of highPainIdeas) {
-      // Prüfe ob schon als Opportunity existiert (via Titel)
       const existing = await prisma.opportunity.findFirst({
         where: { title: idea.title },
       });
@@ -37,7 +31,6 @@ export async function GET() {
       }
 
       if (autoConvert) {
-        // Automatisch konvertieren
         const opp = await prisma.opportunity.create({
           data: {
             title: idea.title,
@@ -55,13 +48,12 @@ export async function GET() {
       }
     }
 
-    // Automation Log
     await prisma.automationLog.create({
       data: {
-        automationId: config.id || "auto-convert",
+        automationId: config?.id || "auto-convert",
         name: "auto_convert",
         entityType: "scout",
-        entityId: config.id || "default",
+        entityId: config?.id || "default",
         action: "auto_convert",
         status: converted.length > 0 ? "success" : "skipped",
         details: { converted: converted.length, skipped: skipped.length, threshold },
