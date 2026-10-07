@@ -142,21 +142,23 @@ export async function GET(req: Request) {
         }).catch(() => {});
         oppResult.steps.push({ step: "competitors", count: COMPETITOR_TEMPLATES.length });
 
-        // ── 7. AUTO-SCORE ──
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || "";
-        const protocol = baseUrl.includes("localhost") ? "http" : "https";
-        const fullUrl = baseUrl.startsWith("http") ? baseUrl : `${protocol}://${baseUrl}`;
-
+        // ── 7. AUTO-SCORE (direkt berechnen, kein API-Call) ──
         let scoreResult: any = null;
-        if (fullUrl) {
-          const scoreRes = await fetch(`${fullUrl}/api/opportunities/${opp.id}/auto-score`, {
-            method: "POST",
-          }).catch(() => null);
-          if (scoreRes?.ok) {
-            scoreResult = await scoreRes.json();
-          }
+        try {
+          const scoreA = Math.min(100, Math.round((opp.painSeverity || 5) * 10));
+          const scoreB = Math.min(100, Math.round(50 + (opp.aiLeverage || 0) * 5 + (opp.mvpSimplicity || 0) * 5));
+          const confidence = Math.min(1.0, Math.round((0.3 + (7 * 0.1) + (3 * 0.2) + (3 * 0.05)) * 100) / 100);
+
+          await prisma.opportunity.update({
+            where: { id: opp.id },
+            data: { scoreA, scoreB, confidence },
+          });
+
+          scoreResult = { scoreA, scoreB, confidence };
+          oppResult.steps.push({ step: "auto-score", scoreA, scoreB, confidence });
+        } catch (scoreErr: any) {
+          oppResult.steps.push({ step: "auto-score", error: scoreErr.message });
         }
-        oppResult.steps.push({ step: "auto-score", scoreResult });
 
         // ── 8. STAGE GATES (OpportunityGate) ──
         await prisma.opportunityGate.createMany({
