@@ -21,6 +21,10 @@
       "schedule": "5,35 * * * *"
     },
     {
+      "path": "/api/cron/pipeline",
+      "schedule": "10,40 * * * *"
+    },
+    {
       "path": "/api/dashboard/snapshot",
       "schedule": "0 3 * * *"
     }
