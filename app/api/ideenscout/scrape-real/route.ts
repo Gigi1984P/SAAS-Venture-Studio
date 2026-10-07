@@ -1163,6 +1163,18 @@ export async function POST(req: NextRequest) {
       "de-recht": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_recht_compliance || [], "DE Recht & Compliance"); } catch (e) { return []; } },
       "de-hr": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_hr_arbeit || [], "DE HR & Arbeit"); } catch (e) { return []; } },
       "de-bildung": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_bildung_weiterbildung || [], "DE Bildung & Weiterbildung"); } catch (e) { return []; } },
+      "de-it-software": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_it_software || [], "DE IT & Software"); } catch (e) { return []; } },
+      "de-startup-gruender": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_startup_gruender || [], "DE Startup & Gründer"); } catch (e) { return []; } },
+      "de-ecommerce": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_ecommerce_onlinehandel || [], "DE E-Commerce & Onlinehandel"); } catch (e) { return []; } },
+      "de-immobilien-bau": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_immobilien_bau || [], "DE Immobilien & Bau"); } catch (e) { return []; } },
+      "de-mobiltech": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_mobiltech_automotive || [], "DE Mobiltech & Automotive"); } catch (e) { return []; } },
+      "de-wissenschaft": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_wissenschaft_forschung || [], "DE Wissenschaft & Forschung"); } catch (e) { return []; } },
+      "de-beratung": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_beratung_consulting || [], "DE Beratung & Consulting"); } catch (e) { return []; } },
+      "de-banken": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_banken_fintech || [], "DE Banken & FinTech"); } catch (e) { return []; } },
+      "de-marketing": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_marketing_werbung || [], "DE Marketing & Werbung"); } catch (e) { return []; } },
+      "de-sport": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_sport_fitness_de || [], "DE Sport & Fitness"); } catch (e) { return []; } },
+      "de-mode": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_mode_lifestyle || [], "DE Mode & Lifestyle"); } catch (e) { return []; } },
+      "de-tourismus": async () => { try { const cfg = await import("@/config/rss-feeds.json").then(m => m.default || m); return scrapeRSS(cfg.de_tourismus_reisen || [], "DE Tourismus & Reisen"); } catch (e) { return []; } },
     };
 
     // Fallback-Handler für dynamische/custom Quellen
