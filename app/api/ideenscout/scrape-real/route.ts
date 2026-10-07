@@ -797,60 +797,203 @@ async function scrapeQuora(): Promise<any[]> {
   }
   return results;
 }
+// ─── DEUTSCHER OFFLINE-ÜBERSETZER ───
+const EN_DE: Record<string, string> = {
+  // SaaS / Tech
+  "saas": "SaaS", "software": "Software", "platform": "Plattform", "tool": "Tool",
+  "solution": "Lösung", "product": "Produkt", "service": "Dienst", "app": "App",
+  "application": "Anwendung", "system": "System", "program": "Programm",
+  // Geschäft
+  "business": "Geschäft", "startup": "Startup", "company": "Unternehmen",
+  "enterprise": "Unternehmen", "customer": "Kunde", "client": "Kunde",
+  "user": "Nutzer", "buyer": "Käufer", "seller": "Verkäufer",
+  "market": "Markt", "industry": "Branche", "sector": "Sektor",
+  "revenue": "Umsatz", "profit": "Gewinn", "cost": "Kosten",
+  "price": "Preis", "pricing": "Preisgestaltung", "subscription": "Abonnement",
+  "payment": "Zahlung", "billing": "Abrechnung", "invoice": "Rechnung",
+  // Probleme / Pain
+  "problem": "Problem", "pain": "Schmerz", "frustration": "Frustration",
+  "issue": "Problem", "bug": "Fehler", "error": "Fehler",
+  "broken": "kaputt", "slow": "langsam", "fast": "schnell",
+  "manual": "manuell", "automatic": "automatisch", "automated": "automatisiert",
+  "difficult": "schwierig", "easy": "einfach", "hard": "hart",
+  "waste": "Verschwendung", "wasting": "verschwendet", "time": "Zeit",
+  "money": "Geld", "resource": "Ressource", "effort": "Aufwand",
+  // Arbeit
+  "work": "Arbeit", "job": "Aufgabe", "task": "Aufgabe", "project": "Projekt",
+  "team": "Team", "employee": "Mitarbeiter", "manager": "Manager",
+  "remote": "Remote", "office": "Büro", "meeting": "Besprechung",
+  "collaboration": "Zusammenarbeit", "communication": "Kommunikation",
+  "email": "E-Mail", "message": "Nachricht", "notification": "Benachrichtigung",
+  // Daten
+  "data": "Daten", "information": "Information", "analytics": "Analyse",
+  "report": "Bericht", "dashboard": "Dashboard", "metric": "Kennzahl",
+  "tracking": "Tracking", "monitoring": "Überwachung", "logging": "Protokollierung",
+  // KI / Automation
+  "ai": "KI", "artificial intelligence": "Künstliche Intelligenz",
+  "machine learning": "Maschinelles Lernen", "ml": "ML",
+  "automation": "Automatisierung", "workflow": "Workflow",
+  "integration": "Integration", "api": "API", "bot": "Bot",
+  // Marketing / Vertrieb
+  "marketing": "Marketing", "sales": "Vertrieb", "lead": "Lead",
+  "conversion": "Konversion", "funnel": "Trichter", "campaign": "Kampagne",
+  "seo": "SEO", "social media": "Social Media", "content": "Inhalt",
+  // Entwicklung
+  "developer": "Entwickler", "code": "Code", "coding": "Programmierung",
+  "programming": "Programmierung", "deployment": "Deployment",
+  "testing": "Testen", "debugging": "Fehlersuche", "devops": "DevOps",
+  "frontend": "Frontend", "backend": "Backend", "fullstack": "Fullstack",
+  // Security
+  "security": "Sicherheit", "privacy": "Datenschutz", "gdpr": "DSGVO",
+  "compliance": "Compliance", "encryption": "Verschlüsselung",
+  // Support
+  "support": "Support", "help": "Hilfe", "guide": "Anleitung",
+  "documentation": "Dokumentation", "tutorial": "Tutorial",
+  "faq": "FAQ", "ticket": "Ticket", "chat": "Chat",
+  // Zustände
+  "new": "neu", "old": "alt", "good": "gut", "bad": "schlecht",
+  "better": "besser", "best": "beste", "great": "großartig",
+  "awesome": "toll", "amazing": "erstaunlich", "terrible": "schrecklich",
+  // Verben
+  "create": "erstellen", "build": "bauen", "make": "machen",
+  "manage": "verwalten", "organize": "organisieren", "track": "verfolgen",
+  "monitor": "überwachen", "analyze": "analysieren", "report": "berichten",
+  "send": "senden", "receive": "empfangen", "share": "teilen",
+  "export": "exportieren", "import": "importieren", "sync": "synchronisieren",
+  "integrate": "integrieren", "connect": "verbinden", "automate": "automatisieren",
+  // Phrasen
+  "customer support": "Kundensupport", "customer service": "Kundenservice",
+  "project management": "Projektmanagement", "task management": "Aufgabenverwaltung",
+  "team collaboration": "Teamzusammenarbeit", "remote work": "Remote-Arbeit",
+  "time tracking": "Zeiterfassung", "expense tracking": "Ausgabenverfolgung",
+  "workflow automation": "Workflow-Automatisierung", "data analysis": "Datenanalyse",
+  "business intelligence": "Business Intelligence", "sales pipeline": "Vertriebspipeline",
+  "email marketing": "E-Mail-Marketing", "social media management": "Social Media Management",
+  "content management": "Content Management", "document management": "Dokumentenmanagement",
+  "knowledge base": "Wissensdatenbank", "help desk": "Helpdesk",
+  "human resources": "Personalwesen", "hr": "HR", "payroll": "Gehaltsabrechnung",
+  "inventory management": "Lagerverwaltung", "supply chain": "Lieferkette",
+  "accounting": "Buchhaltung", "bookkeeping": "Buchführung",
+  "invoice generation": "Rechnungserstellung", "payment processing": "Zahlungsabwicklung",
+  "subscription billing": "Abonnement-Abrechnung", "recurring payment": " wiederkehrende Zahlung",
+  "user onboarding": "Nutzer-Onboarding", "user experience": "Nutzererfahrung",
+  "customer journey": "Kundenreise", "conversion rate": "Konversionsrate",
+  "churn rate": "Abwanderungsrate", "lifetime value": "Lebenszeitwert",
+  "monthly recurring revenue": "monatlicher wiederkehrender Umsatz", "mrr": "MRR",
+  "annual recurring revenue": "jährlicher wiederkehrender Umsatz", "arr": "ARR",
+  // Remote / Teams
+  "video conference": "Videokonferenz", "screen sharing": "Bildschirmfreigabe",
+  "file sharing": "Dateifreigabe", "cloud storage": "Cloud-Speicher",
+  "real-time": "Echtzeit", "asynchronous": "asynchron", "synchronous": "synchron",
+  "collaborative": "kollaborativ", "distributed": "verteilt",
+  // Development
+  "version control": "Versionskontrolle", "code review": "Code-Review",
+  "continuous integration": "Continuous Integration", "ci": "CI",
+  "continuous deployment": "Continuous Deployment", "cd": "CD",
+  "open source": "Open Source", "repository": "Repository", "repo": "Repo",
+  "pull request": "Pull Request", "merge": "Mergen", "branch": "Branch",
+  "feature": "Feature", "bug fix": "Fehlerbehebung", "hotfix": "Hotfix",
+  "release": "Release", "version": "Version", "update": "Update",
+  "changelog": "Änderungsprotokoll", "roadmap": "Roadmap",
+  // Finance
+  "financial": "finanziell", "account": "Konto", "bank": "Bank",
+  "transaction": "Transaktion", "transfer": "Überweisung",
+  "expense": "Ausgabe", "income": "Einnahme", "budget": "Budget",
+  "forecast": "Prognose", "prediction": "Vorhersage", "planning": "Planung",
+};
+
+function translateToGerman(text: string): string {
+  if (!text || typeof text !== "string") return text;
+  
+  let translated = text;
+  
+  // Erst Phrasen (2-3 Wörter) — längere zuerst
+  const phrases = Object.keys(EN_DE)
+    .filter(k => k.includes(" "))
+    .sort((a, b) => b.length - a.length);
+  
+  for (const phrase of phrases) {
+    const regex = new RegExp(`\\b${phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$\u0026")}\\b`, "gi");
+    translated = translated.replace(regex, EN_DE[phrase]);
+  }
+  
+  // Dann einzelne Wörter
+  const words = Object.keys(EN_DE).filter(k => !k.includes(" "));
+  const wordMap = new Map(words.map(w => [w.toLowerCase(), EN_DE[w]]));
+  
+  translated = translated.replace(/\b[a-zA-Z]+\b/g, (match) => {
+    const lower = match.toLowerCase();
+    if (wordMap.has(lower)) {
+      // Behalte Groß-/Kleinschreibung bei
+      if (match === match.toUpperCase()) return wordMap.get(lower)!.toUpperCase();
+      if (match[0] === match[0].toUpperCase()) {
+        const de = wordMap.get(lower)!;
+        return de.charAt(0).toUpperCase() + de.slice(1);
+      }
+      return wordMap.get(lower)!;
+    }
+    return match;
+  });
+  
+  return translated;
+}
+
+// ─── IDEEN-GENERATOR MIT AUTO-ÜBERSETZUNG ───
 function generateIdeaFromSignal(signal: any): any {
-  const title = signal.title.slice(0, 100);
-  const pain = signal.content.slice(0, 500);
+  // 🔥 AUTOMATISCH AUF DEUTSCH ÜBERSETZEN
+  const titleDe = translateToGerman(signal.title).slice(0, 100);
+  const contentDe = translateToGerman(signal.content).slice(0, 500);
   
   const categories: Record<string, string> = {
-    "CRM": "CRM", "email": "Email Marketing", "invoice": "Finance",
-    "contract": "Legal", "team": "Team Collaboration", "remote": "Remote Work",
-    "meeting": "Productivity", "analytics": "Analytics", "AI": "AI Tools",
-    "automation": "Automation", "chat": "Communication", "support": "Customer Support",
+    "CRM": "CRM", "email": "E-Mail-Marketing", "invoice": "Rechnungsstellung",
+    "contract": "Vertragsmanagement", "team": "Teamzusammenarbeit", "remote": "Remote-Arbeit",
+    "meeting": "Besprechung", "analytics": "Analyse", "AI": "KI-Tools",
+    "automation": "Automatisierung", "chat": "Kommunikation", "support": "Kundensupport",
   };
   
   let category = "SaaS";
   for (const [key, val] of Object.entries(categories)) {
-    if (signal.content.toLowerCase().includes(key.toLowerCase()) || signal.title.toLowerCase().includes(key.toLowerCase())) {
+    if (contentDe.toLowerCase().includes(key.toLowerCase()) || titleDe.toLowerCase().includes(key.toLowerCase())) {
       category = val;
       break;
     }
   }
   
   const audiences: Record<string, string> = {
-    hackernews: "Tech Startups & Founders",
-    github: "Developers & Engineering Teams",
-    indiehackers: "Indie Hackers & Solopreneurs",
-    stackoverflow: "Software Developers",
-    producthunt: "Early Adopters & Product People",
+    hackernews: "Tech-Startups & Gründer",
+    github: "Entwickler & Engineering-Teams",
+    indiehackers: "Indie Hacker & Solopreneure",
+    stackoverflow: "Software-Entwickler",
+    producthunt: "Early Adopters & Product-People",
     heise: "DACH IT-Entscheider & Unternehmen",
-    "deutsche-startups": "DACH Startup Gründer",
-    golem: "DACH Tech Professionals",
-    reddit: "Reddit Community & Founders",
-    g2: "B2B Software Buyers",
-    trustpilot: "Business Software Users",
-    devto: "Developers & Tech Community",
-    t3n: "DACH Digital Professionals",
-    gruenderszene: "DACH Entrepreneurs",
-    getapp: "SMB Software Decision Makers",
-    "software-advice": "Enterprise Software Buyers",
-    medium: "Tech Readers & Product People",
-    "x-twitter": "Social Media Founders & Operators",
-    quora: "Q&A Business Community",
+    "deutsche-startups": "DACH Startup-Gründer",
+    golem: "DACH Tech-Professionals",
+    reddit: "Reddit-Community & Gründer",
+    g2: "B2B Software-Käufer",
+    trustpilot: "Business Software-Nutzer",
+    devto: "Entwickler & Tech-Community",
+    t3n: "DACH Digital-Professionals",
+    gruenderszene: "DACH Entrepreneure",
+    getapp: "SMB Software-Entscheider",
+    "software-advice": "Enterprise Software-Käufer",
+    medium: "Tech-Leser & Product-People",
+    "x-twitter": "Social Media Gründer & Betreiber",
+    quora: "Q&A Business-Community",
     rss: "Branchen-Feeds (Handwerk, Immobilien, Logistik, Buchhaltung)",
   };
   
   return {
-    title: title,
-    description: pain,
+    title: titleDe,
+    description: contentDe,
     category: category,
-    targetAudience: audiences[signal.source] || "SaaS Founders",
+    targetAudience: audiences[signal.source] || "SaaS-Gründer",
     revenueModel: "SaaS-Abonnement (€29-99/Monat)",
     mvpEffort: signal.painScore >= 6 ? "medium" : "low",
-    potential: signal.upvotes >= 50 ? "high" : signal.upvotes >= 10 ? "medium" : "low",
+    potential: signal.upvotes >= 50 ? "hoch" : signal.upvotes >= 10 ? "mittel" : "niedrig",
+    painScore: signal.painScore,
+    painKeywords: signal.painKeywords.map((k: string) => EN_DE[k.toLowerCase()] || k).join(", "),
     source: signal.source,
     sourceUrl: signal.sourceUrl,
-    painScore: signal.painScore,
-    painKeywords: signal.painKeywords.join(", "),
   };
 }
 
