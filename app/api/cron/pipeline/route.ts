@@ -171,17 +171,19 @@ export async function GET(req: Request) {
         }).catch(() => {});
         oppResult.steps.push({ step: "stage-gate", count: 4 });
 
-        // ── 9. STATUS UPDATE auf "scored" ──
+        // ── 9. STATUS UPDATE ──
+        // Wenn Score A >= 60 und Score B >= 40 → "build_approved", sonst "scored"
+        const finalStatus = (scoreResult?.scoreA || 0) >= 60 && (scoreResult?.scoreB || 0) >= 40 ? "build_approved" : "scored";
         await prisma.opportunity.update({
           where: { id: opp.id },
           data: {
-            status: "scored" as any,
+            status: finalStatus as any,
             scoreB: scoreResult?.scoreB || Math.floor(Math.random() * 40) + 40,
             confidence: scoreResult?.confidence || 0.65,
             evidenceLevel: 3,
           },
         });
-        oppResult.steps.push({ step: "status-update", newStatus: "scored" });
+        oppResult.steps.push({ step: "status-update", newStatus: finalStatus });
 
         // ── 10. AUTOMATION LOG ──
         await prisma.automationLog.create({

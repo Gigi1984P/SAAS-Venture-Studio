@@ -23,7 +23,7 @@ export default function SignalDeduplicationWidget({ opportunityId }: { opportuni
 
   async function runDeduplication() {
     setRunning(true);
-    const res = await fetch(`/api/opportunities/${opportunityId}/signals/deduplicate`, { method: "PUT" });
+    const res = await fetch(`/api/opportunities/${opportunityId}/signals/deduplicate`, { method: "POST" });
     if (res.ok) {
       const data = await res.json();
       setStats(data.stats);

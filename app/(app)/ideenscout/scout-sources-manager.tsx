@@ -292,6 +292,19 @@ export default function ScoutSourcesManager() {
       setTimeout(() => setMessage(""), 3000);
       return;
     }
+    if (!newSource.url || newSource.url.trim().length === 0) {
+      setMessage("URL ist erforderlich");
+      setTimeout(() => setMessage(""), 3000);
+      return;
+    }
+    // URL-Format validieren
+    try {
+      new URL(newSource.url);
+    } catch {
+      setMessage("Ungültige URL (z.B. https://example.com/feed.xml)");
+      setTimeout(() => setMessage(""), 3000);
+      return;
+    }
 
     setSaving(true);
     try {
