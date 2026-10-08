@@ -857,55 +857,80 @@ Gib NUR dieses JSON zurück (keine Markdown, keine Erklärungen):
 
 // ─── KOSTENLOSE KI-ÜBERSETZUNG via MyMemory Translate ───
 // Chunking für lange Texte (MyMemory Limit: 500 Zeichen)
+// V2: Sequentielle Übersetzung (Rate Limit), Retry, besseres Chunking
+
 async function translateWithMyMemory(text: string): Promise<string> {
-  if (!text || text.length <= 500) {
-    // Kurze Texte direkt übersetzen
-    try {
-      const response = await fetch(
-        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|de`,
-        { next: { revalidate: 0 } }
-      );
-      if (!response.ok) return text;
-      const data = await response.json();
-      return data.responseData?.translatedText || text;
-    } catch (e) {
-      return text;
-    }
+  if (!text || text.trim().length === 0) return "";
+  
+  // Kurze Texte direkt
+  if (text.length <= 450) {
+    return await translateSingleChunk(text);
   }
   
-  // Lange Texte: In Sätze aufteilen und einzeln übersetzen
+  // Lange Texte: An Satzgrenzen chunken (max 400 Zeichen pro Chunk)
   const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
   const chunks: string[] = [];
   let currentChunk = "";
   
   for (const sentence of sentences) {
-    if ((currentChunk + sentence).length > 450) {
+    const trimmed = sentence.trim();
+    if (!trimmed) continue;
+    if ((currentChunk + " " + trimmed).length > 400) {
       if (currentChunk) chunks.push(currentChunk.trim());
-      currentChunk = sentence;
+      currentChunk = trimmed;
     } else {
-      currentChunk += sentence;
+      currentChunk = currentChunk ? currentChunk + " " + trimmed : trimmed;
     }
   }
   if (currentChunk) chunks.push(currentChunk.trim());
   
-  // Parallel übersetzen
-  const translatedChunks = await Promise.all(
-    chunks.map(async (chunk) => {
-      try {
-        const response = await fetch(
-          `https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=en|de`,
-          { next: { revalidate: 0 } }
-        );
-        if (!response.ok) return chunk;
-        const data = await response.json();
-        return data.responseData?.translatedText || chunk;
-      } catch (e) {
-        return chunk;
-      }
-    })
-  );
+  // SEQUENTIELL übersetzen (MyMemory hat Rate Limit ~100 req/min)
+  const translatedChunks: string[] = [];
+  for (const chunk of chunks) {
+    const translated = await translateSingleChunk(chunk);
+    translatedChunks.push(translated);
+    // Rate Limit: 600ms Pause zwischen Requests
+    await new Promise(r => setTimeout(r, 600));
+  }
   
   return translatedChunks.join(" ").slice(0, 500);
+}
+
+// Einzelner Chunk mit Retry
+async function translateSingleChunk(text: string): Promise<string> {
+  const maxRetries = 2;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000); // 8s Timeout pro Request
+      
+      const response = await fetch(
+        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.slice(0, 500))}&langpair=en|de`,
+        { signal: controller.signal }
+      );
+      clearTimeout(timeout);
+      
+      if (!response.ok) {
+        if (response.status === 429) {
+          await new Promise(r => setTimeout(r, 2000 * (attempt + 1))); // Exponential Backoff
+          continue;
+        }
+        return text;
+      }
+      
+      const data = await response.json();
+      const translated = data.responseData?.translatedText;
+      if (translated && translated !== text && !translated.includes("QUERY LENGTH")) {
+        return translated;
+      }
+      return text;
+    } catch (e) {
+      if (attempt < maxRetries) {
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+      }
+    }
+  }
+  return text; // Fallback
 }
 
 // ─── GRAMMATIKALISCH KORREKTER DEUTSCHER ÜBERSETZER ───
@@ -1342,7 +1367,7 @@ export async function POST(req: NextRequest) {
   try {
     // Solo-Modus: Keine Session-Prüfung nötig
 
-    const { agentId = "ideen-scout", maxIdeas = 20 } = await req.json().catch(() => ({}));
+    const { agentId = "ideen-scout", maxIdeas = 10 } = await req.json().catch(() => ({}));
 
     // ScoutRun finden oder erstellen
     let scoutRun = await prisma.scoutRun.findFirst({
@@ -1531,21 +1556,28 @@ export async function POST(req: NextRequest) {
       return () => Promise.resolve([]);
     }
 
-    // Paralleles Scraping nur aktivierter Quellen
-    const scrapePromises = dbSources.map((src: any) => {
-      const fn = getScraperForSource(src);
-      return fn().then((signals: any[]) => {
-        if (src.painBoost > 0) {
-          signals.forEach((s: any) => { s.painScore = Math.min(10, s.painScore + src.painBoost); });
-        }
-        return signals.slice(0, src.maxResults || 20);
-      }).catch((e: any) => {
-        console.error(`[SCOUT ${src.slug}]`, e.message);
-        return [];
+    // BATCHED SCRAPING: Max 5 Quellen parallel (Vercel Timeout ~60s)
+    const BATCH_SIZE = 5;
+    const allSignalsArrays: any[] = [];
+    
+    for (let i = 0; i < dbSources.length; i += BATCH_SIZE) {
+      const batch = dbSources.slice(i, i + BATCH_SIZE);
+      const batchPromises = batch.map((src: any) => {
+        const fn = getScraperForSource(src);
+        return fn().then((signals: any[]) => {
+          if (src.painBoost > 0) {
+            signals.forEach((s: any) => { s.painScore = Math.min(10, s.painScore + src.painBoost); });
+          }
+          return signals.slice(0, src.maxResults || 20);
+        }).catch((e: any) => {
+          console.error(`[SCOUT ${src.slug}]`, e.message);
+          return [];
+        });
       });
-    });
-
-    const allSignalsArrays = await Promise.all(scrapePromises);
+      
+      const batchResults = await Promise.all(batchPromises);
+      allSignalsArrays.push(...batchResults);
+    }
     const allSignals = allSignalsArrays.flat();
     
     // Nach Pain Score sortieren, Top N nehmen
@@ -1554,27 +1586,23 @@ export async function POST(req: NextRequest) {
       .slice(0, maxIdeas);
 
     // In BusinessIdeas umwandeln, ÜBERSETZEN und speichern
-    const ideaPromises = topSignals.map(async (signal: any) => {
+    // SEQUENTIELL: MyMemory hat Rate Limit
+    const translatedIdeas: any[] = [];
+    for (const signal of topSignals) {
       const idea = generateIdeaFromSignal(signal);
       
       // KOSTENLOSE KI-ÜBERSETZUNG (MyMemory) — echte Sätze auf Deutsch
       try {
-        const [translatedTitle, translatedDesc] = await Promise.all([
-          translateWithMyMemory(signal.title),
-          translateWithMyMemory(signal.content),
-        ]);
-        idea.title = translatedTitle.slice(0, 100);
-        idea.description = translatedDesc.slice(0, 500);
+        idea.title = (await translateWithMyMemory(signal.title)).slice(0, 100);
+        idea.description = (await translateWithMyMemory(signal.content)).slice(0, 500);
       } catch (e) {
         // Fallback: Offline-Keyword-Übersetzung
         idea.title = translateToGerman(signal.title).slice(0, 100);
         idea.description = translateToGerman(signal.content).slice(0, 500);
       }
       
-      return { idea, signal };
-    });
-    
-    const translatedIdeas = await Promise.all(ideaPromises);
+      translatedIdeas.push({ idea, signal });
+    }
     
     const savedIdeas = [];
     for (const { idea, signal } of translatedIdeas) {
