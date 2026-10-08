@@ -16,9 +16,11 @@ export async function GET(req: NextRequest) {
     const opportunities = await prisma.opportunity.findMany({
       take: limit,
       include: {
-        _count: {
-          select: { signals: true, ventures: true, gates: true },
-        },
+        gates: { select: { id: true, gateType: true, passed: true } },
+        assumptions: { select: { id: true, code: true, status: true } },
+        experiments: { select: { id: true, hypothesis: true, status: true } },
+        signals: { select: { id: true } },
+        ventures: { select: { id: true } },
       },
       orderBy: [
         { createdAt: "desc" },

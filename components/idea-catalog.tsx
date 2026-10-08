@@ -30,7 +30,7 @@ export default function IdeaCatalog() {
   async function fetchIdeas() {
     setLoading(true);
     try {
-      const res = await fetch("/api/ideenscout?page=1&limit=100");
+      const res = await fetch("/api/ideas?page=1&limit=100");
       if (res.ok) {
         const data = await res.json();
         setIdeas(data.ideas || []);
